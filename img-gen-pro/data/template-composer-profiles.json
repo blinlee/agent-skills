@@ -1,0 +1,1253 @@
+{
+  "version": 1,
+  "status": "composer-seed-profiles",
+  "notes": [
+    "Canonical template profiles drive the new Template Composer path.",
+    "Profiles are intentionally role/intent based; they do not replace legacy template hubs yet.",
+    "Start with high-risk/high-frequency canonical templates and expand by audit evidence."
+  ],
+  "profiles": [
+    {
+      "target": "references/technical-diagrams/system-architecture.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "technical-documentation",
+        "paper-figure",
+        "architecture-explainer"
+      ],
+      "content": [
+        "system-architecture",
+        "software-system",
+        "agent-runtime",
+        "harness",
+        "microservices",
+        "infrastructure",
+        "multi-sensor-fusion",
+        "slam",
+        "sensor-pipeline",
+        "localization-mapping"
+      ],
+      "structure": [
+        "architecture-diagram",
+        "layered-system",
+        "control-flow",
+        "component-map",
+        "boundary-diagram"
+      ],
+      "style": [
+        "engineering",
+        "academic",
+        "dark-engineering",
+        "clean-vector"
+      ],
+      "constraints": [
+        "readable-labels",
+        "clear-boundaries",
+        "arrows",
+        "no-pseudo-text"
+      ],
+      "positiveTerms": [
+        "架构图",
+        "系统架构",
+        "技术架构",
+        "harness",
+        "runtime",
+        "sandbox",
+        "agent loop",
+        "tool invocation",
+        "api gateway",
+        "微服务",
+        "消息队列",
+        "postgresql",
+        "redis",
+        "architecture diagram",
+        "system architecture",
+        "多传感器",
+        "SLAM",
+        "sensor fusion",
+        "multi-sensor",
+        "LiDAR",
+        "IMU",
+        "GNSS",
+        "camera",
+        "回环检测",
+        "图优化",
+        "地图构建",
+        "定位输出"
+      ],
+      "negativeFor": [
+        "ui-screenshot",
+        "commerce-card",
+        "poster-only",
+        "beauty-report",
+        "product-card",
+        "photo-realistic"
+      ]
+    },
+    {
+      "target": "references/academic-figures/scientific-schematic.md",
+      "roles": [
+        "supporting",
+        "style"
+      ],
+      "purpose": [
+        "paper-figure",
+        "research-explanation",
+        "scientific-illustration"
+      ],
+      "content": [
+        "mechanism",
+        "concept",
+        "method",
+        "system",
+        "experiment"
+      ],
+      "structure": [
+        "schematic",
+        "pipeline",
+        "labeled-diagram",
+        "overview-figure"
+      ],
+      "style": [
+        "academic",
+        "nature-science-paper",
+        "clean-vector",
+        "white-background"
+      ],
+      "constraints": [
+        "short-labels",
+        "publication-quality",
+        "no-logo",
+        "no-decoration"
+      ],
+      "positiveTerms": [
+        "论文",
+        "学术",
+        "期刊",
+        "顶刊",
+        "Nature",
+        "Science",
+        "CHI",
+        "paper figure",
+        "publication",
+        "schematic",
+        "scientific figure",
+        "white background",
+        "白底",
+        "矢量"
+      ],
+      "negativeFor": []
+    },
+    {
+      "target": "references/academic-figures/publication-chart.md",
+      "roles": [
+        "style",
+        "supporting"
+      ],
+      "purpose": [
+        "paper-figure",
+        "data-figure",
+        "research-chart"
+      ],
+      "content": [
+        "data",
+        "chart",
+        "comparison",
+        "result"
+      ],
+      "structure": [
+        "chart-panel",
+        "multi-panel",
+        "caption-ready"
+      ],
+      "style": [
+        "academic",
+        "publication",
+        "clean-vector"
+      ],
+      "constraints": [
+        "axis-readable",
+        "short-labels",
+        "caption-space"
+      ],
+      "positiveTerms": [
+        "publication chart",
+        "paper chart",
+        "论文图表",
+        "多面板",
+        "结果图",
+        "figure panel"
+      ],
+      "negativeFor": [
+        "ui-screenshot",
+        "poster-only"
+      ]
+    },
+    {
+      "target": "references/infographics/bento-grid-infographic.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "explainer",
+        "report",
+        "knowledge-card"
+      ],
+      "content": [
+        "concept",
+        "comparison",
+        "modules",
+        "summary"
+      ],
+      "structure": [
+        "bento-grid",
+        "modular-cards",
+        "infographic"
+      ],
+      "style": [
+        "clean",
+        "editorial",
+        "presentation"
+      ],
+      "constraints": [
+        "module-hierarchy",
+        "readable-text"
+      ],
+      "positiveTerms": [
+        "信息图",
+        "解释图",
+        "模块",
+        "卡片",
+        "bento",
+        "infographic",
+        "explainer",
+        "知识卡片",
+        "板块",
+        "风险提示",
+        "市场快照",
+        "研报",
+        "策略"
+      ],
+      "negativeFor": []
+    },
+    {
+      "target": "references/slides-and-visual-docs/visual-report-page.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "financial-report",
+        "market-analysis",
+        "strategy-note",
+        "morning-brief"
+      ],
+      "content": [
+        "market-data",
+        "stock-market",
+        "indices",
+        "sector-analysis",
+        "risk-summary"
+      ],
+      "structure": [
+        "report-page",
+        "dashboard-summary",
+        "data-cards",
+        "research-note"
+      ],
+      "style": [
+        "securities-research",
+        "clean-financial",
+        "white-background"
+      ],
+      "constraints": [
+        "data-source",
+        "timestamp",
+        "not-investment-advice",
+        "readable-numbers"
+      ],
+      "positiveTerms": [
+        "A股",
+        "市场快照",
+        "行情",
+        "指数",
+        "板块",
+        "券商",
+        "研报",
+        "策略",
+        "早报",
+        "沪深",
+        "创业板",
+        "科创",
+        "financial report",
+        "market snapshot"
+      ],
+      "negativeFor": [
+        "beauty-report",
+        "product-card",
+        "ui-screenshot",
+        "commerce-card",
+        "poster-only",
+        "photo-realistic"
+      ]
+    },
+    {
+      "target": "references/ui-mockups/live-commerce-ui.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "ui-mockup",
+        "commerce-interface"
+      ],
+      "content": [
+        "live-commerce",
+        "comments",
+        "product-card",
+        "streaming"
+      ],
+      "structure": [
+        "mobile-screen",
+        "interface-layout"
+      ],
+      "style": [
+        "app-ui",
+        "screenshot"
+      ],
+      "constraints": [
+        "platform-chrome",
+        "readable-ui-text"
+      ],
+      "positiveTerms": [
+        "直播",
+        "带货",
+        "弹幕",
+        "评论区",
+        "商品卡",
+        "app界面",
+        "UI",
+        "screenshot",
+        "livestream"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "technical-architecture",
+        "financial-report"
+      ]
+    },
+    {
+      "target": "references/product-visuals/ecommerce-marketing-board.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "commerce",
+        "landing-page",
+        "product-marketing",
+        "landing-page",
+        "commerce-hero",
+        "beauty-campaign"
+      ],
+      "content": [
+        "product",
+        "selling-points",
+        "cta",
+        "benefits",
+        "serum",
+        "bottle",
+        "skincare",
+        "beauty-product",
+        "model"
+      ],
+      "structure": [
+        "hero-board",
+        "marketing-board",
+        "conversion-layout",
+        "landing-page-hero",
+        "benefit-bullets",
+        "cta-layout"
+      ],
+      "style": [
+        "commercial",
+        "premium"
+      ],
+      "constraints": [
+        "cta-readable",
+        "benefit-bullets"
+      ],
+      "positiveTerms": [
+        "落地页",
+        "首屏",
+        "卖点",
+        "按钮",
+        "转化",
+        "商品",
+        "产品主图",
+        "landing page",
+        "hero",
+        "cta",
+        "buy now",
+        "skincare",
+        "serum",
+        "bottle",
+        "benefit bullets",
+        "female model",
+        "beauty campaign",
+        "conversion-led"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "technical-architecture",
+        "financial-report"
+      ]
+    },
+    {
+      "target": "references/editing-workflows/multi-reference-composition.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "image-edit",
+        "reference-fusion"
+      ],
+      "content": [
+        "multi-reference",
+        "subject-transfer",
+        "scene-transfer"
+      ],
+      "structure": [
+        "composite",
+        "background-swap"
+      ],
+      "style": [
+        "photorealistic-consistency"
+      ],
+      "constraints": [
+        "identity-consistency",
+        "lighting-consistency",
+        "requires-actual-reference-images"
+      ],
+      "positiveTerms": [
+        "多参考图",
+        "参考这两张图",
+        "把这个人放进",
+        "放到另一个场景",
+        "光线要统一",
+        "multi reference",
+        "background swap",
+        "composite"
+      ],
+      "negativeFor": [
+        "static-report",
+        "paper-figure"
+      ],
+      "fallbackOnly": true
+    },
+    {
+      "target": "references/product-visuals/impossible-concept-product.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "concept-product",
+        "constraint-driven-design"
+      ],
+      "content": [
+        "product",
+        "constraint",
+        "impossible-design"
+      ],
+      "structure": [
+        "concept-poster",
+        "product-breakdown"
+      ],
+      "style": [
+        "premium-product",
+        "speculative"
+      ],
+      "constraints": [
+        "constraint-visible",
+        "material-logic"
+      ],
+      "positiveTerms": [
+        "无拉链",
+        "没有拉链",
+        "无缝线",
+        "不可能产品",
+        "约束驱动",
+        "概念产品",
+        "no zipper",
+        "no seam",
+        "impossible concept"
+      ],
+      "negativeFor": [
+        "generic-poster",
+        "beauty-report"
+      ]
+    },
+    {
+      "target": "references/scenes-and-illustrations/text-on-objects.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "text-rendering",
+        "object-surface-text"
+      ],
+      "content": [
+        "surface-text",
+        "screen-content",
+        "object-material"
+      ],
+      "structure": [
+        "photographic-scene"
+      ],
+      "style": [
+        "realistic",
+        "material-aware"
+      ],
+      "constraints": [
+        "exact-readable-text",
+        "surface-conformity"
+      ],
+      "positiveTerms": [
+        "写在",
+        "写上",
+        "香蕉皮",
+        "物体表面",
+        "曲面文字",
+        "屏幕内容",
+        "surface text",
+        "text on",
+        "banana"
+      ],
+      "negativeFor": [
+        "generic-photography"
+      ]
+    },
+    {
+      "target": "references/typography-and-text-layout/conceptual-typography-poster.md",
+      "roles": [
+        "primary",
+        "style"
+      ],
+      "purpose": [
+        "poster",
+        "typography-visual",
+        "concept-poster"
+      ],
+      "content": [
+        "title",
+        "text",
+        "concept",
+        "headline"
+      ],
+      "structure": [
+        "typography-poster",
+        "type-as-hero",
+        "poster-layout"
+      ],
+      "style": [
+        "conceptual",
+        "editorial",
+        "graphic-design"
+      ],
+      "constraints": [
+        "readable-title",
+        "text-as-main-visual"
+      ],
+      "positiveTerms": [
+        "标题字",
+        "标题",
+        "字体",
+        "概念字体",
+        "文字做主角",
+        "字是主角",
+        "typography",
+        "headline",
+        "type as hero",
+        "poster"
+      ],
+      "negativeFor": [
+        "ui-screenshot",
+        "financial-report",
+        "photo-realistic"
+      ]
+    },
+    {
+      "target": "references/slides-and-visual-docs/personalized-beauty-report.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "beauty-report",
+        "personalized-recommendation",
+        "shopping-assistant"
+      ],
+      "content": [
+        "selfie-analysis",
+        "lip-color",
+        "skin-analysis",
+        "makeup-recommendation",
+        "product-cards"
+      ],
+      "structure": [
+        "personal-report",
+        "recommendation-cards",
+        "try-on-report"
+      ],
+      "style": [
+        "beauty",
+        "premium",
+        "lifestyle"
+      ],
+      "constraints": [
+        "selfie-based",
+        "shade-readable",
+        "product-card-hierarchy"
+      ],
+      "positiveTerms": [
+        "自拍",
+        "口红",
+        "试色",
+        "Dior",
+        "美妆",
+        "肤色",
+        "妆容",
+        "推荐报告",
+        "beauty report",
+        "lip color",
+        "shade recommendation",
+        "try-on",
+        "selfie"
+      ],
+      "negativeFor": [
+        "financial-report",
+        "technical-architecture",
+        "paper-figure"
+      ]
+    },
+    {
+      "target": "references/product-visuals/premium-studio-product.md",
+      "roles": [
+        "primary",
+        "style"
+      ],
+      "purpose": [
+        "product-hero",
+        "commercial-product",
+        "studio-ad",
+        "packaging-design",
+        "product-packaging"
+      ],
+      "content": [
+        "product",
+        "material",
+        "packaging",
+        "hero-object",
+        "packaging",
+        "cosmetic-packaging",
+        "bottle",
+        "label"
+      ],
+      "structure": [
+        "single-product-hero",
+        "studio-composition"
+      ],
+      "style": [
+        "premium",
+        "studio-lighting",
+        "commercial"
+      ],
+      "constraints": [
+        "product-fidelity",
+        "clean-background"
+      ],
+      "positiveTerms": [
+        "产品图",
+        "棚拍",
+        "高级产品",
+        "商品质感",
+        "材质",
+        "包装",
+        "studio product",
+        "premium product",
+        "hero object",
+        "包装设计",
+        "瓶身",
+        "外盒",
+        "护肤品包装",
+        "packaging design",
+        "cosmetic packaging",
+        "bottle packaging"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "financial-report"
+      ]
+    },
+    {
+      "target": "references/poster-and-campaigns/brand-poster.md",
+      "roles": [
+        "supporting",
+        "style"
+      ],
+      "purpose": [
+        "brand-poster",
+        "campaign",
+        "marketing-visual"
+      ],
+      "content": [
+        "brand",
+        "campaign",
+        "slogan",
+        "visual-key"
+      ],
+      "structure": [
+        "poster",
+        "key-visual",
+        "layout"
+      ],
+      "style": [
+        "commercial",
+        "campaign",
+        "premium"
+      ],
+      "constraints": [
+        "brand-hierarchy",
+        "headline-readable"
+      ],
+      "positiveTerms": [
+        "品牌海报",
+        "品牌",
+        "campaign",
+        "KV",
+        "主视觉",
+        "slogan",
+        "广告海报",
+        "brand poster",
+        "key visual"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "financial-report",
+        "ui-screenshot"
+      ],
+      "fallbackOnly": true
+    },
+    {
+      "target": "references/academic-figures/method-pipeline-overview.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "paper-figure",
+        "method-overview",
+        "research-explanation"
+      ],
+      "content": [
+        "method",
+        "pipeline",
+        "workflow",
+        "model",
+        "dataset",
+        "slam-pipeline",
+        "sensor-fusion-pipeline"
+      ],
+      "structure": [
+        "method-pipeline",
+        "flow-diagram",
+        "multi-stage-process"
+      ],
+      "style": [
+        "academic",
+        "clean-vector",
+        "white-background"
+      ],
+      "constraints": [
+        "stage-labels",
+        "readable-arrows"
+      ],
+      "positiveTerms": [
+        "方法流程",
+        "pipeline",
+        "method",
+        "方法图",
+        "模型流程",
+        "数据集",
+        "论文方法",
+        "workflow",
+        "multi-stage",
+        "多传感器",
+        "SLAM",
+        "sensor fusion",
+        "pipeline",
+        "front-end",
+        "back-end",
+        "前端里程计",
+        "后端图优化"
+      ],
+      "negativeFor": []
+    },
+    {
+      "target": "references/technical-diagrams/flowchart-decision.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "technical-documentation",
+        "process-explainer"
+      ],
+      "content": [
+        "decision",
+        "process",
+        "logic",
+        "condition"
+      ],
+      "structure": [
+        "flowchart",
+        "decision-tree",
+        "branching-flow"
+      ],
+      "style": [
+        "engineering",
+        "clean-vector"
+      ],
+      "constraints": [
+        "readable-labels",
+        "clear-branches"
+      ],
+      "positiveTerms": [
+        "流程图",
+        "决策树",
+        "判断",
+        "分支",
+        "条件",
+        "flowchart",
+        "decision",
+        "branch"
+      ],
+      "negativeFor": [
+        "poster-only",
+        "photo-realistic"
+      ]
+    },
+    {
+      "target": "references/branding-and-packaging/brand-identity-board.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "brand-identity",
+        "identity-system"
+      ],
+      "content": [
+        "logo",
+        "palette",
+        "typography",
+        "brand-rules"
+      ],
+      "structure": [
+        "identity-board",
+        "brand-guideline",
+        "system-board"
+      ],
+      "style": [
+        "brand-system",
+        "clean-presentation"
+      ],
+      "constraints": [
+        "consistent-brand-assets",
+        "palette-readable"
+      ],
+      "positiveTerms": [
+        "品牌识别",
+        "VI",
+        "logo",
+        "配色",
+        "字体规范",
+        "品牌系统",
+        "brand identity",
+        "identity system",
+        "palette",
+        "typography"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "financial-report"
+      ]
+    },
+    {
+      "target": "references/branding-and-packaging/brand-touchpoint-system-board.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "brand-rollout",
+        "touchpoint-board"
+      ],
+      "content": [
+        "packaging",
+        "social",
+        "retail",
+        "app",
+        "brand-touchpoints"
+      ],
+      "structure": [
+        "multi-touchpoint-board",
+        "rollout-grid"
+      ],
+      "style": [
+        "brand-system",
+        "campaign"
+      ],
+      "constraints": [
+        "cross-touchpoint-consistency"
+      ],
+      "positiveTerms": [
+        "品牌落地",
+        "触点",
+        "社媒",
+        "门店",
+        "touchpoint",
+        "rollout",
+        "brand rollout"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "financial-report"
+      ]
+    },
+    {
+      "target": "references/scenes-and-illustrations/meme-and-viral-content.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "meme",
+        "viral-content",
+        "social-share"
+      ],
+      "content": [
+        "humor",
+        "programmer",
+        "parody",
+        "social-context"
+      ],
+      "structure": [
+        "meme-layout",
+        "viral-image"
+      ],
+      "style": [
+        "humorous",
+        "social-media"
+      ],
+      "constraints": [
+        "punchline-readable"
+      ],
+      "positiveTerms": [
+        "梗图",
+        "恶搞",
+        "玩梗",
+        "传播图",
+        "meme",
+        "viral",
+        "parody",
+        "satire",
+        "程序员",
+        "周五上线"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "financial-report",
+        "brand-system"
+      ]
+    },
+    {
+      "target": "references/portraits-and-characters/fashion-lookbook-pose.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "fashion-lookbook",
+        "outfit-presentation"
+      ],
+      "content": [
+        "fashion",
+        "outfit",
+        "model",
+        "pose",
+        "bag",
+        "sleeve"
+      ],
+      "structure": [
+        "lookbook-pose",
+        "editorial-fashion-frame"
+      ],
+      "style": [
+        "pinterest",
+        "editorial-fashion"
+      ],
+      "constraints": [
+        "pose-control",
+        "outfit-visible"
+      ],
+      "positiveTerms": [
+        "pinterest",
+        "lookbook",
+        "穿搭",
+        "姿态",
+        "一只袖子",
+        "拎包",
+        "fashion pose",
+        "outfit pose",
+        "时尚"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "technical-architecture",
+        "financial-report"
+      ]
+    },
+    {
+      "target": "references/technical-diagrams/network-topology.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "technical-documentation",
+        "network-diagram"
+      ],
+      "content": [
+        "network",
+        "router",
+        "firewall",
+        "switch",
+        "ap",
+        "nas",
+        "terminal"
+      ],
+      "structure": [
+        "network-topology",
+        "node-link-diagram"
+      ],
+      "style": [
+        "engineering",
+        "clean-vector"
+      ],
+      "constraints": [
+        "readable-labels",
+        "topology-accuracy"
+      ],
+      "positiveTerms": [
+        "网络拓扑",
+        "拓扑图",
+        "路由器",
+        "防火墙",
+        "交换机",
+        "AP",
+        "NAS",
+        "终端",
+        "network topology",
+        "router",
+        "firewall",
+        "switch"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "commerce-card",
+        "poster-only"
+      ]
+    },
+    {
+      "target": "references/technical-diagrams/er-diagram.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "technical-documentation",
+        "data-model"
+      ],
+      "content": [
+        "entity",
+        "relationship",
+        "database",
+        "ecommerce-data-model"
+      ],
+      "structure": [
+        "er-diagram",
+        "data-model-diagram"
+      ],
+      "style": [
+        "engineering",
+        "clean-vector"
+      ],
+      "constraints": [
+        "readable-labels",
+        "relationship-lines"
+      ],
+      "positiveTerms": [
+        "ER图",
+        "ER 图",
+        "实体关系",
+        "数据模型",
+        "用户",
+        "订单",
+        "商品",
+        "支付",
+        "库存",
+        "er diagram",
+        "entity relationship"
+      ],
+      "negativeFor": [
+        "poster-only",
+        "photo-realistic",
+        "brand-system"
+      ]
+    },
+    {
+      "target": "references/academic-figures/neural-network-architecture.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "paper-figure",
+        "model-architecture"
+      ],
+      "content": [
+        "neural-network",
+        "transformer",
+        "attention",
+        "mlp",
+        "skip-connection",
+        "layers"
+      ],
+      "structure": [
+        "neural-network-architecture",
+        "layer-blocks"
+      ],
+      "style": [
+        "academic",
+        "clean-vector"
+      ],
+      "constraints": [
+        "readable-labels",
+        "tensor-shapes"
+      ],
+      "positiveTerms": [
+        "神经网络架构",
+        "Transformer",
+        "attention",
+        "MLP",
+        "skip connection",
+        "layer",
+        "网络架构图",
+        "neural network architecture"
+      ],
+      "negativeFor": [
+        "commerce-card",
+        "poster-only"
+      ]
+    },
+    {
+      "target": "references/technical-diagrams/sequence-diagram.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "technical-documentation",
+        "api-flow"
+      ],
+      "content": [
+        "api",
+        "client",
+        "gateway",
+        "service",
+        "payment",
+        "order"
+      ],
+      "structure": [
+        "sequence-diagram",
+        "lifelines",
+        "call-flow"
+      ],
+      "style": [
+        "engineering",
+        "clean-vector"
+      ],
+      "constraints": [
+        "readable-labels",
+        "ordered-flow"
+      ],
+      "positiveTerms": [
+        "时序图",
+        "API时序",
+        "调用流",
+        "客户端",
+        "订单服务",
+        "支付服务",
+        "sequence diagram",
+        "lifeline"
+      ],
+      "negativeFor": [
+        "poster-only",
+        "photo-realistic"
+      ]
+    },
+    {
+      "target": "references/typography-and-text-layout/city-creative-font.md",
+      "roles": [
+        "primary"
+      ],
+      "purpose": [
+        "city-typography",
+        "typography-hero"
+      ],
+      "content": [
+        "city-name",
+        "local-culture",
+        "landmark"
+      ],
+      "structure": [
+        "typography-hero",
+        "letterform-composition"
+      ],
+      "style": [
+        "creative-font",
+        "poster"
+      ],
+      "constraints": [
+        "text-as-hero"
+      ],
+      "positiveTerms": [
+        "城市名",
+        "城市字体",
+        "创意字体",
+        "上海",
+        "杭州",
+        "苏州",
+        "南京",
+        "成都",
+        "西安",
+        "外滩",
+        "东方明珠",
+        "city font",
+        "creative font"
+      ],
+      "negativeFor": [
+        "paper-figure",
+        "technical-architecture"
+      ]
+    }
+  ]
+}

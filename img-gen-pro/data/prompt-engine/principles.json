@@ -1,0 +1,650 @@
+{
+  "generatedAt": "2026-05-11T07:09:12.686Z",
+  "source": {
+    "promptMethodSourceRoot": "local reference: codex-text-to-image",
+    "principles": "local reference: codex-text-to-image/data/compiled/principles.json",
+    "promptTaxonomy": "local reference: codex-text-to-image/data/compiled/prompt-taxonomy.json",
+    "principlesMd": "local reference: codex-text-to-image/references/prompt-design-principles.md"
+  },
+  "families": [
+    {
+      "source_file": "App_网页设计.md",
+      "slug": "app-web-design",
+      "task_family": "ui-mockup",
+      "default_aspect_ratios": [
+        "16:9",
+        "9:16",
+        "4:3"
+      ],
+      "common_slots": [
+        "objective",
+        "layout",
+        "sections",
+        "ui_overlay",
+        "data_cards",
+        "brand",
+        "cta"
+      ],
+      "notes": "UI mockup、网页设计板、直播 UI、设计系统板。"
+    },
+    {
+      "source_file": "IP_角色二创.md",
+      "slug": "ip-character-remix",
+      "task_family": "ip-remix",
+      "default_aspect_ratios": [
+        "1:1",
+        "3:4",
+        "16:9",
+        "9:16"
+      ],
+      "common_slots": [
+        "subject",
+        "world_knowledge_merge",
+        "style",
+        "layout",
+        "consistency_constraints"
+      ],
+      "notes": "IP 二创、角色融合、世界观混搭、截图化二创。"
+    },
+    {
+      "source_file": "YouTube_缩略图.md",
+      "slug": "youtube-thumbnail",
+      "task_family": "thumbnail",
+      "default_aspect_ratios": [
+        "16:9"
+      ],
+      "common_slots": [
+        "headline",
+        "subject",
+        "hook",
+        "contrast",
+        "layout"
+      ],
+      "notes": "YouTube 缩略图，强调冲击力、可读标题与点击诱因。"
+    },
+    {
+      "source_file": "个人资料_头像.md",
+      "slug": "profile-avatar",
+      "task_family": "avatar-portrait",
+      "default_aspect_ratios": [
+        "1:1",
+        "3:4"
+      ],
+      "common_slots": [
+        "subject",
+        "visual_style",
+        "framing_camera",
+        "background",
+        "avoid"
+      ],
+      "notes": "头像、profile、个人资料图。"
+    },
+    {
+      "source_file": "产品营销.md",
+      "slug": "product-marketing",
+      "task_family": "product-ad",
+      "default_aspect_ratios": [
+        "1:1",
+        "4:5",
+        "16:9"
+      ],
+      "common_slots": [
+        "product",
+        "scene",
+        "benefits",
+        "headline",
+        "badges",
+        "cta"
+      ],
+      "notes": "产品广告图、营销物料、商业视觉。"
+    },
+    {
+      "source_file": "信息图_教育视觉图.md",
+      "slug": "infographic-edu-visual",
+      "task_family": "infographic",
+      "default_aspect_ratios": [
+        "3:4",
+        "4:5",
+        "16:9"
+      ],
+      "common_slots": [
+        "objective",
+        "subject",
+        "layout",
+        "sections",
+        "labels",
+        "callouts",
+        "typography_or_ui"
+      ],
+      "notes": "信息图、讲解图、教育视觉图，强调结构与信息组织。"
+    },
+    {
+      "source_file": "信息图_教育视觉图_公开仓库版.md",
+      "slug": "infographic-edu-visual-public",
+      "task_family": "infographic",
+      "default_aspect_ratios": [
+        "3:4",
+        "4:5",
+        "16:9"
+      ],
+      "common_slots": [
+        "objective",
+        "subject",
+        "layout",
+        "sections",
+        "labels",
+        "callouts",
+        "typography_or_ui"
+      ],
+      "notes": "信息图 / 教育视觉图的公开仓库补充样本。"
+    },
+    {
+      "source_file": "创意字体.md",
+      "slug": "creative-typography",
+      "task_family": "typography-art",
+      "default_aspect_ratios": [
+        "1:1",
+        "3:4",
+        "16:9"
+      ],
+      "common_slots": [
+        "headline",
+        "style",
+        "lettering_constraints",
+        "background"
+      ],
+      "notes": "创意字体、文字造型、字体实验。"
+    },
+    {
+      "source_file": "名人热点.md",
+      "slug": "celebrity-trending",
+      "task_family": "celebrity-scene",
+      "default_aspect_ratios": [
+        "9:16",
+        "3:4",
+        "16:9"
+      ],
+      "common_slots": [
+        "subject",
+        "platform_or_scene",
+        "style",
+        "headline_or_sign",
+        "avoid"
+      ],
+      "notes": "名人热点、历史人物社媒化、热点传播图。"
+    },
+    {
+      "source_file": "图片编辑_参考.md",
+      "slug": "image-edit-reference",
+      "task_family": "image-edit",
+      "default_aspect_ratios": [
+        "same-as-input"
+      ],
+      "common_slots": [
+        "input_reference",
+        "edit_instruction",
+        "preserve",
+        "change"
+      ],
+      "notes": "图像编辑、参考图修改、局部替换与融合。"
+    },
+    {
+      "source_file": "梗图_玩梗.md",
+      "slug": "meme-satire",
+      "task_family": "meme",
+      "default_aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16"
+      ],
+      "common_slots": [
+        "premise",
+        "subject",
+        "joke_mechanism",
+        "text",
+        "layout"
+      ],
+      "notes": "梗图、恶搞、传播型 meme。"
+    },
+    {
+      "source_file": "海报_传单.md",
+      "slug": "poster-flyer",
+      "task_family": "poster-layout",
+      "default_aspect_ratios": [
+        "3:4",
+        "4:5",
+        "9:16"
+      ],
+      "common_slots": [
+        "objective",
+        "theme",
+        "layout",
+        "header",
+        "sections",
+        "footer",
+        "typography_or_ui"
+      ],
+      "notes": "活动海报、宣传 poster、促销 poster，核心是版式与信息层次。"
+    },
+    {
+      "source_file": "游戏资产.md",
+      "slug": "game-assets",
+      "task_family": "game-asset",
+      "default_aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16"
+      ],
+      "common_slots": [
+        "subject",
+        "layout",
+        "variants",
+        "materials",
+        "annotations"
+      ],
+      "notes": "游戏概念图、资产图板、icon、weapon sheet 等。"
+    },
+    {
+      "source_file": "漫画_故事板.md",
+      "slug": "comic-storyboard",
+      "task_family": "comic-storyboard",
+      "default_aspect_ratios": [
+        "16:9",
+        "3:4",
+        "9:16"
+      ],
+      "common_slots": [
+        "story_beats",
+        "panel_layout",
+        "subject",
+        "environment",
+        "text_boxes"
+      ],
+      "notes": "漫画、分镜、panel 叙事。"
+    },
+    {
+      "source_file": "炫技测试.md",
+      "slug": "showoff-benchmark",
+      "task_family": "benchmark-scene",
+      "default_aspect_ratios": [
+        "1:1",
+        "16:9",
+        "3:4"
+      ],
+      "common_slots": [
+        "challenge",
+        "subject",
+        "critical_detail",
+        "avoid"
+      ],
+      "notes": "炫技测试、模型能力边界测试、复杂文字/材质/概念图。"
+    },
+    {
+      "source_file": "电商主图.md",
+      "slug": "ecommerce-main-image",
+      "task_family": "ecommerce-conversion",
+      "default_aspect_ratios": [
+        "1:1",
+        "4:5",
+        "16:9"
+      ],
+      "common_slots": [
+        "brand",
+        "product",
+        "layout",
+        "benefits",
+        "badges",
+        "cta",
+        "statistics_cards"
+      ],
+      "notes": "电商主图、转化页 hero、产品主视觉。"
+    },
+    {
+      "source_file": "真实摄影.md",
+      "slug": "realistic-photography",
+      "task_family": "portrait-photo",
+      "default_aspect_ratios": [
+        "3:4",
+        "4:5",
+        "9:16"
+      ],
+      "common_slots": [
+        "subject",
+        "scene",
+        "framing_camera",
+        "lighting",
+        "realism_anchors",
+        "avoid"
+      ],
+      "notes": "纪实、抓拍、胶片、生活化质感、人像与环境真实感。"
+    },
+    {
+      "source_file": "社交媒体帖子.md",
+      "slug": "social-media-post",
+      "task_family": "social-post",
+      "default_aspect_ratios": [
+        "1:1",
+        "4:5",
+        "9:16"
+      ],
+      "common_slots": [
+        "platform",
+        "subject",
+        "layout",
+        "ui_overlay",
+        "text_labels",
+        "cta",
+        "avoid"
+      ],
+      "notes": "社媒帖子、截图、直播、卡片、帖子拼图。"
+    },
+    {
+      "source_file": "社区实验_对比.md",
+      "slug": "community-experiment",
+      "task_family": "experiment",
+      "default_aspect_ratios": [
+        "3:4",
+        "4:5",
+        "16:9"
+      ],
+      "common_slots": [
+        "experiment_goal",
+        "variables",
+        "comparison_target",
+        "layout"
+      ],
+      "notes": "社区实验、对比实验、多参考图融合验证。"
+    },
+    {
+      "source_file": "艺术创作.md",
+      "slug": "artistic-creation",
+      "task_family": "art-visual",
+      "default_aspect_ratios": [
+        "1:1",
+        "3:4",
+        "16:9"
+      ],
+      "common_slots": [
+        "subject",
+        "style",
+        "composition",
+        "mood"
+      ],
+      "notes": "艺术创作、概念视觉、风格实验。"
+    },
+    {
+      "source_file": "角色_一致性.md",
+      "slug": "character-consistency",
+      "task_family": "character-sheet",
+      "default_aspect_ratios": [
+        "1:1",
+        "3:4",
+        "16:9",
+        "9:16"
+      ],
+      "common_slots": [
+        "subject",
+        "consistency_constraints",
+        "views_or_grid",
+        "expressions",
+        "accessories",
+        "layout"
+      ],
+      "notes": "角色一致性、多视图、宫格、设定资料卡。"
+    },
+    {
+      "source_file": "趣味玩法.md",
+      "slug": "playful-gimmicks",
+      "task_family": "playful-scene",
+      "default_aspect_ratios": [
+        "1:1",
+        "9:16",
+        "16:9"
+      ],
+      "common_slots": [
+        "premise",
+        "subject",
+        "style",
+        "hook"
+      ],
+      "notes": "趣味玩法、轻创意、娱乐型视觉玩法。"
+    }
+  ],
+  "principles": [
+    {
+      "id": "define-objective-before-style",
+      "title": "先定义用途，再定义风格",
+      "summary": "决定 prompt 结构的第一驱动是图的用途，而不是审美词堆砌。",
+      "applies_to": [
+        "poster-layout",
+        "infographic",
+        "ecommerce-conversion",
+        "social-post",
+        "portrait-photo"
+      ],
+      "signals": [
+        "need promo",
+        "need screenshot",
+        "need infographic",
+        "need realistic photo"
+      ],
+      "anti_patterns": [
+        "只写高级感、好看、震撼而不写用途",
+        "把截图、海报、主图混成一个任务"
+      ]
+    },
+    {
+      "id": "realism-needs-anchors",
+      "title": "真实感需要具体锚点",
+      "summary": "写实图像应通过材质、光线、瑕疵、环境证据建立可信感。",
+      "applies_to": [
+        "portrait-photo",
+        "avatar-portrait",
+        "social-post"
+      ],
+      "signals": [
+        "candid",
+        "photorealistic",
+        "documentary",
+        "snapshot"
+      ],
+      "anti_patterns": [
+        "只写 photorealistic",
+        "塑料皮肤",
+        "过度磨皮"
+      ]
+    },
+    {
+      "id": "layout-is-the-core-of-designed-images",
+      "title": "版式类图片的本体是信息组织",
+      "summary": "海报、信息图、UI、主图的质量往往取决于 layout 和 hierarchy。",
+      "applies_to": [
+        "poster-layout",
+        "infographic",
+        "ecommerce-conversion",
+        "ui-mockup"
+      ],
+      "signals": [
+        "header",
+        "footer",
+        "cards",
+        "callouts",
+        "sections",
+        "CTA"
+      ],
+      "anti_patterns": [
+        "只有审美描述没有区块结构",
+        "信息密度失控"
+      ]
+    },
+    {
+      "id": "platform-grammar-matters",
+      "title": "平台图要用平台语法描述",
+      "summary": "截图感、直播感、社媒卡片感来自平台特有 UI 结构，而不是抽象风格词。",
+      "applies_to": [
+        "social-post",
+        "ui-mockup"
+      ],
+      "signals": [
+        "status bar",
+        "chat bubble",
+        "follow button",
+        "gift popup",
+        "product card"
+      ],
+      "anti_patterns": [
+        "只写像抖音截图",
+        "没有任何平台结构"
+      ]
+    },
+    {
+      "id": "consistency-must-be-explicit",
+      "title": "一致性约束必须显式写出",
+      "summary": "多宫格、多视图、系列图应明确哪些元素必须保持一致，哪些允许变化。",
+      "applies_to": [
+        "character-sheet",
+        "comic-storyboard",
+        "social-post"
+      ],
+      "signals": [
+        "same character",
+        "grid",
+        "front/side/back",
+        "expression variants"
+      ],
+      "anti_patterns": [
+        "只说多图不说一致性范围",
+        "多格漂脸"
+      ]
+    },
+    {
+      "id": "fill-critical-slots-not-adjectives",
+      "applies_to": [
+        "poster-layout",
+        "infographic",
+        "ecommerce-conversion",
+        "ui-mockup",
+        "portrait-photo",
+        "character-sheet"
+      ],
+      "signals": [
+        "objective",
+        "subject",
+        "scene",
+        "visual_style",
+        "framing_camera",
+        "lighting",
+        "must_include",
+        "avoid",
+        "aspect ratio"
+      ],
+      "anti_patterns": [
+        "只堆高级感、电影感、氛围感而不写关键槽位",
+        "主体、场景、布局、比例缺失"
+      ],
+      "title": "好 prompt 不是堆形容词，而是补齐关键槽位",
+      "summary": "高质量 prompt 往往有这些核心槽位：",
+      "rawExcerpt": "高质量 prompt 往往有这些核心槽位：\n\n- `objective`：要解决什么视觉任务\n- `subject`：主体是谁 / 是什么\n- `scene`：场景与环境\n- `visual_style`：风格与审美方向\n- `framing_camera`：镜头 / 构图 / 视角\n- `lighting`：光线系统\n- `must_include`：必须出现的元素\n- `realism_anchors`：真实感 / 材质 / 细节锚点\n- `typography_or_ui`：文字 / UI / 信息布局要求\n- `consistency_constraints`：一致性要求\n- `avoid`：不要出现什么\n- `output_aspect_ratio`：比例"
+    },
+    {
+      "id": "failure-constraints-must-be-explicit",
+      "applies_to": [
+        "poster-layout",
+        "infographic",
+        "ecommerce-conversion",
+        "ui-mockup",
+        "portrait-photo",
+        "character-sheet"
+      ],
+      "signals": [
+        "avoid",
+        "不要 AI 味",
+        "不要塑料皮肤",
+        "不要乱字",
+        "不要背景抢主体"
+      ],
+      "anti_patterns": [
+        "没有 avoid 层",
+        "只讲想要什么，不讲绝对不要什么"
+      ],
+      "title": "优秀 prompt 常自带“失败约束”",
+      "summary": "很多模板的强点，在于隐含或显式说明不要什么：",
+      "rawExcerpt": "很多模板的强点，在于隐含或显式说明不要什么：\n\n- 不要 AI 味\n- 不要塑料皮肤\n- 不要摆拍感\n- 不要过度磨皮\n- 不要乱字\n- 不要数字感过强 / 过度锐化\n- 不要背景抢主体\n\n运行时应主动补一层 `avoid`。"
+    },
+    {
+      "id": "decompose-structure-before-style-mixing",
+      "applies_to": [
+        "social-post",
+        "ui-mockup",
+        "ecommerce-conversion",
+        "infographic",
+        "poster-layout"
+      ],
+      "signals": [
+        "用途结构",
+        "平台语法",
+        "layout hierarchy",
+        "次风格"
+      ],
+      "anti_patterns": [
+        "直接把多个风格词硬拼在一起",
+        "先堆风格再想结构"
+      ],
+      "title": "混合任务优先做结构拆解，再拼风格",
+      "summary": "比如：\n- 直播截图感 + 电商转化卡\n- 二创角色 + 社媒页面\n- 信息图 + 国风古籍手稿",
+      "rawExcerpt": "比如：\n- 直播截图感 + 电商转化卡\n- 二创角色 + 社媒页面\n- 信息图 + 国风古籍手稿\n\n不要直接拼形容词，应先判断任务本体，再融合次风格。\n\n优先级建议：\n1. 用途结构\n2. 主体与场景\n3. 平台 / 版式语法\n4. 视觉风格\n5. 细节锚点\n6. 避免项"
+    },
+    {
+      "id": "clarify-only-when-outcome-changes",
+      "applies_to": [
+        "ui-mockup",
+        "ecommerce-conversion",
+        "infographic",
+        "poster-layout",
+        "portrait-photo",
+        "character-sheet",
+        "social-post"
+      ],
+      "signals": [
+        "task type",
+        "layout",
+        "ratio",
+        "platform",
+        "style direction",
+        "consistency scope"
+      ],
+      "anti_patterns": [
+        "为了完整而盘问所有细节",
+        "低影响问题也打断用户"
+      ],
+      "title": "clarify 只问会改变画面结果的问题",
+      "summary": "需要 clarify 的，通常是会显著影响以下内容的问题：\n- 任务类型\n- 版式与用途\n- 比例\n- 平台\n- 风格方向\n- 是否系列图 / 一致性图",
+      "rawExcerpt": "需要 clarify 的，通常是会显著影响以下内容的问题：\n- 任务类型\n- 版式与用途\n- 比例\n- 平台\n- 风格方向\n- 是否系列图 / 一致性图\n\n不需要为了“完整”而把用户盘一遍。"
+    },
+    {
+      "id": "solve-new-themes-by-visual-problem-shape",
+      "applies_to": [
+        "generic",
+        "poster-layout",
+        "infographic",
+        "ecommerce-conversion",
+        "ui-mockup",
+        "portrait-photo"
+      ],
+      "signals": [
+        "visual task",
+        "core subject",
+        "scene",
+        "credibility detail",
+        "failure smells"
+      ],
+      "anti_patterns": [
+        "模板库里没见过题材就放弃",
+        "把模板当题材字典而不是求解器"
+      ],
+      "title": "新主题不等于无解",
+      "summary": "模板库没有现成题材时，不要放弃，而要用“视觉问题求解”方式拆解：",
+      "rawExcerpt": "模板库没有现成题材时，不要放弃，而要用“视觉问题求解”方式拆解：\n\n- 这是哪类任务？\n- 想传达什么？\n- 关键主体与场景是什么？\n- 靠什么细节建立可信感？\n- 哪些失败味道必须压掉？\n\n模板库应该提供的是求解能力，不是题材字典。"
+    }
+  ]
+}

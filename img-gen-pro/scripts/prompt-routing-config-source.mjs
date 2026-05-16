@@ -1,0 +1,1415 @@
+export const ROUTING_CONFIG_SOURCE = {
+  "templateIntentProfiles": {
+    "ui-screenshot-system": {
+      "zh": {
+        "label": "真实界面为主",
+        "description": "重点是屏幕结构、控件层级、评论区/直播区等真实 UI 细节。"
+      },
+      "en": {
+        "label": "Real interface first",
+        "description": "Focus on an actual screen, UI hierarchy, controls, comments, or live-commerce layout."
+      }
+    },
+    "infographic-engine": {
+      "zh": {
+        "label": "模块化解释图为主",
+        "description": "重点是把信息拆成多个卡片/模块，用简洁结构讲清概念。"
+      },
+      "en": {
+        "label": "Modular explainer first",
+        "description": "Focus on multiple information blocks/cards that explain a concept clearly."
+      }
+    },
+    "scientific-scale-diagram": {
+      "zh": {
+        "label": "尺度/比例对比为主",
+        "description": "重点是不同对象的尺寸差异、缩放关系和比例感。"
+      },
+      "en": {
+        "label": "Scale comparison first",
+        "description": "Focus on size differences, zoom levels, and proportional relationships."
+      }
+    },
+    "poster-layout-system": {
+      "zh": {
+        "label": "通用高级海报版式",
+        "description": "重点是单张海报的构图、层级、纹理和整体完成度。"
+      },
+      "en": {
+        "label": "Premium poster layout",
+        "description": "Focus on a finished single-poster composition, hierarchy, texture, and polish."
+      }
+    },
+    "sports-campaign-poster": {
+      "zh": {
+        "label": "运动 campaign 视觉",
+        "description": "重点是运动员/器材/速度感的商业 campaign 海报。"
+      },
+      "en": {
+        "label": "Sports campaign visual",
+        "description": "Focus on athletes, gear, energy, and campaign-style commercial poster language."
+      }
+    },
+    "conceptual-typography-poster": {
+      "zh": {
+        "label": "标题文字做主角",
+        "description": "重点是标题本身成为主视觉，图像只服务文字概念。"
+      },
+      "en": {
+        "label": "Typography as the hero",
+        "description": "Make the title itself the main visual structure; imagery supports the type concept."
+      }
+    },
+    "ink-double-exposure-poster": {
+      "zh": {
+        "label": "人物剪影叙事海报",
+        "description": "重点是人物剪影、水墨氛围、双重曝光式叙事。"
+      },
+      "en": {
+        "label": "Portrait-silhouette narrative",
+        "description": "Focus on portrait silhouette, ink atmosphere, and double-exposure storytelling."
+      }
+    },
+    "nature-science-poster": {
+      "zh": {
+        "label": "白底极简科普海报",
+        "description": "重点是放大的主体生物 + 极简说明，像高端发布会科普视觉。"
+      },
+      "en": {
+        "label": "Minimal science poster",
+        "description": "Focus on an enlarged subject with restrained scientific labels on a clean white layout."
+      }
+    },
+    "product-commerce-visual": {
+      "zh": {
+        "label": "商品/产品主视觉",
+        "description": "重点是商品本身的卖点、质感和商业广告感。"
+      },
+      "en": {
+        "label": "Product hero visual",
+        "description": "Focus on the product itself, selling points, material quality, and ad-style hero treatment."
+      }
+    },
+    "personalized-beauty-report": {
+      "zh": {
+        "label": "个性化推荐报告",
+        "description": "重点是基于自拍做分析、推荐和试色，不是通用信息图。"
+      },
+      "en": {
+        "label": "Personal recommendation report",
+        "description": "Focus on selfie-based analysis, shade recommendation, and try-on/report logic."
+      }
+    },
+    "brand-identity-package": {
+      "zh": {
+        "label": "品牌识别系统",
+        "description": "重点是 logo、配色、字体和品牌识别规则。"
+      },
+      "en": {
+        "label": "Brand identity system",
+        "description": "Focus on logo, palette, typography, and identity rules."
+      }
+    },
+    "brand-touchpoint-board": {
+      "zh": {
+        "label": "多触点品牌落地",
+        "description": "重点是包装、社媒、门店、App 等多个触点的统一视觉。"
+      },
+      "en": {
+        "label": "Multi-touchpoint rollout",
+        "description": "Focus on a unified brand rollout across packaging, social, retail, app, and other touchpoints."
+      }
+    },
+    "architecture-space": {
+      "zh": {
+        "label": "建筑/空间/城市地图",
+        "description": "重点是空间结构、建筑表达或城市地图，而不是 UI 或报告页。"
+      },
+      "en": {
+        "label": "Architecture / space / city map",
+        "description": "Focus on spatial structure, architecture, or city-map expression rather than UI or report layouts."
+      }
+    },
+    "realistic-photography": {
+      "zh": {
+        "label": "写实摄影/人像",
+        "description": "重点是镜头语言、光线、人物状态和真实拍摄感。"
+      },
+      "en": {
+        "label": "Realistic photography / portrait",
+        "description": "Focus on camera language, lighting, subject presence, and believable photographic realism."
+      }
+    },
+    "street-accident-moment": {
+      "zh": {
+        "label": "街头手机抓拍瞬间",
+        "description": "重点是手机随手拍、意外痕迹、街头现场感。"
+      },
+      "en": {
+        "label": "Candid street phone moment",
+        "description": "Focus on phone-captured candid accident traces and lived-in street realism."
+      }
+    },
+    "illustration-art-style": {
+      "zh": {
+        "label": "插画/艺术风格表达",
+        "description": "重点是材质感、插画笔触、刺绣/纤维/绘本等艺术风格。"
+      },
+      "en": {
+        "label": "Illustration / art style",
+        "description": "Focus on materiality, illustration treatment, embroidery/fiber/picture-book style, or art direction."
+      }
+    },
+    "character-design-sheet": {
+      "zh": {
+        "label": "角色设定与动作拆解",
+        "description": "重点是角色设定、姿态变化、分解视图。"
+      },
+      "en": {
+        "label": "Character design sheet",
+        "description": "Focus on character setup, pose variations, and structured design-sheet views."
+      }
+    },
+    "3d-collectible-toy": {
+      "zh": {
+        "label": "3D 收藏玩具化",
+        "description": "重点是把角色/参考图转成可收藏的玩具或手办形态。"
+      },
+      "en": {
+        "label": "3D collectible toy",
+        "description": "Focus on turning a character/reference into a stylized collectible figure or toy."
+      }
+    },
+    "scene-storytelling": {
+      "zh": {
+        "label": "完整场景叙事",
+        "description": "重点是一个整体场景在讲故事，而不是 UI 或单张海报。"
+      },
+      "en": {
+        "label": "Scene-led storytelling",
+        "description": "Focus on a full narrative scene rather than a UI screenshot or a single-poster layout."
+      }
+    },
+    "history-classical-themes": {
+      "zh": {
+        "label": "历史/古风叙事",
+        "description": "重点是历史气质、古典题材、长卷/文化叙事。"
+      },
+      "en": {
+        "label": "Historical / classical narrative",
+        "description": "Focus on historical tone, classical themes, and cultural or scroll-like storytelling."
+      }
+    },
+    "document-publishing": {
+      "zh": {
+        "label": "出版页/报告页",
+        "description": "重点是文档版式、报告页、出版物封面或内页结构。"
+      },
+      "en": {
+        "label": "Document / report page",
+        "description": "Focus on publication layout, report pages, covers, or editorial/document structure."
+      }
+    },
+    "concept-product-breakdown": {
+      "zh": {
+        "label": "概念产品拆解板",
+        "description": "重点是产品结构、机制、研发拆解和说明板。"
+      },
+      "en": {
+        "label": "Concept product breakdown",
+        "description": "Focus on product structure, mechanism, R&D breakdown, and annotated concept-board logic."
+      }
+    },
+    "city-creative-font": {
+      "zh": {
+        "label": "城市名字体主视觉",
+        "description": "重点是城市名本身成为主视觉，并把地域文化元素融入笔画结构。"
+      },
+      "en": {
+        "label": "City-name typography hero",
+        "description": "Focus on the city name itself as the main visual, with local culture embedded into the letterforms."
+      }
+    },
+    "fashion-lookbook-pose": {
+      "zh": {
+        "label": "时尚姿态 lookbook",
+        "description": "重点是穿搭展示、姿态控制和 Pinterest / editorial 式时尚画面。"
+      },
+      "en": {
+        "label": "Fashion pose lookbook",
+        "description": "Focus on outfit presentation, pose control, and Pinterest/editorial fashion framing."
+      }
+    },
+    "impossible-concept-product": {
+      "zh": {
+        "label": "约束驱动概念产品",
+        "description": "重点是围绕一个不可能约束去设计产品，而不是普通商品海报。"
+      },
+      "en": {
+        "label": "Constraint-driven concept product",
+        "description": "Focus on designing a product around an impossible constraint, not a normal commerce hero shot."
+      }
+    },
+    "meme-viral-content": {
+      "zh": {
+        "label": "梗图 / 传播图",
+        "description": "重点是幽默理解、社媒传播性和玩梗语境，而不是普通插画或海报。"
+      },
+      "en": {
+        "label": "Meme / viral content",
+        "description": "Focus on humor, social-shareability, and meme context rather than a generic illustration or poster."
+      }
+    },
+    "multi-reference-composition": {
+      "zh": {
+        "label": "多参考图融合编辑",
+        "description": "重点是主体与场景的自然融合，要求光线、透视、景深和色调一起统一。"
+      },
+      "en": {
+        "label": "Multi-reference composition edit",
+        "description": "Focus on naturally merging subject and scene so lighting, perspective, depth, and color all reconcile together."
+      }
+    },
+    "text-on-objects": {
+      "zh": {
+        "label": "物体表面文字真实性",
+        "description": "重点是让文字真实贴合曲面、材质或屏幕，而不是普通摄影主体。"
+      },
+      "en": {
+        "label": "Text realism on objects",
+        "description": "Focus on believable text conforming to surfaces, materials, or screens rather than a generic photographic subject."
+      }
+    }
+  },
+  "pairwiseClarifiers": {
+    "conceptual-typography-poster__poster-layout-system": {
+      "templates": [
+        "conceptual-typography-poster",
+        "poster-layout-system"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "conceptual-typography-poster": [
+            "title",
+            "headline",
+            "typography",
+            "letter",
+            "字",
+            "字体",
+            "字形",
+            "标题",
+            "排版",
+            "文案"
+          ],
+          "poster-layout-system": [
+            "composition",
+            "layout",
+            "subject",
+            "visual",
+            "hero",
+            "构图",
+            "主体",
+            "氛围",
+            "画面",
+            "版式"
+          ]
+        }
+      },
+      "zh": {
+        "question": "这张图你更希望哪一部分成为主角？",
+        "options": [
+          {
+            "templateId": "conceptual-typography-poster",
+            "label": "标题文字本身",
+            "description": "画面核心是标题字形，图像只服务文字概念。"
+          },
+          {
+            "templateId": "poster-layout-system",
+            "label": "画面主体与构图",
+            "description": "重点是主视觉主体、层级、纹理与单张海报完成度。"
+          }
+        ]
+      },
+      "en": {
+        "question": "What should dominate this image?",
+        "options": [
+          {
+            "templateId": "conceptual-typography-poster",
+            "label": "The title typography itself",
+            "description": "The words become the main visual structure; imagery supports the concept."
+          },
+          {
+            "templateId": "poster-layout-system",
+            "label": "The subject and overall composition",
+            "description": "The main visual subject, hierarchy, texture, and poster finish matter most."
+          }
+        ]
+      }
+    },
+    "personalized-beauty-report__infographic-engine": {
+      "templates": [
+        "personalized-beauty-report",
+        "infographic-engine"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "personalized-beauty-report": [
+            "beauty",
+            "makeup",
+            "lipstick",
+            "shade",
+            "selfie",
+            "face",
+            "美妆",
+            "口红",
+            "试色",
+            "自拍",
+            "肤色"
+          ],
+          "infographic-engine": [
+            "infographic",
+            "explainer",
+            "chart",
+            "module",
+            "信息图",
+            "解释图",
+            "模块",
+            "卡片"
+          ]
+        }
+      },
+      "zh": {
+        "question": "你更想要哪种结果？",
+        "options": [
+          {
+            "templateId": "personalized-beauty-report",
+            "label": "基于自拍的个性化推荐报告",
+            "description": "会突出肤色分析、色号推荐、试色和使用场景。"
+          },
+          {
+            "templateId": "infographic-engine",
+            "label": "通用说明型信息图",
+            "description": "重点是把信息模块化讲清楚，不强调个性化分析。"
+          }
+        ]
+      },
+      "en": {
+        "question": "Which outcome do you want more?",
+        "options": [
+          {
+            "templateId": "personalized-beauty-report",
+            "label": "A personalized recommendation report",
+            "description": "Focus on face analysis, shade picks, try-on logic, and usage scenarios."
+          },
+          {
+            "templateId": "infographic-engine",
+            "label": "A general explainer infographic",
+            "description": "Focus on modular explanation, not personalized analysis."
+          }
+        ]
+      }
+    },
+    "ui-screenshot-system__infographic-engine": {
+      "templates": [
+        "ui-screenshot-system",
+        "infographic-engine"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "ui-screenshot-system": [
+            "ui",
+            "interface",
+            "screen",
+            "screenshot",
+            "app",
+            "dashboard",
+            "界面",
+            "截图",
+            "页面",
+            "按钮",
+            "弹幕",
+            "评论"
+          ],
+          "infographic-engine": [
+            "infographic",
+            "explainer",
+            "module",
+            "cards",
+            "信息图",
+            "讲解图",
+            "模块",
+            "卡片"
+          ]
+        }
+      },
+      "zh": {
+        "question": "你更需要哪种呈现方式？",
+        "options": [
+          {
+            "templateId": "ui-screenshot-system",
+            "label": "真实界面截图感",
+            "description": "像一个真的 App / 网站界面，有控件、评论区、按钮和屏幕层级。"
+          },
+          {
+            "templateId": "infographic-engine",
+            "label": "信息模块解释感",
+            "description": "像一张讲解图，把内容拆成多个信息卡片和说明块。"
+          }
+        ]
+      },
+      "en": {
+        "question": "Which presentation do you need more?",
+        "options": [
+          {
+            "templateId": "ui-screenshot-system",
+            "label": "A real interface screenshot feel",
+            "description": "Looks like an actual app/site screen with controls, comments, and UI hierarchy."
+          },
+          {
+            "templateId": "infographic-engine",
+            "label": "A modular explainer feel",
+            "description": "Looks like an explainer graphic built from multiple cards and information blocks."
+          }
+        ]
+      }
+    },
+    "brand-identity-package__brand-touchpoint-board": {
+      "templates": [
+        "brand-identity-package",
+        "brand-touchpoint-board"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "brand-identity-package": [
+            "identity",
+            "logo",
+            "palette",
+            "typography",
+            "guideline",
+            "vi",
+            "识别",
+            "logo",
+            "配色",
+            "字体",
+            "规范",
+            "品牌系统"
+          ],
+          "brand-touchpoint-board": [
+            "touchpoint",
+            "packaging",
+            "social",
+            "retail",
+            "app",
+            "落地",
+            "包装",
+            "社媒",
+            "门店",
+            "触点",
+            "应用"
+          ]
+        }
+      },
+      "zh": {
+        "question": "你更想先确定哪一层？",
+        "options": [
+          {
+            "templateId": "brand-identity-package",
+            "label": "品牌识别系统本身",
+            "description": "先明确 logo、字体、配色和品牌规则。"
+          },
+          {
+            "templateId": "brand-touchpoint-board",
+            "label": "品牌在多个触点上的落地",
+            "description": "重点看包装、社媒、门店、App 等如何统一呈现。"
+          }
+        ]
+      },
+      "en": {
+        "question": "Which layer do you want to define first?",
+        "options": [
+          {
+            "templateId": "brand-identity-package",
+            "label": "The identity system itself",
+            "description": "Define the logo, palette, typography, and brand rules first."
+          },
+          {
+            "templateId": "brand-touchpoint-board",
+            "label": "How the brand rolls out across touchpoints",
+            "description": "Focus on packaging, social, retail, app, and other real-world applications."
+          }
+        ]
+      }
+    },
+    "street-accident-moment__realistic-photography": {
+      "templates": [
+        "street-accident-moment",
+        "realistic-photography"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "street-accident-moment": [
+            "spilled",
+            "spill",
+            "street",
+            "pavement",
+            "phone",
+            "candid",
+            "街头",
+            "泼洒",
+            "路边",
+            "手机",
+            "抓拍"
+          ],
+          "realistic-photography": [
+            "portrait",
+            "photography",
+            "camera",
+            "lens",
+            "lighting",
+            "人像",
+            "摄影",
+            "镜头",
+            "光线",
+            "写真"
+          ]
+        }
+      },
+      "zh": {
+        "question": "你更想要哪种真实感？",
+        "options": [
+          {
+            "templateId": "street-accident-moment",
+            "label": "街头手机抓拍瞬间",
+            "description": "强调意外痕迹、现场感、不完美和路人视角。"
+          },
+          {
+            "templateId": "realistic-photography",
+            "label": "更完整的写实摄影",
+            "description": "强调镜头语言、人物状态、光线和较稳定的拍摄质感。"
+          }
+        ]
+      },
+      "en": {
+        "question": "What kind of realism do you want more?",
+        "options": [
+          {
+            "templateId": "street-accident-moment",
+            "label": "A candid phone-captured street moment",
+            "description": "Emphasize accident traces, imperfection, and everyday street feel."
+          },
+          {
+            "templateId": "realistic-photography",
+            "label": "A fuller realistic photo treatment",
+            "description": "Emphasize camera language, subject presence, lighting, and steadier photographic polish."
+          }
+        ]
+      }
+    },
+    "scientific-scale-diagram__infographic-engine": {
+      "templates": [
+        "scientific-scale-diagram",
+        "infographic-engine"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "scientific-scale-diagram": [
+            "scale",
+            "size",
+            "zoom",
+            "ratio",
+            "比例",
+            "尺度",
+            "尺寸",
+            "缩放"
+          ],
+          "infographic-engine": [
+            "infographic",
+            "explainer",
+            "module",
+            "compare",
+            "信息图",
+            "解释图",
+            "模块",
+            "对比"
+          ]
+        }
+      },
+      "zh": {
+        "question": "你更想突出哪种信息结构？",
+        "options": [
+          {
+            "templateId": "scientific-scale-diagram",
+            "label": "尺寸/比例关系",
+            "description": "核心是对象之间的大小差异、缩放层级和比例感。"
+          },
+          {
+            "templateId": "infographic-engine",
+            "label": "模块化概念解释",
+            "description": "核心是把一个概念拆成多个模块来讲清楚。"
+          }
+        ]
+      },
+      "en": {
+        "question": "Which information structure matters more?",
+        "options": [
+          {
+            "templateId": "scientific-scale-diagram",
+            "label": "Size and scale relationships",
+            "description": "The core is relative size, zoom levels, and proportional comparison."
+          },
+          {
+            "templateId": "infographic-engine",
+            "label": "A modular concept explainer",
+            "description": "The core is breaking a concept into multiple explanatory blocks."
+          }
+        ]
+      }
+    },
+    "fashion-lookbook-pose__realistic-photography": {
+      "templates": [
+        "fashion-lookbook-pose",
+        "realistic-photography"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "fashion-lookbook-pose": [
+            "fashion",
+            "lookbook",
+            "pinterest",
+            "outfit",
+            "pose",
+            "时尚",
+            "穿搭",
+            "姿态"
+          ],
+          "realistic-photography": [
+            "portrait",
+            "photography",
+            "camera",
+            "lens",
+            "人像",
+            "摄影",
+            "镜头"
+          ]
+        }
+      },
+      "zh": {
+        "question": "你更想突出哪一层？",
+        "options": [
+          {
+            "templateId": "fashion-lookbook-pose",
+            "label": "穿搭姿态与 lookbook 感",
+            "description": "重点是服装展示、姿态引导和 Pinterest / editorial 风格。"
+          },
+          {
+            "templateId": "realistic-photography",
+            "label": "更完整的写实摄影感",
+            "description": "重点是镜头语言、人物状态和更通用的摄影真实感。"
+          }
+        ]
+      },
+      "en": {
+        "question": "What do you want to emphasize more?",
+        "options": [
+          {
+            "templateId": "fashion-lookbook-pose",
+            "label": "The outfit pose and lookbook feel",
+            "description": "Focus on styling, pose guidance, and Pinterest/editorial fashion language."
+          },
+          {
+            "templateId": "realistic-photography",
+            "label": "A fuller realistic photo treatment",
+            "description": "Focus on camera language, subject presence, and broader photographic realism."
+          }
+        ]
+      }
+    },
+    "text-on-objects__realistic-photography": {
+      "templates": [
+        "text-on-objects",
+        "realistic-photography"
+      ],
+      "trigger": {
+        "requireBothSides": true,
+        "sideSignals": {
+          "text-on-objects": [
+            "banana",
+            "surface text",
+            "screen content",
+            "写在",
+            "物体表面",
+            "屏幕内容"
+          ],
+          "realistic-photography": [
+            "portrait",
+            "photography",
+            "camera",
+            "人像",
+            "摄影"
+          ]
+        }
+      },
+      "zh": {
+        "question": "这次你更在意哪种真实感？",
+        "options": [
+          {
+            "templateId": "text-on-objects",
+            "label": "特殊表面 / 屏幕上的文字真实性",
+            "description": "重点是文字如何贴合曲面、材质或真实屏幕。"
+          },
+          {
+            "templateId": "realistic-photography",
+            "label": "整体摄影画面的真实感",
+            "description": "重点是镜头、光线和更完整的摄影语言。"
+          }
+        ]
+      },
+      "en": {
+        "question": "Which realism matters more here?",
+        "options": [
+          {
+            "templateId": "text-on-objects",
+            "label": "Believable text on a special surface or screen",
+            "description": "Focus on how text conforms to material, curvature, or a real display."
+          },
+          {
+            "templateId": "realistic-photography",
+            "label": "The overall photographic realism",
+            "description": "Focus on lens language, lighting, and full-scene photographic treatment."
+          }
+        ]
+      }
+    }
+  },
+  "specialRouteBoosts": [
+    {
+      "templateId": "ui-screenshot-system",
+      "matchRegex": "直播|带货|弹幕|评论区|商品卡|抖音|淘宝直播|小红书直播|livestream|live stream",
+      "matchFlags": "i",
+      "points": 28
+    },
+    {
+      "templateId": "concept-product-breakdown",
+      "matchRegex": "架构图|系统架构|微服务|api gateway|消息队列|postgresql|redis|sequence|state machine|er 图|拓扑|flowchart|architecture diagram",
+      "matchFlags": "i",
+      "points": 34
+    },
+    {
+      "templateId": "multi-reference-composition",
+      "matchRegex": "多参考图|参考这两张图|把这个人放进|把这个产品自然放到|自然放到另一个场景|放进那个|放到另一个场景|背景换成|光线要统一|场景迁移|融合|合成|multi reference|background swap|scene transfer|composite",
+      "matchFlags": "i",
+      "points": 42
+    },
+    {
+      "templateId": "impossible-concept-product",
+      "matchRegex": "无拉链|没有拉链|无缝线|没有缝线|不可能产品|约束驱动|no zipper|no seam|impossible concept",
+      "matchFlags": "i",
+      "points": 42
+    },
+    {
+      "templateId": "text-on-objects",
+      "matchRegex": "写在|写上|香蕉皮|物体表面|屏幕内容|曲面文字|banana|surface text|text on|screen content",
+      "matchFlags": "i",
+      "points": 40
+    },
+    {
+      "templateId": "fashion-lookbook-pose",
+      "matchRegex": "pinterest|lookbook|穿搭|姿态|一只袖子|拎包|fashion pose|outfit pose",
+      "matchFlags": "i",
+      "points": 34
+    },
+    {
+      "templateId": "city-creative-font",
+      "matchRegex": "城市名|城市字体|创意字体|上海|杭州|苏州|南京|成都|西安|city font|creative font",
+      "matchFlags": "i",
+      "points": 44
+    },
+    {
+      "templateId": "meme-viral-content",
+      "matchRegex": "梗图|恶搞|玩梗|传播图|meme|viral|parody|satire",
+      "matchFlags": "i",
+      "points": 30
+    }
+  ],
+  "templateQueryGuards": {
+    "conceptual-typography-poster": {
+      "requireAny": [
+        "title",
+        "headline",
+        "typography",
+        "type-first",
+        "letter",
+        "标题",
+        "字形",
+        "字体",
+        "排版",
+        "标语"
+      ],
+      "penalty": 36
+    },
+    "sports-campaign-poster": {
+      "requireAny": [
+        "sport",
+        "athlete",
+        "fitness",
+        "campaign",
+        "球",
+        "运动",
+        "健身",
+        "球员"
+      ],
+      "penalty": 24
+    },
+    "poster-layout-system": {
+      "requireAny": [
+        "poster",
+        "cover",
+        "editorial",
+        "campaign",
+        "headline",
+        "海报",
+        "封面",
+        "杂志",
+        "排版"
+      ],
+      "penalty": 18
+    },
+    "ink-double-exposure-poster": {
+      "requireAny": [
+        "double exposure",
+        "silhouette",
+        "portrait",
+        "人物",
+        "水墨",
+        "双重曝光",
+        "剪影"
+      ],
+      "penalty": 28,
+      "boostIfMatched": 10
+    },
+    "nature-science-poster": {
+      "requireAny": [
+        "science",
+        "species",
+        "animal",
+        "insect",
+        "reptile",
+        "wildlife",
+        "科普",
+        "物种",
+        "动物",
+        "昆虫",
+        "生物"
+      ],
+      "penalty": 28,
+      "boostIfMatched": 24
+    },
+    "brand-identity-package": {
+      "requireAny": [
+        "logo",
+        "identity",
+        "brand board",
+        "guideline",
+        "vi",
+        "hex",
+        "字体",
+        "配色",
+        "品牌识别",
+        "品牌系统",
+        "视觉识别"
+      ],
+      "penalty": 44
+    },
+    "brand-touchpoint-board": {
+      "requireAny": [
+        "touchpoint",
+        "rollout",
+        "application",
+        "mockup",
+        "packaging",
+        "触点",
+        "落地",
+        "应用",
+        "系统板",
+        "视觉板"
+      ],
+      "penalty": 24,
+      "boostIfMatched": 10
+    },
+    "personalized-beauty-report": {
+      "requireAny": [
+        "selfie",
+        "try-on",
+        "shade",
+        "report",
+        "analysis",
+        "recommendation",
+        "自拍",
+        "试色",
+        "推荐",
+        "肤色",
+        "报告",
+        "分析"
+      ],
+      "penalty": 24,
+      "boostIfMatched": 36
+    },
+    "product-commerce-visual": {
+      "requireAny": [
+        "product",
+        "hero shot",
+        "ecommerce",
+        "commercial ad",
+        "商品",
+        "电商",
+        "产品",
+        "主图",
+        "英雄图",
+        "广告"
+      ],
+      "penalty": 20,
+      "boostIfMatched": 12
+    },
+    "ui-screenshot-system": {
+      "requireAny": [
+        "ui",
+        "interface",
+        "screen",
+        "screenshot",
+        "app",
+        "dashboard",
+        "直播",
+        "界面",
+        "弹幕",
+        "评论",
+        "聊天",
+        "首屏"
+      ],
+      "penalty": 24
+    },
+    "street-accident-moment": {
+      "requireAny": [
+        "spilled",
+        "spill",
+        "street",
+        "pavement",
+        "smartphone photo",
+        "泼洒",
+        "街头",
+        "地面",
+        "手机照片",
+        "洒落"
+      ],
+      "penalty": 18,
+      "boostIfMatched": 12
+    },
+    "realistic-photography": {
+      "requireAny": [
+        "photography",
+        "portrait",
+        "camera",
+        "lens",
+        "same face",
+        "face identity",
+        "人像",
+        "摄影",
+        "拍摄",
+        "肖像",
+        "同一张脸",
+        "面部"
+      ],
+      "penalty": 18,
+      "boostIfMatched": 10
+    },
+    "3d-collectible-toy": {
+      "requireAny": [
+        "toy",
+        "collectible",
+        "figure",
+        "vinyl",
+        "3d",
+        "玩具",
+        "手办",
+        "公仔",
+        "收藏"
+      ],
+      "penalty": 20
+    },
+    "city-creative-font": {
+      "requireAny": [
+        "city",
+        "font",
+        "typography",
+        "creative font",
+        "城市",
+        "字体",
+        "字形",
+        "创意字体"
+      ],
+      "penalty": 26,
+      "boostIfMatched": 18
+    },
+    "fashion-lookbook-pose": {
+      "requireAny": [
+        "fashion",
+        "lookbook",
+        "pinterest",
+        "outfit",
+        "pose",
+        "时尚",
+        "穿搭",
+        "姿态"
+      ],
+      "penalty": 24,
+      "boostIfMatched": 20
+    },
+    "impossible-concept-product": {
+      "requireAny": [
+        "impossible",
+        "constraint",
+        "no zipper",
+        "no seam",
+        "concept product",
+        "无拉链",
+        "无缝线",
+        "约束",
+        "概念产品"
+      ],
+      "penalty": 34,
+      "boostIfMatched": 24
+    },
+    "meme-viral-content": {
+      "requireAny": [
+        "meme",
+        "viral",
+        "satire",
+        "parody",
+        "shitpost",
+        "梗图",
+        "恶搞",
+        "玩梗"
+      ],
+      "penalty": 24,
+      "boostIfMatched": 18
+    },
+    "multi-reference-composition": {
+      "requireAny": [
+        "multi reference",
+        "reference fusion",
+        "background swap",
+        "scene transfer",
+        "composite",
+        "merge",
+        "多参考图",
+        "参考这两张图",
+        "两张图",
+        "放进那个",
+        "放到另一个场景",
+        "场景迁移",
+        "融合",
+        "合成",
+        "光线统一"
+      ],
+      "penalty": 38,
+      "boostIfMatched": 28
+    },
+    "text-on-objects": {
+      "requireAny": [
+        "text on",
+        "surface text",
+        "banana",
+        "screen content",
+        "render text",
+        "写在",
+        "物体表面文字",
+        "香蕉",
+        "屏幕内容"
+      ],
+      "penalty": 30,
+      "boostIfMatched": 22
+    }
+  },
+  "templateScoreAdjustments": [
+    {
+      "templateIds": [
+        "concept-product-breakdown"
+      ],
+      "matchRegex": "架构图|系统架构|微服务|api gateway|消息队列|postgresql|redis|sequence|state machine|er 图|拓扑|拓扑图|flowchart|architecture diagram",
+      "matchFlags": "i",
+      "points": 26,
+      "reason": "technical-diagram-route"
+    },
+    {
+      "templateIds": [
+        "multi-reference-composition"
+      ],
+      "matchRegex": "参考这两张图|两张图|把这个产品自然放到|自然放到另一个场景|放到另一个场景|放进那个|光线要统一|场景迁移|background swap|scene transfer|multi reference|reference fusion|composite",
+      "matchFlags": "i",
+      "points": 34,
+      "reason": "multi-reference-route"
+    },
+    {
+      "templateIds": [
+        "city-creative-font"
+      ],
+      "matchRegex": "城市名|城市字体|创意字体|上海|杭州|苏州|南京|成都|西安|city font|creative font",
+      "matchFlags": "i",
+      "points": 22,
+      "reason": "city-font-specialization"
+    },
+    {
+      "templateIds": [
+        "conceptual-typography-poster"
+      ],
+      "matchRegex": "城市名|城市字体|创意字体|上海|杭州|苏州|南京|成都|西安|city font|creative font",
+      "matchFlags": "i",
+      "points": -18,
+      "reason": "city-font-beats-generic-typography"
+    },
+    {
+      "templateIds": [
+        "product-commerce-visual"
+      ],
+      "matchRegex": "landing page|hero|buy-now|buy now|cta|benefit bullets?|conversion|落地页|首屏|卖点|按钮|转化",
+      "matchFlags": "i",
+      "absentAny": [
+        "光线要统一",
+        "场景迁移",
+        "放到另一个场景",
+        "多参考图",
+        "参考这两张图",
+        "background swap",
+        "scene transfer",
+        "multi reference",
+        "reference fusion",
+        "composite"
+      ],
+      "points": 20,
+      "reason": "conversion-hero-route"
+    },
+    {
+      "templateIds": [
+        "poster-layout-system",
+        "sports-campaign-poster"
+      ],
+      "matchRegex": "landing page|buy-now|buy now|cta|benefit bullets?|conversion|落地页|首屏|卖点|按钮|转化",
+      "matchFlags": "i",
+      "points": -26,
+      "reason": "poster-mismatch"
+    },
+    {
+      "templateIds": [
+        "personalized-beauty-report"
+      ],
+      "matchRegex": "landing page|hero|buy-now|buy now|cta|benefit bullets?|conversion|落地页|首屏|卖点|按钮|转化",
+      "matchFlags": "i",
+      "absentAny": [
+        "selfie",
+        "try-on",
+        "shade",
+        "report",
+        "analysis",
+        "recommendation",
+        "自拍",
+        "试色",
+        "推荐",
+        "肤色",
+        "报告",
+        "分析"
+      ],
+      "points": -28,
+      "reason": "beauty-report-mismatch"
+    }
+  ],
+  "targetRouteHints": [
+    {
+      "matchRegex": "references\\/ui-mockups\\/live-commerce-ui\\.md$",
+      "includeAny": [
+        "直播",
+        "带货",
+        "直播间",
+        "弹幕",
+        "礼物",
+        "商品卡",
+        "livestream",
+        "live stream",
+        "live commerce"
+      ],
+      "excludeAny": [
+        "推文",
+        "动态",
+        "帖子",
+        "主页",
+        "profile",
+        "tweet",
+        "thread"
+      ]
+    },
+    {
+      "matchRegex": "references\\/ui-mockups\\/social-interface-mockup\\.md$",
+      "includeAny": [
+        "推文",
+        "动态",
+        "帖子",
+        "主页",
+        "社交平台",
+        "twitter",
+        "x ",
+        "微博",
+        "小红书",
+        "threads",
+        "instagram",
+        "profile"
+      ],
+      "excludeAny": [
+        "直播",
+        "带货",
+        "直播间",
+        "弹幕",
+        "礼物",
+        "商品卡",
+        "livestream",
+        "live commerce"
+      ]
+    },
+    {
+      "matchRegex": "references\\/product-visuals\\/ecommerce-marketing-board\\.md$",
+      "includeAny": [
+        "landing page",
+        "hero",
+        "buy-now",
+        "buy now",
+        "cta",
+        "benefit",
+        "bullet",
+        "conversion",
+        "落地页",
+        "首屏",
+        "卖点",
+        "按钮",
+        "转化"
+      ],
+      "excludeAny": [
+        "影棚",
+        "studio",
+        "white background",
+        "白底",
+        "lifestyle",
+        "生活场景"
+      ]
+    },
+    {
+      "matchRegex": "references\\/product-visuals\\/premium-studio-product\\.md$",
+      "includeAny": [
+        "studio",
+        "影棚",
+        "杂志",
+        "商业大片",
+        "dramatic lighting",
+        "luxury shot",
+        "cinematic"
+      ],
+      "excludeAny": [
+        "landing page",
+        "hero",
+        "buy-now",
+        "buy now",
+        "cta",
+        "benefit",
+        "bullet",
+        "conversion",
+        "落地页",
+        "首屏",
+        "卖点",
+        "按钮",
+        "转化"
+      ]
+    },
+    {
+      "matchRegex": "references\\/editing-workflows\\/multi-reference-composition\\.md$",
+      "includeAny": [
+        "多参考图",
+        "两张图",
+        "参考这两张图",
+        "放进那个",
+        "光线要统一",
+        "background swap",
+        "multi reference",
+        "composite",
+        "merge"
+      ],
+      "excludeAny": [
+        "动作参考表",
+        "角色设定",
+        "pose sheet"
+      ]
+    },
+    {
+      "matchRegex": "references\\/product-visuals\\/impossible-concept-product\\.md$",
+      "includeAny": [
+        "无拉链",
+        "没有拉链",
+        "无缝线",
+        "constraint-driven",
+        "no zipper",
+        "no seam",
+        "impossible"
+      ],
+      "excludeAny": []
+    },
+    {
+      "matchRegex": "references\\/scenes-and-illustrations\\/text-on-objects\\.md$",
+      "includeAny": [
+        "香蕉皮",
+        "写在",
+        "写上",
+        "物体表面",
+        "surface text",
+        "text on",
+        "screen content",
+        "banana"
+      ],
+      "excludeAny": []
+    },
+    {
+      "matchRegex": "references\\/portraits-and-characters\\/fashion-lookbook-pose\\.md$",
+      "includeAny": [
+        "pinterest",
+        "lookbook",
+        "穿搭",
+        "姿态",
+        "一只袖子",
+        "拎包",
+        "fashion pose",
+        "outfit pose"
+      ],
+      "excludeAny": []
+    },
+    {
+      "matchRegex": "references\\/technical-diagrams\\/system-architecture\\.md$",
+      "includeAny": [
+        "架构图",
+        "系统架构",
+        "微服务",
+        "api gateway",
+        "消息队列",
+        "postgresql",
+        "redis",
+        "sequence",
+        "state machine",
+        "er 图",
+        "拓扑",
+        "flowchart",
+        "architecture diagram"
+      ],
+      "excludeAny": []
+    }
+  ]
+};

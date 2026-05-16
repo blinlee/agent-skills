@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "status": "heuristic-candidate-crosswalk",
+  "notes": [
+    "Canonical templates serve as the primary user-facing template surface.",
+    "Taxonomy data provides/case intelligence source.",
+    "Mappings are candidate links for retrieval and prompt standardization, not hard schema casts."
+  ],
+  "templates": {
+    "ui-screenshot-system": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/ui-mockups/social-interface-mockup.md",
+        "references/ui-mockups/live-commerce-ui.md",
+        "references/ui-mockups/chat-interface-scene.md",
+        "references/ui-mockups/short-video-cover-ui.md",
+        "references/ui-mockups/landing-page-case-study.md",
+        "references/ui-mockups/product-card-overlay.md"
+      ]
+    },
+    "infographic-engine": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/infographics/bento-grid-infographic.md"
+      ]
+    },
+    "scientific-scale-diagram": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/infographics/scientific-scale-zoom.md",
+        "references/academic-figures/scientific-schematic.md",
+        "references/academic-figures/publication-chart.md",
+        "references/academic-figures/research-overview-poster.md"
+      ]
+    },
+    "poster-layout-system": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/poster-and-campaigns/premium-editorial-poster-layout.md",
+        "references/poster-and-campaigns/brand-poster.md",
+        "references/poster-and-campaigns/campaign-kv.md",
+        "references/poster-and-campaigns/editorial-cover.md"
+      ]
+    },
+    "sports-campaign-poster": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/poster-and-campaigns/campaign-kv.md",
+        "references/poster-and-campaigns/brand-poster.md",
+        "references/poster-and-campaigns/banner-hero.md"
+      ]
+    },
+    "conceptual-typography-poster": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/typography-and-text-layout/conceptual-typography-poster.md",
+        "references/typography-and-text-layout/title-safe-poster.md",
+        "references/poster-and-campaigns/editorial-cover.md"
+      ]
+    },
+    "city-creative-font": {
+      "confidence": "medium",
+      "canonicalTargets": [
+        "references/typography-and-text-layout/city-creative-font.md"
+      ]
+    },
+    "ink-double-exposure-poster": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/poster-and-campaigns/ink-double-exposure-character-poster.md",
+        "references/poster-and-campaigns/editorial-cover.md",
+        "references/poster-and-campaigns/brand-poster.md"
+      ]
+    },
+    "nature-science-poster": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/poster-and-campaigns/premium-nature-science-poster.md",
+        "references/academic-figures/research-overview-poster.md",
+        "references/infographics/step-by-step-infographic.md"
+      ]
+    },
+    "product-commerce-visual": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/product-visuals/ecommerce-marketing-board.md",
+        "references/product-visuals/premium-studio-product.md",
+        "references/product-visuals/lifestyle-product-scene.md",
+        "references/product-visuals/white-background-product.md"
+      ]
+    },
+    "impossible-concept-product": {
+      "confidence": "medium",
+      "canonicalTargets": [
+        "references/product-visuals/impossible-concept-product.md"
+      ]
+    },
+    "personalized-beauty-report": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/slides-and-visual-docs/personalized-beauty-report.md",
+        "references/ui-mockups/product-card-overlay.md",
+        "references/product-visuals/ecommerce-marketing-board.md"
+      ]
+    },
+    "brand-identity-package": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/branding-and-packaging/brand-identity-board.md",
+        "references/branding-and-packaging/cosmetic-packaging.md",
+        "references/branding-and-packaging/beverage-label-design.md",
+        "references/branding-and-packaging/mascot-brand-kit.md"
+      ]
+    },
+    "brand-touchpoint-board": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/branding-and-packaging/brand-touchpoint-system-board.md",
+        "references/branding-and-packaging/brand-identity-board.md",
+        "references/product-visuals/ecommerce-marketing-board.md"
+      ]
+    },
+    "architecture-space": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/architectural-space-render.md",
+        "references/maps/illustrated-city-map.md",
+        "references/scenes-and-illustrations/concept-scene.md"
+      ]
+    },
+    "realistic-photography": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/documentary-street-moment.md",
+        "references/portraits-and-characters/professional-portrait.md",
+        "references/product-visuals/lifestyle-product-scene.md",
+        "references/poster-and-campaigns/banner-hero.md"
+      ]
+    },
+    "fashion-lookbook-pose": {
+      "confidence": "medium",
+      "canonicalTargets": [
+        "references/portraits-and-characters/fashion-lookbook-pose.md"
+      ]
+    },
+    "multi-reference-composition": {
+      "confidence": "medium",
+      "canonicalTargets": [
+        "references/editing-workflows/multi-reference-composition.md"
+      ]
+    },
+    "street-accident-moment": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/documentary-street-moment.md",
+        "references/storyboards-and-sequences/cinematic-storyboard-grid.md",
+        "references/scenes-and-illustrations/concept-scene.md"
+      ]
+    },
+    "illustration-art-style": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/picture-book-scene.md",
+        "references/scenes-and-illustrations/healing-scene.md",
+        "references/scenes-and-illustrations/minimalist-mood-scene.md"
+      ]
+    },
+    "character-design-sheet": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/portraits-and-characters/character-sheet.md",
+        "references/portraits-and-characters/pose-reference-sheet.md",
+        "references/avatars-and-profile/character-grid-portrait.md"
+      ]
+    },
+    "3d-collectible-toy": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/avatars-and-profile/collectible-figure-display.md",
+        "references/avatars-and-profile/themed-3d-icon.md",
+        "references/branding-and-packaging/character-merch-board.md"
+      ]
+    },
+    "scene-storytelling": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/concept-scene.md",
+        "references/scenes-and-illustrations/picture-book-scene.md",
+        "references/storyboards-and-sequences/four-panel-comic.md",
+        "references/storyboards-and-sequences/cinematic-storyboard-grid.md"
+      ]
+    },
+    "meme-viral-content": {
+      "confidence": "medium",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/meme-and-viral-content.md"
+      ]
+    },
+    "text-on-objects": {
+      "confidence": "medium",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/text-on-objects.md"
+      ]
+    },
+    "history-classical-themes": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/scenes-and-illustrations/historical-scroll-scene.md",
+        "references/poster-and-campaigns/editorial-cover.md",
+        "references/scenes-and-illustrations/picture-book-scene.md"
+      ]
+    },
+    "document-publishing": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/slides-and-visual-docs/visual-report-page.md",
+        "references/slides-and-visual-docs/policy-style-slide.md",
+        "references/slides-and-visual-docs/dense-explainer-slides.md"
+      ]
+    },
+    "concept-product-breakdown": {
+      "confidence": "high",
+      "canonicalTargets": [
+        "references/product-visuals/exploded-view-poster.md",
+        "references/academic-figures/mechanism-diagram.md",
+        "references/technical-diagrams/system-architecture.md"
+      ]
+    }
+  }
+}

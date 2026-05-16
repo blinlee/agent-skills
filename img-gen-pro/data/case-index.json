@@ -1,0 +1,1320 @@
+{
+  "generatedAt": "2026-05-11T00:48:20.445Z",
+  "source": {
+    "taxonomySource": "upstream: freestylefly/awesome-gpt-image-2/data/style-library.json",
+    "caseLibrary": "upstream: freestylefly/awesome-gpt-image-2/data/cases.json",
+    "selectionRule": "unique example cases referenced by taxonomy templates"
+  },
+  "totalCases": 34,
+  "cases": [
+    {
+      "id": 17,
+      "title": "界面交互设计图",
+      "category": "Products & E-commerce",
+      "styles": [
+        "UI",
+        "Infographic",
+        "Poster"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce"
+      ],
+      "featured": true,
+      "promptPreview": "{   \"type\": \"exploded view product diagram poster\",   \"subject\": \"VR headset\",   \"style\": \"clean high-tech 3D render, studio lighting, glowing accents\",   \"background\": \"{argument name=\\\"background color\\\" default=\\\"soft",
+      "prompt": "{\n  \"type\": \"exploded view product diagram poster\",\n  \"subject\": \"VR headset\",\n  \"style\": \"clean high-tech 3D render, studio lighting, glowing accents\",\n  \"background\": \"{argument name=\\\"background color\\\" default=\\\"soft purple and blue gradient\\\"}\",\n  \"header\": {\n    \"logo\": \"∞ {argument name=\\\"product name\\\" default=\\\"Meta Quest 3\\\"}\",\n    \"subtitle\": \"{argument name=\\\"main catchphrase\\\" default=\\\"まったく新しい現実を、まったく新しい構造から。\\\"}\"\n  },\n  \"layout\": {\n    \"centerpiece\": \"vertically stacked exploded view of a VR headset showing 9 distinct layers of internal components: outer shell, camera sensors, motherboard with chip, pancake lenses, internal frame, battery packs, side straps, top strap, and facial interface cushion.\",\n    \"callout_labels\": {\n      \"count\": 8,\n      \"left_side\": [\n        \"Snapdragon® XR2 Gen 2\\n圧倒的な処理性能でリアルタイムな体験を。\",\n        \"調整可能なIPD機構\\n幅広いユーザーに快適なフィット感を。\",\n        \"精密設計されたヘッドストラップ\\n快適さと安定性を追求したエルゴノミクス。\"\n      ],\n      \"right_side\": [\n        \"フェイスプレート\\n洗練されたデザインと最適な重量バランス。\",\n        \"トラッキングカメラ\\n高精度な位置トラッキングと環境認識を実現。\",\n        \"パンケーキレンズ\\n薄型設計で広い視野角と鮮明な映像を提供。\",\n        \"高性能バッテリー\\n長時間駆動を支える最適化された電源設計。\",\n        \"柔らかなフェイスインターフェース\\n長時間でも快適な装着感を実現。\"\n      ]\n    },\n    \"footer\": {\n      \"left_text_block\": {\n        \"headline\": \"{argument name=\\\"bottom headline\\\" default=\\\"体験は、構造から進化する。\\\"}\",\n        \"body\": \"一つひとつのパーツに、没入体験を支える最先端テクノロジーとこだわりの設計。Meta Quest 3は、未来を感じさせる体験を内部から生み出しています。\"\n      },\n      \"right_logo\": \"∞ Meta\"\n    }\n  }\n}",
+      "sourceLabel": "@wory37303852",
+      "sourceUrl": "https://x.com/wory37303852",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-17",
+      "linkedTemplateIds": [
+        "ui-screenshot-system"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "personalized-beauty-report",
+          "score": 16
+        },
+        {
+          "id": "impossible-concept-product",
+          "score": 14
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 10
+        },
+        {
+          "id": "product-commerce-visual",
+          "score": 10
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 9
+        },
+        {
+          "id": "document-publishing",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "社媒界面截图",
+      "category": "UI & Interfaces",
+      "styles": [
+        "UI",
+        "Poster"
+      ],
+      "scenes": [
+        "Tech",
+        "Social"
+      ],
+      "featured": true,
+      "promptPreview": "画一张 X 的内容截图，深色模式，@OpenAI 蓝勾认证账号发推。  正文的中文内容：  今天想推荐一位很棒的 AI Builder：Ailln AI。  他持续在小红书分享 AI 工具、Agent 工作流、自动化实践和真实项目经验，把复杂的 AI 能力讲得清楚、实用、可落地。  如果你正在关注 AI 产品、效率工具、个人自动化、内容创作和未来工作方式，Ailln AI 是一个非常值得关注的创作者。  在小红书搜索：Ailln AI ",
+      "prompt": "画一张 X 的内容截图，深色模式，@OpenAI 蓝勾认证账号发推。\n 正文的中文内容：\n 今天想推荐一位很棒的 AI Builder：Ailln AI。\n 他持续在小红书分享 AI 工具、Agent 工作流、自动化实践和真实项目经验，把复杂的 AI 能力讲得清楚、实用、可落地。\n 如果你正在关注 AI 产品、效率工具、个人自动化、内容创作和未来工作方式，Ailln AI 是一个非常值得关注的创作者。\n 在小红书搜索：Ailln AI\n 底部添加一张深色官方宣传风格海报，简洁黑客质感，图片中文本准确显示。\n 海报大字： 「Ailln AI」\n 副标题： 「A brilliant AI Builder worth following」\n 互动数据位于最下方： 评论 8.9K、转发 42K、点赞 298K（亮起）、收藏 34K（亮起）、浏览 32.4M。\n 图片比例为3:4，不包含软件其他部分。",
+      "sourceLabel": "小红书号4264014889",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-2",
+      "linkedTemplateIds": [
+        "ui-screenshot-system"
+      ],
+      "candidateTemplates": []
+    },
+    {
+      "id": 4,
+      "title": "老干妈风味",
+      "category": "UI & Interfaces",
+      "styles": [
+        "UI"
+      ],
+      "scenes": [
+        "Social"
+      ],
+      "featured": false,
+      "promptPreview": "特朗普在抖音直播间卖老干妈，手里举着「老干妈风味」新品，背景还是 SpaceX 那种科技感，左下角弹幕飘着「特斯拉车主：求上链接」。",
+      "prompt": "特朗普在抖音直播间卖老干妈，手里举着「老干妈风味」新品，背景还是 SpaceX 那种科技感，左下角弹幕飘着「特斯拉车主：求上链接」。",
+      "sourceLabel": "小红书号989137706",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-4",
+      "linkedTemplateIds": [
+        "ui-screenshot-system"
+      ],
+      "candidateTemplates": []
+    },
+    {
+      "id": 334,
+      "title": "RAG 技术详解图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "Charts"
+      ],
+      "scenes": [
+        "Tech"
+      ],
+      "featured": true,
+      "promptPreview": "帮我生成一张 RAG 技术的详细讲解图",
+      "prompt": "帮我生成一张 RAG 技术的详细讲解图",
+      "sourceLabel": "苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-334",
+      "linkedTemplateIds": [
+        "infographic-engine"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "scientific-scale-diagram",
+          "score": 13
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "title": "信息图可视化设计",
+      "category": "UI & Interfaces",
+      "styles": [
+        "UI",
+        "Infographic"
+      ],
+      "scenes": [
+        "Tech",
+        "Education",
+        "Travel"
+      ],
+      "featured": true,
+      "promptPreview": "Vertical 9:16 isometric cutaway infographic \"城市生命系统图谱 / Urban Metabolism Atlas\". Smart city from sky to bedrock: skyscrapers, streets, subway, utility tunnels, water/sewage/gas/heating pipes, fiber, data center, flood ta",
+      "prompt": "Vertical 9:16 isometric cutaway infographic \"城市生命系统图谱 / Urban Metabolism Atlas\". Smart city from sky to bedrock: skyscrapers, streets, subway, utility tunnels, water/sewage/gas/heating pipes, fiber, data center, flood tanks, aquifers, geothermal wells, bedrock. Color-coded flows for power/water/data/traffic/waste. 12 numbered panels bilingual CN/EN: 能源/水循环/交通/数据/垃圾/建筑/公共服务/ 物流/气候韧性/生态/地质/治理看板. 24h timeline at bottom. Style: engineering white paper + scientific atlas, light paper bg, crisp lines, 8K. No cyberpunk, no gibberish text, must show both above AND below ground.",
+      "sourceLabel": "小红书号insight_express",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-1",
+      "linkedTemplateIds": [
+        "infographic-engine"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "ui-screenshot-system",
+          "score": 14
+        },
+        {
+          "id": "scientific-scale-diagram",
+          "score": 12
+        },
+        {
+          "id": "document-publishing",
+          "score": 10
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "科普百科图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "Infographic",
+        "Poster",
+        "Illustration"
+      ],
+      "scenes": [
+        "Commerce",
+        "Education",
+        "Story"
+      ],
+      "featured": false,
+      "promptPreview": "根据【主题】生成一张高质量竖版「科普百科图」。 这张图不是普通海报，也不是单纯插画，而是一张兼具图鉴感、百科感、信息结构感和收藏感的模块化科普信息图。整体风格参考高级博物图鉴、现代百科书页、生活方式知识卡，以及社交媒体上更容易传播的信息图风格。 让画面包含： 一个清晰好看的主题主视觉 若干局部特征放大细节 多个圆角模块化信息分区 清楚的标题层级与重点标签 简洁但信息丰富的百科内容 可视化评分、要点总结或 Top 5 模块 内容栏目请根据",
+      "prompt": "根据【主题】生成一张高质量竖版「科普百科图」。\n这张图不是普通海报，也不是单纯插画，而是一张兼具图鉴感、百科感、信息结构感和收藏感的模块化科普信息图。整体风格参考高级博物图鉴、现代百科书页、生活方式知识卡，以及社交媒体上更容易传播的信息图风格。\n让画面包含：\n一个清晰好看的主题主视觉\n若干局部特征放大细节\n多个圆角模块化信息分区\n清楚的标题层级与重点标签\n简洁但信息丰富的百科内容\n可视化评分、要点总结或 Top 5 模块\n内容栏目请根据主题自动适配，优先从这些方向里选择并合理组合：\n基础档案、分类信息、外观特征、习性生态、形成机制或结构组成、生长或使用条件、养护或维护建议、风险与注意事项、适合人群或适用场景、优缺点对比、快速评分卡。\n视觉要求：\n浅色干净背景，柔和配色，轻阴影，精致小图标，圆角信息框，整体排版整洁清爽。信息密度要丰富，但不能显得拥挤，阅读体验要舒服。最终效果要像真正可以发布、阅读、收藏、批量做成系列内容的科普百科卡，而不是广告感很重的宣传海报。\n不要做成普通商业宣传海报，要重点突出“知识整理”“模块信息”“图鉴式展示”这几个特征。",
+      "sourceLabel": "小红书号1055699679",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-8",
+      "linkedTemplateIds": [
+        "infographic-engine"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "scientific-scale-diagram",
+          "score": 13
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 11
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 11
+        },
+        {
+          "id": "meme-viral-content",
+          "score": 9
+        }
+      ]
+    },
+    {
+      "id": 341,
+      "title": "AP Calculus 学习表信息图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "UI",
+        "Infographic",
+        "Poster"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Education"
+      ],
+      "featured": true,
+      "promptPreview": "Please create a mathematical visualization infographic about \"[math concept / topic].\" The goal is to help the viewer intuitively understand what it is, why it works, its geometric or structural intuition, and how it beh",
+      "prompt": "Please create a mathematical visualization infographic about \"[math concept / topic].\" The goal is to help the viewer intuitively understand what it is, why it works, its geometric or structural intuition, and how it behaves in different contexts. The visual should feel like a high-quality math lecture handout combined with a hand-drawn educational poster. It should be elegant, clear, and information-rich, but not cluttered. Visual style: either portrait or landscape is fine. Use a clean, light paper-like background, with a deep blue title and black or dark gray lines for the main content. Add a small number of refined accent colors such as blue, teal, gold, and red. Incorporate rounded-corner cards, thin borders, numbered labels, hand-drawn arrows, zoom-in callout boxes, and a summary section. The overall design should be aesthetically pleasing, balanced, and academic, allowing the viewer to grasp the structure of the concept and why it works at a glance.",
+      "sourceLabel": "@hqmank",
+      "sourceUrl": "https://x.com/hqmank/status/2048587150544028084",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-341",
+      "linkedTemplateIds": [
+        "scientific-scale-diagram"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "infographic-engine",
+          "score": 18
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 14
+        },
+        {
+          "id": "document-publishing",
+          "score": 10
+        },
+        {
+          "id": "impossible-concept-product",
+          "score": 9
+        },
+        {
+          "id": "personalized-beauty-report",
+          "score": 8
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 345,
+      "title": "法新浪潮撕纸电影海报",
+      "category": "Posters & Typography",
+      "styles": [
+        "Poster",
+        "Realistic",
+        "Brand"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Fashion"
+      ],
+      "featured": false,
+      "promptPreview": "Create a vertical poster composition on aged cream paper with a handmade analog feel. Use rough ripped paper edges, layered magazine cutouts, photocopy grain, halftone texture, ink bleed, and slightly imperfect screen-pr",
+      "prompt": "Create a vertical poster composition on aged cream paper with a handmade analog feel. Use rough ripped paper edges, layered magazine cutouts, photocopy grain, halftone texture, ink bleed, and slightly imperfect screen-print registration. Keep the subject as the main black-and-white photographic portrait, placed prominently in the center or upper center. Surround the subject with graphic blocks of deep red, cobalt blue, warm yellow, black, and ivory.\n\nAdd supporting collage fragments such as a rainy European street, film-strip borders, newspaper clippings, urban silhouettes, and cinematic details, arranged like a handmade 1960s art-house movie poster. Use bold condensed typography with a strong visual hierarchy. Add large headline text: \"[MAIN TITLE]\". Add smaller subtitle text: \"[SUBTITLE]\". Add bottom text: \"[BRAND NAME / EVENT NAME / COMING SOON / DATE]\". If needed, include a small top line reading \"[TAGLINE]\".\n\nThe final result should feel cinematic, intellectual, rebellious, and editorial — like a lost 1960s European film poster with a strong point of view. Keep it raw, tactile, printed, imperfect, and handmade. Avoid a glossy modern finish.",
+      "sourceLabel": "@bananaprompts",
+      "sourceUrl": "https://x.com/bananaprompts/status/2048541390900994476",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-345",
+      "linkedTemplateIds": [
+        "poster-layout-system"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "sports-campaign-poster",
+          "score": 22
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 12
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 12
+        },
+        {
+          "id": "city-creative-font",
+          "score": 11
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 11
+        },
+        {
+          "id": "realistic-photography",
+          "score": 10
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "主题海报版式设计",
+      "category": "Posters & Typography",
+      "styles": [
+        "Poster",
+        "Illustration",
+        "Brand"
+      ],
+      "scenes": [
+        "Story"
+      ],
+      "featured": false,
+      "promptPreview": "根据【XXX主题】自动生成一张收藏版史诗叙事海报：巨大优雅的人物侧脸剪影作为外轮廓，剪影内部自动生长出最契合该主题的完整世界观、标志性场景、角色关系、象征符号、关键建筑、生物、道具与氛围。整体不是普通拼贴，而是高级的剪影轮廓填充式叙事合成，带有双重曝光式联想，但更偏电影海报与梦幻水彩插画融合风格；柔和空气透视，轻雾化过渡，纸张颗粒，边缘飞白与刷痕，大面积留白，版式克制高级，安静、宏大、神圣、怀旧、诗意、传说感强。风格、色彩、场景、材质全",
+      "prompt": "根据【XXX主题】自动生成一张收藏版史诗叙事海报：巨大优雅的人物侧脸剪影作为外轮廓，剪影内部自动生长出最契合该主题的完整世界观、标志性场景、角色关系、象征符号、关键建筑、生物、道具与氛围。整体不是普通拼贴，而是高级的剪影轮廓填充式叙事合成，带有双重曝光式联想，但更偏电影海报与梦幻水彩插画融合风格；柔和空气透视，轻雾化过渡，纸张颗粒，边缘飞白与刷痕，大面积留白，版式克制高级，安静、宏大、神圣、怀旧、诗意、传说感强。风格、色彩、场景、材质全部根据主题自动适配，所有元素必须强绑定主题，一眼识别，不要杂乱，不要硬拼贴，不要模板化背景，不要廉价奇幻素材。画面中需自然加入专属签名“WHY”，作为海报设计的一部分，位置低调但清晰，可放在左下角、右下角或标题附近，风格需与整体版式统一，像收藏版海报的作者落款或设计签章；签名字体精致、克制、高级，不可过大，不可破坏主体构图，不可显得突兀廉价。",
+      "sourceLabel": "小红书号6455654397",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-5",
+      "linkedTemplateIds": [
+        "poster-layout-system"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 17
+        },
+        {
+          "id": "city-creative-font",
+          "score": 11
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 10
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 10
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 10
+        },
+        {
+          "id": "meme-viral-content",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "主题海报版式设计",
+      "category": "Posters & Typography",
+      "styles": [
+        "Poster",
+        "Character"
+      ],
+      "scenes": [
+        "Creative"
+      ],
+      "featured": false,
+      "promptPreview": "生成八十年代宣传画，标语“热烈庆祝GPT-Image-2全量开放”，人物包含Sam Altman、Dario Amodei、Elon Musk，Dario Amodei 带上红领巾",
+      "prompt": "生成八十年代宣传画，标语“热烈庆祝GPT-Image-2全量开放”，人物包含Sam Altman、Dario Amodei、Elon Musk，Dario Amodei 带上红领巾",
+      "sourceLabel": "小红书号2202716350",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-10",
+      "linkedTemplateIds": [
+        "poster-layout-system"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "city-creative-font",
+          "score": 13
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 13
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 10
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 10
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 10
+        }
+      ]
+    },
+    {
+      "id": 350,
+      "title": "足球球员数据涂鸦海报",
+      "category": "Posters & Typography",
+      "styles": [
+        "Poster",
+        "Realistic",
+        "Character"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Social"
+      ],
+      "featured": true,
+      "promptPreview": "Create a scrapbook doodle-style football poster of [PLAYER_NAME]. AI auto-generates realistic career stats (club and national team). Main photo: realistic, unchanged ([PLAYER_NAME] in action or iconic pose). Doodles and ",
+      "prompt": "Create a scrapbook doodle-style football poster of [PLAYER_NAME].\n\nAI auto-generates realistic career stats (club and national team).\n\nMain photo: realistic, unchanged ([PLAYER_NAME] in action or iconic pose).\n\nDoodles and handwritten notes: white and [PRIMARY_COLOR] neon ink (no warm colors unless specified), arrows, stars, scribbles, sketchy outlines. Add a glowing [PRIMARY_COLOR] outline around the player's body.\n\nLayout (bold handwritten titles and stats):\n- Top Title: \"[PLAYER_NAME]\" plus \"[NICKNAME/TITLE]\"\n- Club Career: total matches and goals plus 2–4 main clubs (apps and goals)\n- Highlights: 2–3 standout achievements (e.g., UCL goals, Ballon d'Or, top scorer)\n- National Team: caps and goals plus 1–2 international achievements\n\nStyle: modern football poster x notebook aesthetic, clean but energetic, slightly messy doodles, high contrast, neon accents on dark or muted background.\n\nImportant: all stats must be realistic and proportional to the player's real career.",
+      "sourceLabel": "@ryanpp27",
+      "sourceUrl": "https://x.com/ryanpp27/status/2048602248524214542",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-350",
+      "linkedTemplateIds": [
+        "sports-campaign-poster"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "poster-layout-system",
+          "score": 18
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 15
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 13
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 12
+        },
+        {
+          "id": "city-creative-font",
+          "score": 10
+        },
+        {
+          "id": "3d-collectible-toy",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "足球主题电影海报",
+      "category": "Posters & Typography",
+      "styles": [
+        "Poster",
+        "Realistic",
+        "Character"
+      ],
+      "scenes": [
+        "Fashion"
+      ],
+      "featured": false,
+      "promptPreview": "生成一张「足球主题电影海报」风格的高清写真海报：国际米兰后卫巴斯托尼站在圣西罗球场中央激情庆祝，双手高举并披着波黑国旗，神情热血、坚定、自信，现场灯光璀璨，球场看台座无虚席，背景有蓝黑色烟雾、聚光灯、飘扬的旗帜和飞舞的纸屑，营造欧冠之夜般的史诗氛围。人物为画面核心，半身到全身构图，突出脸部细节、肌肉张力与球衣质感。整体风格写实、震撼、富有戏剧性，海报级构图，电影感光影，高对比度，超清细节，8K，专业体育摄影，极具视觉冲击力。五根手指。",
+      "prompt": "生成一张「足球主题电影海报」风格的高清写真海报：国际米兰后卫巴斯托尼站在圣西罗球场中央激情庆祝，双手高举并披着波黑国旗，神情热血、坚定、自信，现场灯光璀璨，球场看台座无虚席，背景有蓝黑色烟雾、聚光灯、飘扬的旗帜和飞舞的纸屑，营造欧冠之夜般的史诗氛围。人物为画面核心，半身到全身构图，突出脸部细节、肌肉张力与球衣质感。整体风格写实、震撼、富有戏剧性，海报级构图，电影感光影，高对比度，超清细节，8K，专业体育摄影，极具视觉冲击力。五根手指。",
+      "sourceLabel": "未提供",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-3",
+      "linkedTemplateIds": [
+        "sports-campaign-poster"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "city-creative-font",
+          "score": 10
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 10
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 10
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 10
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 10
+        }
+      ]
+    },
+    {
+      "id": 355,
+      "title": "概念字体海报 Prompt",
+      "category": "Posters & Typography",
+      "styles": [
+        "Poster",
+        "Realistic",
+        "Brand"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Social"
+      ],
+      "featured": false,
+      "promptPreview": "Create ONE finished premium conceptual typography poster for the exact title: “[INPUT_TEXT]” Single poster only. No moodboard, grid, presentation board, mockup, captions, prompt text, process sheet, or sample labels. The",
+      "prompt": "Create ONE finished premium conceptual typography poster for the exact title:\n\n“[INPUT_TEXT]”\n\nSingle poster only. No moodboard, grid, presentation board, mockup, captions, prompt text, process sheet, or sample labels.\n\nThe title “[INPUT_TEXT]” must be the dominant visual structure of the poster: huge, readable, powerful, and spelled exactly. Do not translate, shorten, replace, or misspell it. Do not add other large readable text. Optional micro catalog text is allowed only if it stays subtle and secondary.\n\nSilently interpret the title’s meaning, mood, cultural aura, symbolic associations, psychological tension, and visual rhythm. Turn that interpretation into one strong visual metaphor.\n\nTypography is the hero. Design custom-looking letterforms whose weight, width, contrast, spacing, rhythm, distortion, negative space, edge quality, and ink texture express the temperament of the title. The type should feel intentionally designed, not like a default font.\n\nIf “[INPUT_TEXT]” refers to a widely known person, make a large editorial portrait or full / half-body figure a major visual presence, occupying roughly 40–70% of the composition. The figure should feel recognizable through aura, posture, styling, era, expression, lighting, and symbolic atmosphere, but should not copy a specific existing photograph, official poster, campaign image, logo, slogan, or copyrighted composition. The portrait must interact with the typography: overlapping the letters, emerging from them, being framed by them, casting shadows on them, breaking through them, or being partially hidden behind them.\n\nFor all other titles, use a human figure, landscape, object, or atmospheric setting only when it strengthens the meaning. It must interact with the typography and deepen the concept, not decorate it.\n\nUse a rich but restrained 4–6 color system matched to the theme: dominant background color, primary typography color, figure / landscape tone, emotional accent color, muted support color, and subtle paper / ink texture tone. Avoid flat black-white-red defaults unless conceptually necessary.\n\nComposition style: high-end editorial poster, museum-quality graphic design, dramatic scale, strong hierarchy, few elements, intelligent whitespace, bold flat color areas, sharp cropping, silkscreen / lithograph / risograph grain, paper fibers, subtle ink imperfections, refined visual tension.\n\nThe final image should feel like a complete visual sentence: the title, the figure or setting, the color, and the typography explain each other.\n\nAvoid generic word art, glossy 3D lettering, random icons, stock-photo realism, cluttered collage, excessive grunge, tourist clichés, official logos, copied slogans, copied campaign aesthetics, unrelated text, and misspelled typography.\n\n-----\n\nINPUT_TEXT：Phoenix Rebirth",
+      "sourceLabel": "@dotey",
+      "sourceUrl": "https://x.com/dotey/status/2048793351290327381",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-355",
+      "linkedTemplateIds": [
+        "conceptual-typography-poster"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "poster-layout-system",
+          "score": 20
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 20
+        },
+        {
+          "id": "city-creative-font",
+          "score": 13
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 13
+        },
+        {
+          "id": "brand-touchpoint-board",
+          "score": 12
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 12
+        }
+      ]
+    },
+    {
+      "id": 359,
+      "title": "水墨双重曝光人物海报",
+      "category": "Posters & Typography",
+      "styles": [
+        "UI",
+        "Poster",
+        "Character"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Story"
+      ],
+      "featured": true,
+      "promptPreview": "A cinematic character promotional poster of [SUBJECT], vertical composition (9:16), designed with a refined East-Asian ink aesthetic and high-end visual storytelling. STRUCTURE: Top-heavy hierarchical layout. The upper h",
+      "prompt": "A cinematic character promotional poster of [SUBJECT], vertical composition (9:16), designed with a refined East-Asian ink aesthetic and high-end visual storytelling.\n\nSTRUCTURE:\nTop-heavy hierarchical layout. The upper half features a large, highly recognizable silhouette of [SUBJECT]'s head / face / mask / upper body, forming a bold, iconic primary shape. The silhouette should be instantly identifiable.\n\nThe middle-lower section contains the full-body version of [SUBJECT] as a secondary subject, standing in a stable pose or subtle action stance, forming the visual core.\n\nCOMPOSITION STYLE:\nInside the large silhouette and around the character, use double exposure and collage storytelling. Integrate multiple elements:\n- key scenes related to [SUBJECT]\n- symbolic imagery and environment\n- small narrative figures and interactions\n- supporting visual motifs\n\nBlend everything seamlessly using clouds, mist, ink diffusion, and negative space.\n\nVISUAL FLOW:\nCreate a continuous flowing visual path from top to bottom, connecting:\n- upper silhouette\n- inner collage elements\n- full-body subject\n\nEnsure smooth eye guidance and compositional cohesion.\n\nSIDE ELEMENTS:\nAdd balanced supporting elements on left and right sides to create tension, depth, and spatial variation.\n\nSTYLE & ATMOSPHERE:\n- Large areas of negative space\n- Ink-wash diffusion edges, soft fading, subtle fragmentation\n- Eastern aesthetic: balance of emptiness and detail\n- Calm, premium, restrained, cinematic tone\n\nQUALITY:\nUltra-detailed, high resolution, layered depth, soft lighting, atmospheric perspective, cohesive series-style design.\n\nOUTPUT:\n9:16 aspect ratio, poster-ready composition.",
+      "sourceLabel": "@Goodmanprotocol",
+      "sourceUrl": "https://x.com/Goodmanprotocol/status/2049002279051895243",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-359",
+      "linkedTemplateIds": [
+        "ink-double-exposure-poster"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "poster-layout-system",
+          "score": 15
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 14
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 12
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 12
+        },
+        {
+          "id": "character-design-sheet",
+          "score": 11
+        },
+        {
+          "id": "city-creative-font",
+          "score": 10
+        }
+      ]
+    },
+    {
+      "id": 339,
+      "title": "Apple 风格自然科普海报",
+      "category": "Posters & Typography",
+      "styles": [
+        "Infographic",
+        "Poster",
+        "Brand"
+      ],
+      "scenes": [
+        "Education"
+      ],
+      "featured": false,
+      "promptPreview": "你是一个高端自然科普海报生成系统，目标是为稀有动物、昆虫、爬行动物、哺乳动物或其他小众生物生成 Apple keynote 风格的高级科普视觉海报。 整体视觉方向： 生成一张 9:16 竖版高级科普海报，画面采用极简、纯白、干净、现代、Apple 式产品发布海报语言。背景应为纯白或极浅灰白渐变，保持大量留白。整体设计应具备高级感、克制感、视觉冲击力和科学展示感。 核心设计原则： 1. 主体动物必须被极度放大，成为画面最强视觉中心。 2.",
+      "prompt": "你是一个高端自然科普海报生成系统，目标是为稀有动物、昆虫、爬行动物、哺乳动物或其他小众生物生成 Apple keynote 风格的高级科普视觉海报。\n\n整体视觉方向：\n生成一张 9:16 竖版高级科普海报，画面采用极简、纯白、干净、现代、Apple 式产品发布海报语言。背景应为纯白或极浅灰白渐变，保持大量留白。整体设计应具备高级感、克制感、视觉冲击力和科学展示感。\n\n核心设计原则：\n1. 主体动物必须被极度放大，成为画面最强视觉中心。\n2. 主体应具有强烈立体感、真实质感、高清细节和柔和棚拍光影。\n3. 海报信息要少而准，避免拥挤。\n4. 不使用传统信息图的卡片、圆角框、复杂底纹、淡黄色纸张质感或装饰性边框。\n5. 底部信息区只使用四列极简 icon + 标题 + 短说明，通过细竖线分隔。\n6. 文字排版要像高端发布会视觉，标题巨大，副标题克制，正文小而清晰。\n7. 风格关键词：Apple-inspired, premium editorial, pure white background, hero subject, clean typography, minimal infographic, high-end science poster.\n\n画面结构：\n顶部左侧为标题区：\n中文大标题：{中文物种名}\n中文副标题：{一句有吸引力的物种定位}\n细短横线\n英文名：{英文物种名}\n分布信息：主要分布：{分布区域}\n\n中部与下中部为主体视觉：\n生成一个超高清、真实、具有强烈立体感的 {中文物种名}。\n主体应占据画面 50% 到 70% 的视觉面积。\n主体姿态应具有展示性、力量感或识别度。\n保持白色背景，不添加复杂自然环境。\n可以保留少量必要承托物，例如树枝、岩石、雪地、沙土或木皮，但必须简洁。\n主体要有真实阴影，使其像高级产品摄影一样立在画面中。\n\n底部信息区：\n用四个极简信息栏目展示科普信息。\n每个栏目包含：\n一个细线 icon\n一个彩色小标题\n一段 1 到 3 行短文字\n栏目之间用极细浅灰竖线分隔。\n不使用卡片框，不使用圆角背景，不使用大面积色块。\n\n四个信息栏目：\n栏目 1：\n标题：{重点特征1标题}\n说明：{重点特征1短说明}\n\n栏目 2：\n标题：{重点特征2标题}\n说明：{重点特征2短说明}\n\n栏目 3：\n标题：{重点特征3标题}\n说明：{重点特征3短说明}\n\n栏目 4：\n标题：{重点特征4标题}\n说明：{重点特征4短说明}\n\n底部总结句：\n在最底部居中放置一句灰色小字总结：\n{一句高级、克制、有记忆点的科普总结}\n\n字体与排版：\n中文标题使用大号黑色、高级、稳重、有力量感的字体。\n副标题使用灰色，中等字号，字距略宽。\n英文名使用小号灰色，简洁现代。\n正文使用清晰现代中文字体，保持可读。\n所有文字必须留有足够呼吸感。\n\n色彩规范：\n背景：纯白、极浅灰、轻微柔光渐变。\n主标题：黑色或深石墨色。\n副标题与正文：中性灰。\n底部四个信息标题可使用低饱和强调色：\n暖棕、冷蓝、松石绿、紫色、橙色。\n颜色只用于 icon 和小标题，不要大面积铺色。\n\n图像质量：\n2K 高清质感，细节清晰，主体锐利，光影真实。\n主体纹理必须可信，例如毛发、鳞片、甲壳、皮肤褶皱、羽毛或斑纹。\n避免变形、错误肢体、错误解剖结构、模糊主体、低质贴图、塑料感、卡通感。\n\n禁止项：\n不要使用淡黄色旧纸背景。\n不要使用复杂信息图网格。\n不要使用圆角卡片。\n不要使用厚边框。\n不要使用大面积装饰图形。\n不要添加无关 logo。\n不要添加多余小字。\n不要让主体太小。\n不要让文字压住主体。\n不要让底部信息区过度拥挤。\n不要出现儿童科普风、卡通风、低端展板风。\n\n最终输出：\n生成一张 9:16 竖版、高级、干净、强视觉冲击的 Apple 风自然科普海报。",
+      "sourceLabel": "@berryxia",
+      "sourceUrl": "https://x.com/berryxia/status/2048251413147644100",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-339",
+      "linkedTemplateIds": [
+        "nature-science-poster"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "city-creative-font",
+          "score": 12
+        },
+        {
+          "id": "conceptual-typography-poster",
+          "score": 12
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 12
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 12
+        },
+        {
+          "id": "ink-double-exposure-poster",
+          "score": 11
+        },
+        {
+          "id": "infographic-engine",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 373,
+      "title": "高端肉类海鲜品牌英雄图",
+      "category": "Products & E-commerce",
+      "styles": [
+        "Brand"
+      ],
+      "scenes": [
+        "Commerce",
+        "Food"
+      ],
+      "featured": true,
+      "promptPreview": "一、品牌基础设定 品牌名称：[请填写，例如：PRIME STEAK / OCEAN PRIME] 品牌标语：[请填写，例如：Steakhouse Quality, Your Table / Restaurant Grade, Home Delivered] 主色调：[请填写，例如：黑金 / 深红+金 / 深蓝+银] 字体风格： 标题：[请填写，例如：金色衬线体，大写，奢华感] 正文：[请填写，例如：细衬线体/无衬线体] 二、核心视觉元素",
+      "prompt": "一、品牌基础设定\n品牌名称：[请填写，例如：PRIME STEAK / OCEAN PRIME]\n品牌标语：[请填写，例如：Steakhouse Quality, Your Table / Restaurant Grade, Home Delivered]\n主色调：[请填写，例如：黑金 / 深红+金 / 深蓝+银]\n字体风格：\n标题：[请填写，例如：金色衬线体，大写，奢华感]\n正文：[请填写，例如：细衬线体/无衬线体]\n二、核心视觉元素\n台面材质：[请填写，例如：大理石/黑色石板]\n背景调性：[请填写，例如：深色渐变/暗调餐厅环境]\n光线风格：[请填写，例如：聚光/侧光/顶部照明]\n三、主产品定义（必填）\n产品名称/类型：[请填写，例如：和牛牛排 / 帝王蟹 / 北极甜虾]\n产品数量/摆放：[请填写，例如：1份单品 / 3块整齐摆放]\n呈现方式：[请填写，例如：切片展示 / 带骨展示 / 原壳展示]\n产品特色/质感提示：[请填写，例如：肉质纹理清晰、多汁感 / 光泽晶亮 / 肉眼可见油花]",
+      "sourceLabel": "@xpg0970",
+      "sourceUrl": "https://x.com/xpg0970/status/2050108279385419965",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-373",
+      "linkedTemplateIds": [
+        "product-commerce-visual"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "impossible-concept-product",
+          "score": 10
+        },
+        {
+          "id": "personalized-beauty-report",
+          "score": 9
+        }
+      ]
+    },
+    {
+      "id": 358,
+      "title": "草莓能量饮料商业广告",
+      "category": "Products & E-commerce",
+      "styles": [
+        "UI",
+        "Poster",
+        "Realistic"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Food"
+      ],
+      "featured": false,
+      "promptPreview": "A hyper-realistic commercial advertisement blending energy drink and sports branding. A dynamic athletic woman mid-air jump, wearing modern sportswear (light translucent jacket, orange shorts, white sneakers), surrounded",
+      "prompt": "A hyper-realistic commercial advertisement blending energy drink and sports branding. A dynamic athletic woman mid-air jump, wearing modern sportswear (light translucent jacket, orange shorts, white sneakers), surrounded by explosive splashes of red strawberry liquid and flying ice cubes. A cold metallic energy drink can (strawberry flavor) bursting with droplets sits in the foreground, covered in condensation. Fresh strawberries scattered on a glossy reflective surface.\n\nBright cinematic lighting with dramatic highlights and motion effects. Vibrant orange gradient background with bold glowing typography behind the subject. Ultra-detailed, high contrast, sharp focus, commercial product photography style, 8K resolution, advertising poster aesthetic, energetic, powerful, refreshing mood.",
+      "sourceLabel": "@SPEEDAI07",
+      "sourceUrl": "https://x.com/SPEEDAI07/status/2049043627163435040",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-358",
+      "linkedTemplateIds": [
+        "product-commerce-visual"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "personalized-beauty-report",
+          "score": 15
+        },
+        {
+          "id": "impossible-concept-product",
+          "score": 14
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 14
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 9
+        },
+        {
+          "id": "realistic-photography",
+          "score": 9
+        },
+        {
+          "id": "ui-screenshot-system",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 353,
+      "title": "品牌口红推荐报告信息图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "UI",
+        "Infographic",
+        "Poster"
+      ],
+      "scenes": [
+        "Commerce",
+        "Food",
+        "Story"
+      ],
+      "featured": true,
+      "promptPreview": "一、系统角色 你是一个专业美妆顾问 + 人脸分析系统 + 品牌视觉设计系统。 你的任务是：基于用户上传自拍与指定口红品牌，生成一张具有品牌调性的“口红推荐报告信息结构图”。 二、输入参数 用户图像：{用户自拍} 品牌：{口红品牌，如 Dior / YSL / Armani / Chanel / TF} 风格偏好（可选）：{通勤 / 温柔 / 气场 / 氛围感 / 显白优先} 推荐数量：3–5 三、品牌视觉层（新增核心模块） 根据 {品牌",
+      "prompt": "一、系统角色\n你是一个专业美妆顾问 + 人脸分析系统 + 品牌视觉设计系统。\n你的任务是：基于用户上传自拍与指定口红品牌，生成一张具有品牌调性的“口红推荐报告信息结构图”。\n\n二、输入参数\n用户图像：{用户自拍}\n品牌：{口红品牌，如 Dior / YSL / Armani / Chanel / TF}\n风格偏好（可选）：{通勤 / 温柔 / 气场 / 氛围感 / 显白优先}\n推荐数量：3–5\n\n三、品牌视觉层（新增核心模块）\n根据 {品牌} 自动构建视觉风格（Brand Visual Identity），提取品牌调性，例如：\nDior：\n优雅、高级、法式、灰白 + 银色、柔光\nYSL：\n黑金、性感、强对比、时尚编辑感\nArmani：\n低饱和、雾面、克制、灰调高级感\nChanel：\n极简黑白、高级、理性、结构清晰\nTom Ford：\n深色、高对比、奢华、电影感\n\n视觉应用到海报：\n1. 主色调（背景微变化，不是大面积铺色）\n2. 强调色（用于色号标题/细线/小元素）\n3. 光影风格（柔光 / 强对比 / 冷调 / 暖调）\n4. 字体气质（优雅 / 现代 / 冷感 / 力量感）\n\n四、分析层\n对用户进行分析：\n- 肤色：冷 / 暖 / 中性（+ 明度）\n- 气质：清冷 / 温柔 / 明艳 / 干净 / 成熟\n- 唇部特征：薄 / 厚 / 唇色基础\n- 妆容状态：素颜 / 日常 / 精致\n输出一句总结：「更适合 {色系} + {饱和度} + {质地} 的口红方向」\n\n五、推荐层（增强差异）\n从 {品牌} 推荐 3–5 个色号：\n每个包含：\n- 色号名称（#999）\n- 色系（正红 / 豆沙 / 枫叶 / 奶茶 / 玫瑰）\n- 上脸效果（显白 / 提气色 / 氛围感 / 气场增强）\n- 场景（逛街 / 通勤 / 聚餐 / 约会 / 宴会）\n\n要求：每个色号“风格明确区分”（一个日常、一个气场、一个氛围感等）\n\n六、信息结构图\n生成竖版信息结构图\n整体风格：美妆时尚大片质感 + 结构化信息可视化排版 + 品牌视觉体系深度融合\n极简但不单调，高级但有视觉层次\n\n【整体布局】\n左上：用户输入区\n右上：分析结论\n中部：试色矩阵（核心）\n底部：总结\n\n## 1️⃣ 左上（用户区）\n用户自拍（真实质感）\n+ 小标题：「肤色分析」\n+ 一句话结论：「适合低饱和玫瑰调，避免高荧光色」\n\n极细品牌色线条（如 YSL 金线 / Dior 灰线）\n\n## 2️⃣ 中部（核心试色矩阵）\n这是视觉重点区域（占比60%以上）\n展示方式：将 3–5 个色号以“人脸试色对比”的形式排列：\n每一列 = 一个色号\n每个色号包含：\n- 小型人脸图（同一张脸，不同唇色）\n- 色号名称（如 #999）\n- 色系标签（如 Classic Red）\n- 一句话效果说明\n要求：所有人脸保持一致，仅唇色变化，真实试色效果（lip color try-on），肤质真实，不塑料，光影统一。\n排列方式：横向排布 或 网格排布（整齐但不死板）\n\n品牌增强点：\n- Dior：轻柔渐变背景 + 柔光阴影\n- YSL：更强对比 + 黑色细分割线\n- Armani：整体灰调统一，低对比\n- Chanel：严格对齐，极简黑白\n- TF：局部暗背景 + 高光强调\n\n## 3️⃣ 每个色号模块\n包含：\n色号名（突出）\n色系标签\n一句推荐语\n场景标签（逛街/通勤/聚餐/约会/宴会等）\n\n品牌化处理：\n- 用“品牌强调色”做：\n  - 色号标题\n  - 细分隔线\n  - 小icon\n（不是色块，而是“精致点缀”）\n\n## 4️⃣ 底部总结\n一段“有判断力的建议”，\n例如：「日常建议选择低饱和豆沙色提升气色，重要场合可使用正红增强气场」\n或：「你的肤色更适合柔和玫瑰调，避免高荧光色系」\n但不要完全引用以上2个例子的建议，根据用户实际肤色来建议。\n品牌增强：底部可加极淡品牌风格横线 / 极小品牌字样（非logo）\n\n七、UI设计\n- 不使用圆角卡片 UI\n- 不使用厚边框\n1. 引入“层级对比”：\n   - 主体亮\n   - 次要信息弱\n2. 使用“微对比”：\n   - 细线\n   - 灰度差\n   - 字重变化\n3. 加入“节奏感”：\n   - 疏密变化\n   - 模块呼吸\n4. 品牌点缀：\n   - 只用 5% 强调\n   - 不破坏极简结构\n\n八、图像质量\n真实皮肤质感\n唇色精准\n统一光影\n商业级美妆摄影\n8K\n\n———\n品牌：YSL",
+      "sourceLabel": "@liyue_ai",
+      "sourceUrl": "https://x.com/liyue_ai/status/2048667226195317219",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-353",
+      "linkedTemplateIds": [
+        "personalized-beauty-report"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "infographic-engine",
+          "score": 10
+        },
+        {
+          "id": "scientific-scale-diagram",
+          "score": 10
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 354,
+      "title": "Logo 与品牌身份系统提示词合集",
+      "category": "Brand & Logos",
+      "styles": [
+        "Product",
+        "Brand"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce"
+      ],
+      "featured": true,
+      "promptPreview": "1. Logo概念生成提示词 你是一位拥有20年经验的顶级Logo设计师，为全球知名品牌设计过即时识别且深具意义的标志。 品牌名称：[你的品牌名] 行业：[你的行业] 品牌个性：[描述] 目标受众：[描述] 欣赏的视觉身份：[列举3个] 讨厌的视觉身份：[列举3个] 偏好风格：[如极简、大胆、几何、有机、复古、未来] 为我的品牌生成5个完全不同的Logo概念。 对每个概念提供： - 核心视觉理念及象征意义 - 形状语言及为何适合品牌 -",
+      "prompt": "1. Logo概念生成提示词\n\n你是一位拥有20年经验的顶级Logo设计师，为全球知名品牌设计过即时识别且深具意义的标志。\n\n品牌名称：[你的品牌名]\n行业：[你的行业]\n品牌个性：[描述]\n目标受众：[描述]\n欣赏的视觉身份：[列举3个]\n讨厌的视觉身份：[列举3个]\n偏好风格：[如极简、大胆、几何、有机、复古、未来]\n\n为我的品牌生成5个完全不同的Logo概念。\n\n对每个概念提供：\n\n- 核心视觉理念及象征意义\n- 形状语言及为何适合品牌\n- 字体方向建议\n- 第一眼的情感触发\n- 为何适合目标受众\n- 在名片、App图标和广告牌上的效果\n- 何为永恒而非潮流\n\n然后告诉我，如果这是你的品牌，你会选哪个以及原因。\n\n2. 品牌身份基础提示词\n\n你是为财富500强公司和初创企业建立品牌身份的顶级品牌战略师，这些企业后来融资数百万。\n\n业务名称：[你的业务名]\n业务描述：[一句话]\n目标受众：[详细描述]\n竞争对手：[列举3-5个]\n想触发的感受：[如信任、兴奋、奢华、亲近、力量]\n想关联的词汇：[列举5-10个]\n不想关联的词汇：[列举5-10个]\n\n在设计任何视觉效果之前建立完整的品牌身份基础。\n\n为我提供：\n\n- 品牌原型及为何完美契合\n- 5个具体人类特征描述的品牌个性\n- 带示例的品牌语调指南\n- 核心品牌承诺（一句话）\n- 3个品牌应触发的情感层级\n- 与竞争对手的根本差异\n- 定义品牌的唯一关键词\n\n3. 配色方案提示词\n\n你是色彩心理学专家和品牌设计师，深知色彩如何触发情感、建立信任和驱动购买决策。\n\n品牌名称：[你的品牌名]\n行业：[你的行业]\n目标受众：[年龄、性别、收入、生活方式]\n想触发的首要情感：[如信任、能量、奢华、平静、兴奋]\n前3名竞争对手颜色：[列举]\n喜欢的颜色：[列举]\n讨厌的颜色：[列举]\n\n为我建立完整品牌配色板。\n\n为我提供：\n\n- 主色及其HEX代码和心理学解释\n- 两个辅助色及HEX代码\n- 一个强调色用于CTA和高亮\n- 一个中性色用于背景和文字\n- 每种颜色对目标受众的影响\n- 与竞争对手的差异化\n- 在网站、社交媒体和包装上的应用示例\n- 永远不要搭配的颜色组合及原因\n\n4. 字体方向提示词\n\n你是字体专家和品牌设计师，深知字体如何传达个性、建立可信度和实现品牌即时识别。\n\n品牌名称：[你的品牌名]\n品牌个性：[5个词]\n行业：[你的行业]\n目标受众：[描述]\n字体应触发的感受：[如权威、友好、创新、优雅、能量]\n喜欢的品牌字体：[列举3个]\n\n为我建立完整字体系统。\n\n为我提供：\n\n- 标题用主显示字体名称及为何完美\n- 长文本的辅助字体\n- 引言或重点的强调字体\n- 标题、副标题、正文、说明文字的精确字号层级\n- 字距和行高建议\n- 字体搭配方法\n- 预算有限时的免费替代方案\n- 你所在行业应避免的字体错误\n\n5. 完整品牌身份包提示词\n\n你是顶级品牌代理创意总监，交付覆盖每个触点的完整品牌身份系统。\n\n业务名称：[你的业务名]\n业务描述：[一句话]\n目标受众：[详细描述]\n品牌个性：[5个词]\n行业：[你的行业]\n竞争对手：[列举3个]\n设计工具预算：[免费或付费]\n时间表：[你需要的时间]\n\n在一个回复中交付我的完整品牌身份系统。\n\n包含所有元素：\n\n- 品牌战略基础、原型、个性、承诺和定位\n- Logo概念及3个变体\n- 完整配色板、HEX代码和使用规则\n- 字体系统、名称、字号和层级\n- 视觉方向指南\n- 品牌语调指南和标语选项\n- 社交媒体视觉模板\n- 3条永远不要打破的核心品牌规则\n\n将一切作为结构化品牌手册交付，任何设计师、开发者或AI工具都能在10分钟内完全理解你的品牌。",
+      "sourceLabel": "@wanerfu",
+      "sourceUrl": "https://x.com/wanerfu/status/2048659924822184026",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-354",
+      "linkedTemplateIds": [
+        "brand-identity-package"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "brand-touchpoint-board",
+          "score": 17
+        },
+        {
+          "id": "impossible-concept-product",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 362,
+      "title": "抹茶品牌触点系统视觉板",
+      "category": "Brand & Logos",
+      "styles": [
+        "UI",
+        "Poster",
+        "Realistic"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Food"
+      ],
+      "featured": true,
+      "promptPreview": "Create a premium “Matcha Brand Touchpoint System” visual board for a modern lifestyle brand called: “MATCHA MODE” Build a full brand identity system, not a single image. HERO SCENE: A hyper-realistic matcha drink in a ce",
+      "prompt": "Create a premium “Matcha Brand Touchpoint System” visual board for a modern lifestyle brand called:\n\n“MATCHA MODE”\n\nBuild a full brand identity system, not a single image.\n\nHERO SCENE:\n\nA hyper-realistic matcha drink in a ceramic cup placed on a clean natural surface.\n\n– vibrant green matcha foam with micro-bubbles\n– bamboo whisk (chasen) nearby\n– soft natural light\n– slight matcha powder dust on the surface\n– minimal Japanese aesthetic\nATMOSPHERE:\n– calm, warm, soft daylight\n– clean background (off-white or beige)\n– subtle shadows and reflections\n– feeling of wellness and luxury\nFULL BRAND SYSTEM:\n– takeout cups (paper + glass bottles)\n– packaging boxes (minimalist design)\n– tote bags (premium lifestyle)\n– labels, stickers, seals\n– menu cards with pricing ($6.50, $8.90, etc.)\n– small typography everywhere\n– subtle imperfections (realism)\n\nDESIGN LANGUAGE:\n\n– modern minimalist typography\n– Japanese-inspired layout\n– soft green palette\n– elegant spacing\n\nINCLUDE:\n– matcha latte\n– iced matcha\n– matcha desserts\n– combo sets\n– lifestyle shots\nThe composition must feel like a high-end design agency presentation.\n\nUltra-detailed, realistic, clean, aesthetic, and highly shareable.",
+      "sourceLabel": "@Preda2005",
+      "sourceUrl": "https://x.com/Preda2005/status/2049846981271699685",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-362",
+      "linkedTemplateIds": [
+        "brand-touchpoint-board"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "product-commerce-visual",
+          "score": 12
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 12
+        },
+        {
+          "id": "brand-identity-package",
+          "score": 11
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 10
+        },
+        {
+          "id": "personalized-beauty-report",
+          "score": 9
+        },
+        {
+          "id": "ui-screenshot-system",
+          "score": 9
+        }
+      ]
+    },
+    {
+      "id": 331,
+      "title": "西安手绘水彩城市地图",
+      "category": "Architecture & Spaces",
+      "styles": [
+        "Architecture"
+      ],
+      "scenes": [
+        "Travel"
+      ],
+      "featured": false,
+      "promptPreview": "生成一张手绘水彩风格的「西安」城市地图，包含当地特色美食、地标建筑及城市特色",
+      "prompt": "生成一张手绘水彩风格的「西安」城市地图，包含当地特色美食、地标建筑及城市特色",
+      "sourceLabel": "苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-331",
+      "linkedTemplateIds": [
+        "architecture-space"
+      ],
+      "candidateTemplates": []
+    },
+    {
+      "id": 11,
+      "title": "一张手绘风格的城市美食地图，以台州为主题",
+      "category": "Architecture & Spaces",
+      "styles": [
+        "Illustration"
+      ],
+      "scenes": [
+        "Travel"
+      ],
+      "featured": false,
+      "promptPreview": "一张手绘风格的城市美食地图，以台州为主题。画面以鸟瞰视角的手绘简化城市地图为底，标注椒江、路桥、黄岩等区域和灵江、台州湾等水系地标，不追求精确比例而是追求可爱的水彩手绘感。地图上分布着12个美食地点的精致手绘小插画：1. 椒江老粮坊的蛋清羊尾（金黄蓬松的蛋泡甜点撒着糖粉，筷子夹起拉丝）2. 临海紫阳古街的食饼筒（一个饱满的麦饼卷切开露出肉丝、蛋皮、米面等丰富馅料）3. 三门的青蟹（一只肥硕的青壳大蟹张着大钳子，旁边一小碟姜醋）4. 温岭",
+      "prompt": "一张手绘风格的城市美食地图，以台州为主题。画面以鸟瞰视角的手绘简化城市地图为底，标注椒江、路桥、黄岩等区域和灵江、台州湾等水系地标，不追求精确比例而是追求可爱的水彩手绘感。地图上分布着12个美食地点的精致手绘小插画：1. 椒江老粮坊的蛋清羊尾（金黄蓬松的蛋泡甜点撒着糖粉，筷子夹起拉丝）2. 临海紫阳古街的食饼筒（一个饱满的麦饼卷切开露出肉丝、蛋皮、米面等丰富馅料）3. 三门的青蟹（一只肥硕的青壳大蟹张着大钳子，旁边一小碟姜醋）4. 温岭石塘渔港的海鲜面（粗瓷大碗浓白鱼汤面铺满虾、蛏子、小黄鱼）5. 路桥的糟羹（一锅稠厚的五彩羹，芥菜、冬笋、香干、牡蛎粒粒可见）6. 玉环坎门的炊圆（三四个白胖糯米团子卧在笼屉里，旁边酱油碟滴着麻油）7. 黄岩的麦虾（陶锅里面疙瘩配蛤蜊、青菜翻滚冒泡）8. 仙居的八大碗（八只粗陶小碗围成一圈——土鸡、溪鱼、豆腐皮俱全）9. 天台的饺饼筒（几卷金黄酥脆的薄饼整齐码放，露出红烧肉和豆面馅）10. 临海的麦油脂（竹盘上摊着薄如蝉翼的饼皮卷着肉末、豆芽、鸡蛋丝）11. 温岭的嵌糕（厚实的年糕饼中间嵌着红烧肉和油条，正在铁板上滋滋作响）12. 椒江的姜汁调蛋（一只青花碗里琥珀色姜汤卧着嫩滑蛋花，撒几粒核桃碎）。每个插画约占地图5%面积，旁边用手写体标注店名和一句推荐语如“阿婆凌晨四点就起来和面”“本地人认准这口锅”。地图边缘用手绘藤蔓、杨梅枝和小海鲜（虾、蟹、贝壳）装饰形成边框。右下角有一个手绘指南针（标注“东海”方向）和图例说明。左上角标题“台州·山海食光地图”使用胖圆的手绘美术字，用杨梅和小黄鱼点缀装饰。整体画风为水彩+彩铅混合的手绘质感，颜色以杨梅红、姜黄、海蓝、翠绿为主，图片比例1:1。",
+      "sourceLabel": "小红书号510244722",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-11",
+      "linkedTemplateIds": [
+        "architecture-space"
+      ],
+      "candidateTemplates": []
+    },
+    {
+      "id": 377,
+      "title": "樱花咖啡户外人像",
+      "category": "Photography & Realism",
+      "styles": [
+        "Realistic",
+        "Brand",
+        "Character"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Food"
+      ],
+      "featured": true,
+      "promptPreview": "Edit the provided image while preserving the same face identity, shape, and facial features without altering age, ethnicity, or structure. Maintain a calm, relaxed expression with the subject not looking at the camera. S",
+      "prompt": "Edit the provided image while preserving the same face identity, shape, and facial features without altering age, ethnicity, or structure. Maintain a calm, relaxed expression with the subject not looking at the camera.\n\nSubject: young woman (18–23) with soft feminine beauty, smooth glowing skin, natural texture.\nPose (strict): seated on a wooden chair, body angled sideways (45–70°), legs crossed naturally, upper body slightly leaning forward, head turned away from camera, gaze to the side. She holds a drink cup with a straw using both hands.\nFraming: full-body vertical (9:16), head to shoes visible, centered but slightly offset for natural composition.\nOutfit: light pink varsity jacket with white stripes, soft pink inner top, modest knee-length pleated skirt, white sneakers.\nAccessories: beige newsboy cap, sunglasses (on face or cap), pink shoulder bag, small earrings.\nHair: neat low bun with soft loose strands.\nEnvironment: outdoor flower shop street scene with pastel flowers (pink, soft tones), decorative plants, floral storefront.\nLighting: bright natural daylight, soft glossy skin highlights, balanced exposure, soft shadows.\nCamera: low/frog angle (slightly below, looking up), 50mm lens, shallow depth of field.\nColor grading: warm pastel palette (pink, cream), clean bright lifestyle aesthetic.\nQuality: ultra-photorealistic, 8K detail, DSLR realism, natural skin texture.\nNegative: front-facing, eye contact, close-up, cropped body, mini/short skirt, indoor scene, dark lighting, anime, cartoon, CGI, plastic skin, distorted anatomy.\n--ar 9:16 --style raw --quality high",
+      "sourceLabel": "@xRahultripathi",
+      "sourceUrl": "https://x.com/xRahultripathi/status/2050677614168391716",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-377",
+      "linkedTemplateIds": [
+        "realistic-photography"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "street-accident-moment",
+          "score": 13
+        },
+        {
+          "id": "product-commerce-visual",
+          "score": 10
+        },
+        {
+          "id": "3d-collectible-toy",
+          "score": 8
+        },
+        {
+          "id": "brand-identity-package",
+          "score": 8
+        },
+        {
+          "id": "brand-touchpoint-board",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 376,
+      "title": "泼洒抹茶街头手机照片",
+      "category": "Photography & Realism",
+      "styles": [
+        "UI",
+        "Poster",
+        "Realistic"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Food"
+      ],
+      "featured": true,
+      "promptPreview": "A realistic vertical smartphone photo of a spilled green iced drink on outdoor stone pavement, a transparent disposable plastic cup lying on its side inside the green puddle, clear plastic lid nearby, scattered ice cubes",
+      "prompt": "A realistic vertical smartphone photo of a spilled green iced drink on outdoor stone pavement, a transparent disposable plastic cup lying on its side inside the green puddle, clear plastic lid nearby, scattered ice cubes floating in the drink, small foam bubbles on the surface, green liquid naturally spreading across rough square floor tiles, strong midday sunlight, harsh realistic shadows, a dark human shadow silhouette cast across the ground and partially over the spill, accidental street moment, urban documentary photography, handheld phone camera perspective, slightly top-down angle, natural colors, realistic pavement texture, raw unedited photo look, high detail, authentic everyday scene, 9:16 vertical composition\n\nNegative Prompt:\ncartoon, illustration, anime, CGI, 3D render, fantasy style, studio lighting, overly perfect composition, overly clean floor, fake liquid, unrealistic reflections, plastic-looking liquid, oversaturated green, blurry, low resolution, distorted cup, melted plastic, extra cups, duplicated objects, readable brand logo, messy text, watermark, poster design, dramatic artificial lighting, excessive sharpening, over-processed, unrealistic shadow, floating ice, deformed perspective",
+      "sourceLabel": "@Shinning1010",
+      "sourceUrl": "https://x.com/Shinning1010/status/2050693240253214894",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-376",
+      "linkedTemplateIds": [
+        "street-accident-moment"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "realistic-photography",
+          "score": 15
+        },
+        {
+          "id": "sports-campaign-poster",
+          "score": 12
+        },
+        {
+          "id": "product-commerce-visual",
+          "score": 10
+        },
+        {
+          "id": "personalized-beauty-report",
+          "score": 8
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 8
+        },
+        {
+          "id": "text-on-objects",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 346,
+      "title": "立体刺绣小鸟花枝",
+      "category": "Illustration & Art",
+      "styles": [
+        "Illustration"
+      ],
+      "scenes": [
+        "Creative"
+      ],
+      "featured": true,
+      "promptPreview": "精致立体刺绣风插画，浅浮雕纤维艺术效果，纯净「蚕丝白 + 奶白」底色，细腻丝线质感。画面为数只小鸟停在蜿蜒花枝上，周围点缀粉白、浅桃、珊瑚粉、淡金色花朵与叶片，构图轻盈雅致、留白充足。鸟儿羽毛以奶白、浅蓝、淡粉、浅金丝线刺绣表现，花枝纤细自然，花朵层层叠线，整体呈现高级手工刺绣、丝线堆绣、柔和光影、细节丰富、温柔清新的艺术效果。",
+      "prompt": "精致立体刺绣风插画，浅浮雕纤维艺术效果，纯净「蚕丝白 + 奶白」底色，细腻丝线质感。画面为数只小鸟停在蜿蜒花枝上，周围点缀粉白、浅桃、珊瑚粉、淡金色花朵与叶片，构图轻盈雅致、留白充足。鸟儿羽毛以奶白、浅蓝、淡粉、浅金丝线刺绣表现，花枝纤细自然，花朵层层叠线，整体呈现高级手工刺绣、丝线堆绣、柔和光影、细节丰富、温柔清新的艺术效果。",
+      "sourceLabel": "@dotey",
+      "sourceUrl": "https://x.com/dotey/status/2048529821706195442",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-346",
+      "linkedTemplateIds": [
+        "illustration-art-style"
+      ],
+      "candidateTemplates": []
+    },
+    {
+      "id": 6,
+      "title": "插画艺术创作图",
+      "category": "Illustration & Art",
+      "styles": [
+        "Illustration",
+        "Character"
+      ],
+      "scenes": [
+        "Creative"
+      ],
+      "featured": true,
+      "promptPreview": "参考图是角色人设图，为参考图的少女绘制一副日系唯美奇幻风格插画。 【构图】这是一个宏大的中景日系奇幻插画构图，画面中心是完全保留了完整细节的可爱少女，她站立在无边的、如镜面般平滑的水面中心。天空呈现出高饱和度的粉紫与深蓝交织，一条耀眼的蓝色巨型流星划破天际，配合着边缘发光的瑰丽层云。女孩处于背光状态，形成一个暗调但依然清晰可辨其服装和紫色明亮眼眸的剪影，被流星和星空的边缘光细腻勾勒，她微微仰头，一只手轻轻张开。下方的水面完美、对称地反射",
+      "prompt": "参考图是角色人设图，为参考图的少女绘制一副日系唯美奇幻风格插画。\n【构图】这是一个宏大的中景日系奇幻插画构图，画面中心是完全保留了完整细节的可爱少女，她站立在无边的、如镜面般平滑的水面中心。天空呈现出高饱和度的粉紫与深蓝交织，一条耀眼的蓝色巨型流星划破天际，配合着边缘发光的瑰丽层云。女孩处于背光状态，形成一个暗调但依然清晰可辨其服装和紫色明亮眼眸的剪影，被流星和星空的边缘光细腻勾勒，她微微仰头，一只手轻轻张开。下方的水面完美、对称地反射出整个壮丽的星空、流星、云彩，以及女孩清晰的倒影，点缀着微小的发光点，营造出天人合一、空灵静谧的唯美梦境意境。\n【日系唯美奇幻风格说明】该风格以高饱和度的粉紫冷暖色调交织出浩瀚星空，并辅以壮丽的流星与边缘发光的层云作为视觉奇观；画面巧妙利用“天空之镜”般的完美水面反射，将宏大的宇宙背景与孤独静立的人物剪影相融合，通过极具电影感的光影渲染与高对比度的表现手法，营造出一种空灵、静谧且带有超现实宿命感的梦境氛围。\n【要求】生成图片的比例9:16，分辨率 4k。",
+      "sourceLabel": "小红书号yi_xiao_jiu",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-1.md#case-6",
+      "linkedTemplateIds": [
+        "illustration-art-style"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "character-design-sheet",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 347,
+      "title": "4×4 动作分解参考表",
+      "category": "Characters & People",
+      "styles": [
+        "Infographic",
+        "Illustration",
+        "Character"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Social"
+      ],
+      "featured": false,
+      "promptPreview": "[STYLE] Monochrome grayscale illustration, 3D-rendered character, clean instructional reference sheet, white background, comic-style cell grid layout, technical diagram aesthetic. [LAYOUT] 4×4 grid layout with a total of",
+      "prompt": "[STYLE]\nMonochrome grayscale illustration, 3D-rendered character, clean instructional reference sheet, white background, comic-style cell grid layout, technical diagram aesthetic.\n\n[LAYOUT]\n4×4 grid layout with a total of 16 panels. Each panel is separated by thin black border lines. Cells are numbered from 1 to 16, with consistent panel sizes.\n\n[CHARACTER]\nimage1 (the same character appears consistently in all panels)\n\n[PANEL STRUCTURE – per cell]\nTop-left: bold number badge + English title text\nCenter: full-body character pose illustration\nBottom-left: English description text (3–4 lines)\nOverlay: directional arrows indicating movement\n\n[ARROWS / MOTION INDICATORS]\nCurved arrows, straight arrows, and circular rotation indicators placed around the character to show motion flow and direction.\n\n[RENDERING STYLE]\nHighly detailed 3D sculpted style, soft studio lighting, subtle shadows, no color, grayscale shading, clean linework, game concept art quality.\n\n[NEGATIVE]\nNo background scenery, no color tones, no additional characters, no complex background.",
+      "sourceLabel": "@oggii_0",
+      "sourceUrl": "https://x.com/oggii_0/status/2048614158699217302",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-347",
+      "linkedTemplateIds": [
+        "character-design-sheet"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "3d-collectible-toy",
+          "score": 16
+        },
+        {
+          "id": "fashion-lookbook-pose",
+          "score": 11
+        },
+        {
+          "id": "scientific-scale-diagram",
+          "score": 9
+        },
+        {
+          "id": "document-publishing",
+          "score": 8
+        },
+        {
+          "id": "scene-storytelling",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 378,
+      "title": "高端 3D 收藏玩具头像",
+      "category": "Characters & People",
+      "styles": [
+        "Realistic",
+        "Brand",
+        "3D"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce"
+      ],
+      "featured": true,
+      "promptPreview": "Transform the input photo into a high-end stylized 3D collectible figure. Large head, slightly exaggerated facial features while preserving identity. Hyper-detailed skin texture with subtle pores, realistic wrinkles, and",
+      "prompt": "Transform the input photo into a high-end stylized 3D collectible figure. Large head, slightly exaggerated facial features while preserving identity. Hyper-detailed skin texture with subtle pores, realistic wrinkles, and a cinematic expression.\n\nSmooth matte vinyl finish. Soft studio lighting, clean black background. Ultra-sharp focus, 8K render, photorealistic materials, Pixar-quality rendering, centered composition, full body, premium designer toy aesthetic.",
+      "sourceLabel": "@Genematicai",
+      "sourceUrl": "https://x.com/Genematicai/status/2050654848216109429",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-378",
+      "linkedTemplateIds": [
+        "3d-collectible-toy"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "brand-identity-package",
+          "score": 8
+        },
+        {
+          "id": "brand-touchpoint-board",
+          "score": 8
+        },
+        {
+          "id": "realistic-photography",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 330,
+      "title": "月下美女直播画面",
+      "category": "UI & Interfaces",
+      "styles": [
+        "UI"
+      ],
+      "scenes": [
+        "Creative"
+      ],
+      "featured": true,
+      "promptPreview": "生成一张直播间的图片，直播间氛围是月下美女跳舞的画面，直播间有很多人评论",
+      "prompt": "生成一张直播间的图片，直播间氛围是月下美女跳舞的画面，直播间有很多人评论",
+      "sourceLabel": "苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-330",
+      "linkedTemplateIds": [
+        "scene-storytelling"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "ui-screenshot-system",
+          "score": 10
+        }
+      ]
+    },
+    {
+      "id": 375,
+      "title": "古希腊三哲时间轴城市图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "Charts"
+      ],
+      "scenes": [
+        "Travel",
+        "History"
+      ],
+      "featured": true,
+      "promptPreview": "二千五百年前，柏拉图，苏格拉底， 亚力士多德，坐在雅典街头聊天，聊出了世界文明史的源头。 背景可以加上他们聊天内容，按时间轴的走向，重叠在古希腊雅典的城市风光中。",
+      "prompt": "二千五百年前，柏拉图，苏格拉底， 亚力士多德，坐在雅典街头聊天，聊出了世界文明史的源头。\n\n背景可以加上他们聊天内容，按时间轴的走向，重叠在古希腊雅典的城市风光中。",
+      "sourceLabel": "@ToroJushiAi",
+      "sourceUrl": "https://x.com/ToroJushiAi/status/2050713034503409874",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-375",
+      "linkedTemplateIds": [
+        "history-classical-themes"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "infographic-engine",
+          "score": 10
+        },
+        {
+          "id": "scientific-scale-diagram",
+          "score": 10
+        }
+      ]
+    },
+    {
+      "id": 338,
+      "title": "《赤壁怀古》长卷图",
+      "category": "History & Classical Themes",
+      "styles": [
+        "History"
+      ],
+      "scenes": [
+        "Creative"
+      ],
+      "featured": true,
+      "promptPreview": "帮我生成一张《赤壁怀古》的长卷图，带整篇《赤壁赋》文字",
+      "prompt": "帮我生成一张《赤壁怀古》的长卷图，带整篇《赤壁赋》文字",
+      "sourceLabel": "苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）",
+      "sourceUrl": "",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-338",
+      "linkedTemplateIds": [
+        "history-classical-themes"
+      ],
+      "candidateTemplates": []
+    },
+    {
+      "id": 360,
+      "title": "长发造型分析信息图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "UI",
+        "Infographic",
+        "Poster"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Education"
+      ],
+      "featured": true,
+      "promptPreview": "Create a professional \"HAIRSTYLE ANALYSIS\" infographic with a different male model (the same face) having long, thick hair (6-10 inches), slightly wavy texture. Style should be clean, modern, premium grooming guide (simi",
+      "prompt": "Create a professional \"HAIRSTYLE ANALYSIS\" infographic with a different male model (the same face) having long, thick hair (6-10 inches), slightly wavy texture.\n\nStyle should be clean, modern, premium grooming guide (similar layout but not identical).\n\nTOP TITLE:\n\"HAIRSTYLE ANALYSIS - Long Hair Edition\"\n\nLEFT PANEL (Key Features with icons):\nFace Shape: Oval\nHair Type: Thick\nTexture: Wavy\nLength: Long\n\nBEST OPTIONS (Top row with green indicators):\nLayered Flow Cut (Adds movement & volume)\nModern Curtain Hair (Stylish & balanced)\nTextured Long Waves (Natural & full)\nLoose Slick Back (Controlled but not flat)\n\nLESS FLATTERING (Bottom row with red indicators):\nFlat Straight Long Hair (No volume)\nOverly Oily Slick Back (Too heavy)\nUneven Long Layers (Messy shape)\nExcessively Frizzy Look (Uncontrolled)\n\nBEST HAIR LENGTH SECTION:\nIdeal: 6-10 inches with layers\nAvoid: Too flat or too heavy bottom\n\nBEST HAIR COLORS:\nDark Brown\nNatural Black\nWarm Brown\nAsh Brown\n\nDESIGN STYLE:\nClean grid infographic\nWhite/beige background\nSoft shadows\nPremium magazine look\nRealistic face and hair detail\nConsistent spacing and typography\nHigh resolution, 4K",
+      "sourceLabel": "@Gemalpha_88",
+      "sourceUrl": "https://x.com/Gemalpha_88/status/2048918707343401034",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-360",
+      "linkedTemplateIds": [
+        "document-publishing"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "infographic-engine",
+          "score": 17
+        },
+        {
+          "id": "scientific-scale-diagram",
+          "score": 17
+        },
+        {
+          "id": "nature-science-poster",
+          "score": 12
+        },
+        {
+          "id": "personalized-beauty-report",
+          "score": 9
+        },
+        {
+          "id": "poster-layout-system",
+          "score": 9
+        },
+        {
+          "id": "impossible-concept-product",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 370,
+      "title": "Crumple Chair 概念沙发研发板",
+      "category": "Products & E-commerce",
+      "styles": [
+        "UI",
+        "Poster",
+        "3D"
+      ],
+      "scenes": [
+        "Tech",
+        "Commerce",
+        "Education"
+      ],
+      "featured": true,
+      "promptPreview": "Design Concept: The Crumple Chair Core Philosophy: Translating the \"controlled chaos\" of a tossed paper ball into a sculptural, high-comfort seating experience. Stage 1: Observation & Morphological Analysis The goal is t",
+      "prompt": "Design Concept: The Crumple Chair Core Philosophy: Translating the \"controlled chaos\" of a tossed paper ball into a sculptural, high-comfort seating experience.\n\nStage 1: Observation & Morphological Analysis The goal is to deconstruct the image of the crumpled paper into usable geometric data. Crease Mapping: Identify the primary \"valley\" and \"ridge\" lines. These represent potential structural ribs or seams in the chair. Faceted Planes: Break down the sphere into a series of non-uniform polygons. Each flat surface of the paper becomes a potential panel for the chair’s upholstery or shell. Shadow Study: Analyze how the \"tossed\" form creates deep recesses. These natural pockets guide where the user’s weight will be cradled.\n\nStage 2: Iterative Form Exploration Moving from a sphere to a seat through \"Digital Crumpling.\" Subtractive Sculpting: Imagine the paper ball as a solid mass. Use Boolean operations to \"carve out\" a seating cavity that fits the human form while maintaining the external jagged texture. Tension Simulation: Use 3D software (like Rhino or Blender) to simulate a flat sheet of material being compressed. This ensures the folds look authentic and not \"modeled.\" The \"Toss\" Logic: Experiment with gravity-based simulation dropping a digital mesh to see how it settles naturally, mimicking the \"tossed\" origin.\n\nStage 3: Ergonomic Translation & Blueprinting Refining the raw aesthetic into a functional object. The Comfort Core: Overlay a standard ergonomic template (Seating Angle: 105°–110°) over the crumpled form. Adjust the internal \"folds\" to provide lumbar support and pressure relief. Blueprint Generation: Create technical orthographic views (Front, Side, Top). Map out the dimensions: Seat Height: 450mm Total Width: 850mm Surface Smoothing: Maintain the sharp \"paper edges\" on the exterior shell while softening the interior contact points for skin comfort.\n\nStage 4: Structural Integration & Scaling Making the concept physically viable. The Skeleton: Design a hidden internal frame (likely CNC-bent steel rods or a 3D-printed lattice) that follows the most prominent ridges of the paper folds to provide rigidity. Material Selection: * Option A (High-End): Faceted, cast aluminum with a white powder coat. Option B (Soft): Vacuum-formed recycled plastic shell covered in \"memory-fold\" technical fabric that retains a wrinkled appearance.\n\nStage 5: Final Prototyping & Material Finish Textural Replication: Apply a matte, slightly porous finish to the material to mimic the tactile feel of heavy-bond paper. Lighting Contrast: Use directional studio lighting in the final renders to emphasize the \"tossed\" shadows, making the chair look like a giant piece of discarded inspiration. Design Tip: To keep the \"tossed\" look authentic, avoid symmetry. The most compelling aspect of a crumpled paper ball is its unique irregularity—ensure the left and right sides of the chair are balance-equivalent but not identical",
+      "sourceLabel": "@ShamsAmin56",
+      "sourceUrl": "https://x.com/ShamsAmin56/status/2050281206139461780",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-370",
+      "linkedTemplateIds": [
+        "concept-product-breakdown"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "impossible-concept-product",
+          "score": 16
+        },
+        {
+          "id": "personalized-beauty-report",
+          "score": 13
+        },
+        {
+          "id": "product-commerce-visual",
+          "score": 9
+        },
+        {
+          "id": "3d-collectible-toy",
+          "score": 8
+        },
+        {
+          "id": "ui-screenshot-system",
+          "score": 8
+        }
+      ]
+    },
+    {
+      "id": 361,
+      "title": "手机爆炸拆解图",
+      "category": "Charts & Infographics",
+      "styles": [
+        "3D"
+      ],
+      "scenes": [
+        "Tech"
+      ],
+      "featured": true,
+      "promptPreview": "Create a 3D Insane detailed exploded assembly drawing of [subject or object]",
+      "prompt": "Create a 3D Insane detailed exploded assembly drawing of [subject or object]",
+      "sourceLabel": "@Ankit_patel211",
+      "sourceUrl": "https://x.com/Ankit_patel211/status/2048834306379075759",
+      "githubUrl": "https://github.com/freestylefly/awesome-gpt-image-2/blob/main/docs/gallery-part-2.md#case-361",
+      "linkedTemplateIds": [
+        "concept-product-breakdown"
+      ],
+      "candidateTemplates": [
+        {
+          "id": "infographic-engine",
+          "score": 9
+        },
+        {
+          "id": "scientific-scale-diagram",
+          "score": 9
+        }
+      ]
+    }
+  ]
+}

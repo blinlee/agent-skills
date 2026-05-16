@@ -1,0 +1,298 @@
+{
+  "generatedAt": "2026-05-11T07:09:12.688Z",
+  "source": {
+    "clarifyRules": "prompt-method-source/references/clarify-rules.md",
+    "rule": "absorb high-impact clarify discipline without exposing internal template identities"
+  },
+  "general": {
+    "maxRounds": 2,
+    "maxQuestionsPerRound": 3,
+    "preferConvergentQuestions": true,
+    "allowSafeDefaultsWhenUserWantsSpeed": true,
+    "askOnlyIfItChangesOutcome": true
+  },
+  "familyRules": {
+    "ui-mockup": [
+      {
+        "id": "platform-or-screen-type",
+        "whenAny": [
+          "live",
+          "直播",
+          "截图",
+          "screenshot",
+          "社媒",
+          "dashboard",
+          "app",
+          "网页"
+        ],
+        "requireAny": [
+          "抖音",
+          "douyin",
+          "小红书",
+          "xiaohongshu",
+          "x",
+          "twitter",
+          "b站",
+          "bilibili",
+          "youtube",
+          "dashboard",
+          "landing",
+          "design system",
+          "app",
+          "网页"
+        ],
+        "question": "这张图更像哪类界面？",
+        "options": [
+          "抖音/直播截图感",
+          "通用 App / 网页界面",
+          "Dashboard / 设计系统板"
+        ],
+        "defaultAnswer": "通用 App / 网页界面"
+      },
+      {
+        "id": "ratio",
+        "whenAny": [
+          "ui",
+          "界面",
+          "dashboard",
+          "landing",
+          "直播",
+          "截图"
+        ],
+        "requireAny": [
+          "9:16",
+          "1:1",
+          "16:9",
+          "3:4",
+          "4:5",
+          "竖版",
+          "横版",
+          "方图"
+        ],
+        "question": "比例还没定：你要竖版 9:16、方图 1:1，还是横版 16:9？",
+        "options": [
+          "竖版 9:16",
+          "方图 1:1",
+          "横版 16:9"
+        ],
+        "defaultAnswer": "横版 16:9"
+      }
+    ],
+    "ecommerce-conversion": [
+      {
+        "id": "product-category",
+        "whenAny": [
+          "product",
+          "商品",
+          "电商",
+          "landing",
+          "hero",
+          "广告",
+          "campaign",
+          "beauty",
+          "护肤"
+        ],
+        "requireAny": [
+          "护肤",
+          "美妆",
+          "beauty",
+          "服饰",
+          "fashion",
+          "数码",
+          "tech",
+          "饮料",
+          "food",
+          "品牌",
+          "product"
+        ],
+        "question": "主商品和品类还不够明确：这是卖什么的，最该突出的产品是什么？",
+        "options": [
+          "美妆/护肤",
+          "数码/硬件",
+          "食品/饮料"
+        ],
+        "defaultAnswer": "按用户文本里最明显的主商品理解"
+      },
+      {
+        "id": "ratio",
+        "whenAny": [
+          "hero",
+          "landing",
+          "电商",
+          "商品卡",
+          "cta"
+        ],
+        "requireAny": [
+          "1:1",
+          "4:5",
+          "16:9",
+          "9:16",
+          "方图",
+          "竖版",
+          "横版"
+        ],
+        "question": "电商图比例还没定：你想要方图商品卡、4:5 竖版内容图，还是横版 hero？",
+        "options": [
+          "方图 1:1",
+          "竖版 4:5",
+          "横版 16:9"
+        ],
+        "defaultAnswer": "竖版 4:5"
+      }
+    ],
+    "infographic": [
+      {
+        "id": "infographic-subtype",
+        "whenAny": [
+          "信息图",
+          "infographic",
+          "explainer",
+          "diagram",
+          "atlas",
+          "workflow",
+          "map"
+        ],
+        "requireAny": [
+          "对比",
+          "comparison",
+          "流程",
+          "workflow",
+          "时间线",
+          "timeline",
+          "地图",
+          "map",
+          "拆解",
+          "breakdown",
+          "scale",
+          "atlas"
+        ],
+        "question": "这张信息图更偏哪种结构？",
+        "options": [
+          "对比 / 讲解",
+          "流程 / 时间线",
+          "地图 / 拆解 / 比例图"
+        ],
+        "defaultAnswer": "对比 / 讲解"
+      },
+      {
+        "id": "ratio",
+        "whenAny": [
+          "信息图",
+          "infographic",
+          "slide",
+          "atlas"
+        ],
+        "requireAny": [
+          "3:4",
+          "4:5",
+          "16:9",
+          "9:16",
+          "竖版",
+          "横版"
+        ],
+        "question": "信息图比例还没定：你要竖版 3:4 / 4:5，还是横版 16:9？",
+        "options": [
+          "3:4 竖版",
+          "4:5 竖版",
+          "16:9 横版"
+        ],
+        "defaultAnswer": "3:4 竖版"
+      }
+    ],
+    "poster-layout": [
+      {
+        "id": "poster-purpose",
+        "whenAny": [
+          "海报",
+          "poster",
+          "campaign",
+          "promo",
+          "cover"
+        ],
+        "requireAny": [
+          "活动",
+          "campaign",
+          "产品",
+          "product",
+          "品牌",
+          "brand",
+          "赛事",
+          "sport",
+          "杂志",
+          "editorial"
+        ],
+        "question": "这张海报更偏哪类用途？",
+        "options": [
+          "活动 / Campaign",
+          "产品 / 品牌宣传",
+          "杂志 / 封面感"
+        ],
+        "defaultAnswer": "产品 / 品牌宣传"
+      }
+    ],
+    "character-sheet": [
+      {
+        "id": "consistency-scope",
+        "whenAny": [
+          "角色",
+          "设定",
+          "一致性",
+          "资料卡",
+          "character"
+        ],
+        "requireAny": [
+          "正面",
+          "侧面",
+          "背面",
+          "front",
+          "side",
+          "back",
+          "表情",
+          "expression",
+          "穿搭",
+          "outfit"
+        ],
+        "question": "你更需要哪种一致性结构？",
+        "options": [
+          "正/侧/背多视图",
+          "表情 / 动作变化",
+          "穿搭 / 部件拆解"
+        ],
+        "defaultAnswer": "正/侧/背多视图"
+      }
+    ],
+    "portrait-photo": [
+      {
+        "id": "realism-mode",
+        "whenAny": [
+          "portrait",
+          "photo",
+          "写实",
+          "摄影",
+          "抓拍",
+          "candid",
+          "flash"
+        ],
+        "requireAny": [
+          "抓拍",
+          "candid",
+          "胶片",
+          "film",
+          "棚拍",
+          "studio",
+          "纪实",
+          "documentary",
+          "editorial"
+        ],
+        "question": "真实感方向还没定：你更想要街头抓拍、胶片纪实，还是更稳定的棚拍 / editorial？",
+        "options": [
+          "街头抓拍",
+          "胶片 / 纪实",
+          "棚拍 / Editorial"
+        ],
+        "defaultAnswer": "街头抓拍"
+      }
+    ]
+  },
+  "rawExcerpt": "# Clarify Rules\n\n## 目标\n\nclarify 不是默认动作，而是为了补齐会显著影响生成结果的关键槽位。\n\nV1 原则：\n- 最多 1~2 轮\n- 每轮优先问 1~3 个关键问题\n- 优先收敛式提问\n- 用户明显想快速出图时，优先给默认值\n\n## 必问情况\n\n### 1. 任务类型歧义\n例如：\n- “给我做一个产品图” → 是电商主图、海报，还是网页 mockup？\n- “做一张介绍图” → 是信息图还是宣传海报？\n\n### 2. 平台 / 版式差异显著\n例如：\n- “做个直播截图” → 抖音 / 小红书 / X / B站风格差异大\n- “做个社媒图” → 单张帖子 / 长图 / banner / carousel 差异大\n\n### 3. 比例强影响构图\n如果用户没说比例，而任务明显依赖比例：\n- 9:16（直播、海报、手机截图）\n- 1:1（社媒封面、商品卡）\n- 16:9（banner、横版 key visual）\n- 3:4 / 4:5（信息图、摄影海报）\n\n### 4. 风格方向分叉明显\n例如：\n- 写实摄影 vs 胶片纪实 vs 棚拍广告\n- 可爱二创 vs 严肃设定图\n- 轻量信息图 vs 高密度“霞关 slide”\n\n### 5. 一致性任务但范围不清\n例如：\n- 是同一角色多表情？\n- 同一人多套穿搭？\n- 还是多视图设定卡？\n\n## 可默认情况\n\n以下可由运行时填安全默认：\n- 未给输出文件名\n- 未给轻微修饰性的色调词\n- 未给背景里非关键小元素\n- 高频任务中的常规结构参数\n\n## 推荐提问格式\n\n### 模式 A：二选一 / 三选一\n- 你更偏向：写实摄影 / 海报排版 / 信息图？\n- 这张图主要用于：抖音封面 / 小红书帖子 / 活动海报？\n\n### 模式 B：缺槽位补齐\n- 这张图是更想要“真实抓拍感”，还是“商业广告感”？\n- 你要竖版 9:16，还是方图 1:1？\n\n### 模式 C：给默认值 + 允许纠偏\n- 我先按 9:16 抖音直播截图来做，如果你想换成小红书卡片我再改。\n\n## 不要这样问\n\n- 一次性抛 8 个开放问题\n- 问不会改变结果的细枝末节\n- 在高频小任务里把用户盘烦\n- 明明已有强默认值还强行追问"
+}

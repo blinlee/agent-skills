@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.tmp/
+coverage/
+*.log
+.env
+.env.*
+*.local
+.DS_Store
+.vscode/
+.idea/
+
+# local docs / notes not intended for the public repo surface
+docs/
+
+# local orchestration/runtime state
+.omx/
+.worktrees/
+vendor/
+knowledge-*/
+review/

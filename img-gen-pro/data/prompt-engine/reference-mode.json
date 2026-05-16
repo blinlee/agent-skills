@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-05-11T07:09:12.688Z",
+  "source": "prompt-method-source/references/reference-image-mode.md",
+  "note": "reference-image ingestion stays a lightweight rebuild path that re-enters the normal builder chain; in this repo the multimodal controller is expected to inspect the image directly",
+  "workflow": {
+    "goals": [
+      "roughly recreate a reference image",
+      "recreate it with targeted edits",
+      "guess a similar prompt first, then optimize it through the main builder"
+    ],
+    "preserve": [
+      "subject",
+      "framing / composition",
+      "style and palette",
+      "lighting",
+      "layout hierarchy when the image is UI / poster / ecommerce / infographic"
+    ],
+    "doNotPromise": [
+      "exact original prompt",
+      "original seed / sampler / model stack",
+      "pixel-identical recovery"
+    ],
+    "controllerExpectation": "use the multimodal LLM to inspect the reference image and pass a concise visual summary into the builder",
+    "intermediateArtifacts": [
+      "rough prompt guess",
+      "keep / change note"
+    ],
+    "rawExcerpt": "# reference-image mode\n\nUse this mode when the user provides a reference image and wants one of these outcomes:\n\n- roughly recreate the image\n- recreate it with targeted edits\n- guess a similar prompt from the image first, then optimize it\n\nThis is a **lightweight reconstruction workflow**, not heavy reverse engineering.\n\nRead `reference-image-upstream-notes.md` when you need the repo-anchored reasoning behind this path.\n\n## Goal\n\nStart from a visible reference image, infer a prompt that is *close enough to be useful*, then feed that prompt into the existing prompt-builder and Codex render flow.\n\nDo **not** promise:\n- the exact original prompt\n- the original seed / sampler / model / LoRA stack\n- pixel-identical recovery\n\nDo aim for:\n- similar subject\n- similar composition\n- similar style / palette / lighting\n- similar layout hierarchy when the image is a poster / social screenshot / ecommerce hero / UI board\n\n## Working rule\n\nThe controller should produce only two lightweight intermedi"
+  }
+}

@@ -1,0 +1,69 @@
+[
+  {
+    "name": "academic-claude-code-harness-architecture",
+    "query": "做一张发表在顶级学术期刊论文里的学术插图，内容是介绍 Claude Code 的 harness 架构：Task Interface、Context Manager、Agent Loop、Tool Invocation Layer、Policy Gate、Sandboxed Workspace、Validation Loop。风格要求 Nature/Science/CHI 论文图，白底，矢量，16:9，标签清晰可读。",
+    "expect": {
+      "primary": "references/technical-diagrams/system-architecture.md",
+      "supportingAny": ["references/academic-figures/scientific-schematic.md"],
+      "styleAny": ["references/academic-figures/scientific-schematic.md", "references/academic-figures/publication-chart.md"],
+      "mustNotPrimary": ["references/ui-mockups/live-commerce-ui.md", "references/slides-and-visual-docs/visual-report-page.md"]
+    }
+  },
+  {
+    "name": "a-share-market-strategy-report",
+    "query": "根据今天上午的A股整体行情，做一张券商研报风格的市场快照分析报告，包含上证、深成指、创业板、沪深300、科创50、涨跌家数、成交额、强弱板块、风险提示，白底16:9，数字清晰可读。",
+    "expect": {
+      "primary": "references/slides-and-visual-docs/visual-report-page.md",
+      "supportingAny": ["references/infographics/bento-grid-infographic.md"],
+      "mustNotPrimary": ["references/slides-and-visual-docs/personalized-beauty-report.md", "references/ui-mockups/live-commerce-ui.md"]
+    }
+  },
+  {
+    "name": "live-commerce-ui",
+    "query": "做一个直播带货界面样机，有弹幕、评论区、主播画面、商品卡和购买按钮，9:16手机界面。",
+    "expect": {
+      "primary": "references/ui-mockups/live-commerce-ui.md",
+      "mustNotPrimary": ["references/technical-diagrams/system-architecture.md"]
+    }
+  },
+  {
+    "name": "technical-microservice-architecture",
+    "query": "画一张微服务系统架构图，包含 API Gateway、用户服务、订单服务、消息队列、PostgreSQL、Redis 缓存，暗色工程风格。",
+    "expect": {
+      "primary": "references/technical-diagrams/system-architecture.md",
+      "mustNotPrimary": ["references/ui-mockups/live-commerce-ui.md"]
+    }
+  },
+  {
+    "name": "multi-reference-scene-transfer",
+    "query": "参考这两张图，把这个人自然放进那个草地野餐场景里，光线要统一，身份不要变。",
+    "expect": {
+      "primary": "references/editing-workflows/multi-reference-composition.md",
+      "mustNotPrimary": ["references/technical-diagrams/system-architecture.md", "references/ui-mockups/live-commerce-ui.md"]
+    }
+  },
+  {
+    "name": "impossible-concept-product",
+    "query": "做一张没有拉链的高端夹克概念产品海报，展示材料逻辑和约束驱动设计。",
+    "expect": {
+      "primary": "references/product-visuals/impossible-concept-product.md",
+      "mustNotPrimary": ["references/product-visuals/ecommerce-marketing-board.md"]
+    }
+  },
+  {
+    "name": "text-on-object",
+    "query": "在香蕉皮上写上 LOBSTER KING，真实摄影感，文字要贴合香蕉皮曲面并且清楚可读。",
+    "expect": {
+      "primary": "references/scenes-and-illustrations/text-on-objects.md",
+      "mustNotPrimary": ["references/technical-diagrams/system-architecture.md"]
+    }
+  },
+  {
+    "name": "product-landing-page-hero",
+    "query": "premium skincare landing page hero with a serum bottle, half-body female model, benefit bullets, buy-now button, beauty campaign polish",
+    "expect": {
+      "primary": "references/product-visuals/ecommerce-marketing-board.md",
+      "mustNotPrimary": ["references/slides-and-visual-docs/visual-report-page.md"]
+    }
+  }
+]

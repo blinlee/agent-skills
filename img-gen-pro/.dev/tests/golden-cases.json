@@ -1,0 +1,470 @@
+[
+  {
+    "name": "selector-live-commerce-ui",
+    "runner": "select-template",
+    "args": [
+      "--query",
+      "做一个直播带货界面样机"
+    ],
+    "expect": {
+      "clarificationNeeded": false,
+      "selectedTemplateId": "ui-screenshot-system",
+      "selectedTarget": "references/ui-mockups/live-commerce-ui.md"
+    }
+  },
+  {
+    "name": "selector-brand-identity-vs-touchpoint",
+    "runner": "select-template",
+    "args": [
+      "--query",
+      "做一个品牌识别系统，同时也想看到包装和社媒落地"
+    ],
+    "expect": {
+      "clarificationNeeded": true,
+      "clarificationTemplates": [
+        "brand-identity-package",
+        "brand-touchpoint-board"
+      ]
+    }
+  },
+  {
+    "name": "selector-live-commerce-target",
+    "runner": "select-template",
+    "args": [
+      "--query",
+      "做一个直播带货界面样机"
+    ],
+    "expect": {
+      "clarificationNeeded": false,
+      "selectedTemplateId": "ui-screenshot-system",
+      "selectedTarget": "references/ui-mockups/live-commerce-ui.md"
+    }
+  },
+  {
+    "name": "builder-live-commerce-ui",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一个直播带货界面样机"
+    ],
+    "expect": {
+      "status": "needs-slot-clarify",
+      "selectedTarget": "references/ui-mockups/live-commerce-ui.md",
+      "preferredOutputRatio": "9:16",
+      "textInspectionRequired": true,
+      "compositionPrimary": "references/ui-mockups/live-commerce-ui.md",
+      "primaryTarget": "references/ui-mockups/live-commerce-ui.md",
+      "templateCategoryIncludes": [
+        "references/ui-mockups/live-commerce-ui.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "builder-conceptual-typography",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一张标题字是主角的概念字体海报"
+    ],
+    "expect": {
+      "status": "needs-slot-clarify",
+      "selectedTarget": "references/typography-and-text-layout/conceptual-typography-poster.md",
+      "preferredOutputRatio": "3:4",
+      "textInspectionRequired": true,
+      "compositionPrimary": "references/typography-and-text-layout/conceptual-typography-poster.md",
+      "primaryTarget": "references/typography-and-text-layout/conceptual-typography-poster.md",
+      "templateCategoryIncludes": [
+        "references/typography-and-text-layout/conceptual-typography-poster.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "builder-personalized-beauty-report",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "基于自拍生成一份 Dior 口红试色推荐报告"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/slides-and-visual-docs/personalized-beauty-report.md",
+      "preferredOutputRatio": "1:1",
+      "textInspectionRequired": true,
+      "compositionPrimary": "references/slides-and-visual-docs/personalized-beauty-report.md",
+      "primaryTarget": "references/slides-and-visual-docs/personalized-beauty-report.md",
+      "templateCategoryIncludes": [
+        "references/slides-and-visual-docs/personalized-beauty-report.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "selector-ecommerce-hero-target",
+    "runner": "select-template",
+    "args": [
+      "--query",
+      "premium skincare landing page hero with a serum bottle, half-body female model, benefit bullets, buy-now button, beauty campaign polish"
+    ],
+    "expect": {
+      "clarificationNeeded": false,
+      "selectedTemplateId": "product-commerce-visual",
+      "selectedTarget": "references/product-visuals/ecommerce-marketing-board.md"
+    }
+  },
+  {
+    "name": "builder-reference-image-ecommerce-hero",
+    "runner": "build-prompt",
+    "args": [
+      "--reference-image-summary",
+      "premium skincare landing page hero with a serum bottle, half-body female model, benefit bullets, buy-now button, beauty campaign polish",
+      "--reference-user-intent",
+      "keep the composition, swap in my product, make the title area more conversion-led"
+    ],
+    "expect": {
+      "status": "needs-slot-clarify",
+      "selectedTarget": "references/product-visuals/ecommerce-marketing-board.md",
+      "preferredOutputRatio": "16:9",
+      "textInspectionRequired": true,
+      "referenceEntryMode": "reference-image",
+      "compositionPrimary": "references/product-visuals/ecommerce-marketing-board.md",
+      "primaryTarget": "references/product-visuals/ecommerce-marketing-board.md",
+      "templateCategoryIncludes": [
+        "references/product-visuals/ecommerce-marketing-board.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "builder-technical-architecture-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "画一张微服务系统架构图，包含 API Gateway、用户服务、订单服务、消息队列、PostgreSQL、Redis 缓存，暗色风格"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/technical-diagrams/system-architecture.md",
+      "preferredOutputRatio": "16:9",
+      "textInspectionRequired": true,
+      "compositionPrimary": "references/technical-diagrams/system-architecture.md",
+      "primaryTarget": "references/technical-diagrams/system-architecture.md",
+      "templateCategoryIncludes": [
+        "references/technical-diagrams/system-architecture.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "selector-multi-reference-composition-route",
+    "runner": "select-template",
+    "args": [
+      "--query",
+      "参考这两张图，把这个人自然放进那个草地野餐场景里，光线要统一"
+    ],
+    "expect": {
+      "clarificationNeeded": false,
+      "selectedTemplateId": "multi-reference-composition",
+      "selectedTarget": "references/editing-workflows/multi-reference-composition.md"
+    }
+  },
+  {
+    "name": "builder-multi-reference-composition-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "参考这两张图，把这个人自然放进那个草地野餐场景里，光线要统一"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/editing-workflows/multi-reference-composition.md",
+      "preferredOutputRatio": "3:4",
+      "textInspectionRequired": false,
+      "compositionPrimary": "references/editing-workflows/multi-reference-composition.md",
+      "primaryTarget": "references/editing-workflows/multi-reference-composition.md",
+      "templateCategoryIncludes": [
+        "references/editing-workflows/multi-reference-composition.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "builder-impossible-concept-product-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一张没有拉链的高端夹克概念产品海报"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/product-visuals/impossible-concept-product.md",
+      "preferredOutputRatio": "4:5",
+      "textInspectionRequired": false,
+      "compositionPrimary": "references/product-visuals/impossible-concept-product.md",
+      "primaryTarget": "references/product-visuals/impossible-concept-product.md",
+      "templateCategoryIncludes": [
+        "references/product-visuals/impossible-concept-product.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "builder-text-on-objects-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "在香蕉皮上写上 LOBSTER KING，真实摄影感"
+    ],
+    "expect": {
+      "status": "needs-slot-clarify",
+      "selectedTarget": "references/scenes-and-illustrations/text-on-objects.md",
+      "preferredOutputRatio": "3:4",
+      "textInspectionRequired": true,
+      "compositionPrimary": "references/scenes-and-illustrations/text-on-objects.md",
+      "primaryTarget": "references/scenes-and-illustrations/text-on-objects.md",
+      "templateCategoryIncludes": [
+        "references/scenes-and-illustrations/text-on-objects.md"
+      ],
+      "promptExcludes": []
+    }
+  },
+  {
+    "name": "selector-scene-transfer-product-route",
+    "runner": "select-template",
+    "args": [
+      "--query",
+      "把这个产品自然放到另一个场景里，光线要统一"
+    ],
+    "expect": {
+      "clarificationNeeded": false,
+      "selectedTemplateId": "multi-reference-composition",
+      "selectedTarget": "references/editing-workflows/multi-reference-composition.md"
+    }
+  },
+  {
+    "name": "builder-composer-academic-harness-architecture",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一张发表在顶级学术期刊论文里的学术插图，内容是介绍 Claude Code 的 harness 架构：Task Interface、Context Manager、Agent Loop、Tool Invocation Layer、Policy Gate、Sandboxed Workspace、Validation Loop。风格要求 Nature/Science/CHI 论文图，白底，矢量，16:9，标签清晰可读。"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/technical-diagrams/system-architecture.md",
+      "compositionPrimary": "references/technical-diagrams/system-architecture.md",
+      "compositionSupportingAny": [
+        "references/academic-figures/scientific-schematic.md"
+      ],
+      "promptIncludes": [
+        "Template composition plan",
+        "Primary structure template: references/technical-diagrams/system-architecture.md",
+        "Supporting templates to borrow from: references/academic-figures/scientific-schematic.md"
+      ],
+      "primaryTarget": "references/technical-diagrams/system-architecture.md",
+      "templateCategoryIncludes": [
+        "references/technical-diagrams/system-architecture.md"
+      ],
+      "promptExcludes": [
+        "Matched prompt body to preserve semantically",
+        "概念产品研发拆解",
+        "工业设计提案板"
+      ]
+    }
+  },
+  {
+    "name": "builder-composer-a-share-report",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "根据今天上午的A股整体行情，做一张券商研报风格的市场快照分析报告，包含上证、深成指、创业板、沪深300、科创50、涨跌家数、成交额、强弱板块、风险提示，白底16:9，数字清晰可读。"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/slides-and-visual-docs/visual-report-page.md",
+      "compositionPrimary": "references/slides-and-visual-docs/visual-report-page.md",
+      "compositionSupportingAny": [
+        "references/infographics/bento-grid-infographic.md"
+      ],
+      "promptIncludes": [
+        "Template composition plan",
+        "Primary structure template: references/slides-and-visual-docs/visual-report-page.md"
+      ],
+      "primaryTarget": "references/slides-and-visual-docs/visual-report-page.md",
+      "templateCategoryIncludes": [
+        "references/slides-and-visual-docs/visual-report-page.md"
+      ],
+      "promptExcludes": [
+        "Matched prompt body to preserve semantically"
+      ]
+    }
+  },
+  {
+    "name": "runner-codex-render-dry-run",
+    "runner": "run-codex-render",
+    "args": [
+      "--prompt",
+      "A minimal neon tech poster titled AI Empire",
+      "--output-path",
+      ".dev/tmp/codex-render-test.png",
+      "--dry-run"
+    ],
+    "expect": {
+      "status": "prepared",
+      "dryRun": true,
+      "outputSuffix": ".dev/tmp/codex-render-test.png",
+      "planSuffix": ".dev/tmp/codex-render-test.plan.json",
+      "resultSuffix": ".dev/tmp/codex-render-test.result.json"
+    }
+  },
+  {
+    "name": "builder-composer-slam-academic-architecture",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一个顶级学术期刊论文的插图，内容是多传感器融合 SLAM 技术的架构图，展示 camera、LiDAR、IMU、GNSS 输入，时间同步、标定、前端里程计、后端图优化、回环检测、地图构建与定位输出，Nature/Science 论文风，白底矢量，16:9"
+    ],
+    "expect": {
+      "primaryTarget": "references/technical-diagrams/system-architecture.md",
+      "compositionPrimary": "references/technical-diagrams/system-architecture.md",
+      "templateCategoryIncludes": [
+        "references/technical-diagrams/system-architecture.md",
+        "references/academic-figures/scientific-schematic.md"
+      ],
+      "preferredOutputRatio": "16:9",
+      "promptIncludes": [
+        "Template composition plan",
+        "Primary structure template: references/technical-diagrams/system-architecture.md",
+        "Style templates to borrow from: references/academic-figures/scientific-schematic.md"
+      ],
+      "promptExcludes": [
+        "Matched prompt body to preserve semantically",
+        "概念产品研发拆解",
+        "产品/家具/装置",
+        "工业设计提案板",
+        "Crumple Chair",
+        "baoyu-diagram",
+        "deep slate",
+        "README / blog / 设计文档",
+        "用户要的是",
+        "→ 用 `technical-diagrams/flowchart-decision.md`",
+        "→ 用 `technical-diagrams/sequence-diagram.md`"
+      ]
+    }
+  },
+  {
+    "name": "builder-brand-identity-composer-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一套龙虾咖啡品牌识别系统，包含 logo、配色、字体、名片和包装延展"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/branding-and-packaging/brand-identity-board.md",
+      "compositionPrimary": "references/branding-and-packaging/brand-identity-board.md",
+      "primaryTarget": "references/branding-and-packaging/brand-identity-board.md",
+      "templateCategoryIncludes": [
+        "references/branding-and-packaging/brand-identity-board.md"
+      ]
+    }
+  },
+  {
+    "name": "builder-brand-touchpoint-composer-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一个新茶饮品牌多触点落地视觉板，包含杯套、外卖袋、门店招牌、社媒图和小程序"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/branding-and-packaging/brand-touchpoint-system-board.md",
+      "compositionPrimary": "references/branding-and-packaging/brand-touchpoint-system-board.md",
+      "primaryTarget": "references/branding-and-packaging/brand-touchpoint-system-board.md",
+      "templateCategoryIncludes": [
+        "references/branding-and-packaging/brand-touchpoint-system-board.md"
+      ]
+    }
+  },
+  {
+    "name": "builder-meme-composer-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一张关于程序员周五上线的梗图，适合社媒传播"
+    ],
+    "expect": {
+      "selectedTarget": "references/scenes-and-illustrations/meme-and-viral-content.md",
+      "compositionPrimary": "references/scenes-and-illustrations/meme-and-viral-content.md",
+      "primaryTarget": "references/scenes-and-illustrations/meme-and-viral-content.md",
+      "templateCategoryIncludes": [
+        "references/scenes-and-illustrations/meme-and-viral-content.md"
+      ]
+    }
+  },
+  {
+    "name": "builder-fashion-composer-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "做一张Pinterest风时尚穿搭lookbook，模特一只手拎包一只袖子滑落"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/portraits-and-characters/fashion-lookbook-pose.md",
+      "compositionPrimary": "references/portraits-and-characters/fashion-lookbook-pose.md",
+      "primaryTarget": "references/portraits-and-characters/fashion-lookbook-pose.md",
+      "templateCategoryIncludes": [
+        "references/portraits-and-characters/fashion-lookbook-pose.md"
+      ]
+    }
+  },
+  {
+    "name": "builder-network-topology-composer-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "画一张办公室网络拓扑图，包含路由器、防火墙、交换机、AP、NAS和多台终端"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/technical-diagrams/network-topology.md",
+      "compositionPrimary": "references/technical-diagrams/network-topology.md",
+      "primaryTarget": "references/technical-diagrams/network-topology.md",
+      "templateCategoryIncludes": [
+        "references/technical-diagrams/network-topology.md"
+      ]
+    }
+  },
+  {
+    "name": "builder-er-diagram-composer-route",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "画一张电商系统ER图，用户、订单、商品、支付、库存"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/technical-diagrams/er-diagram.md",
+      "compositionPrimary": "references/technical-diagrams/er-diagram.md",
+      "primaryTarget": "references/technical-diagrams/er-diagram.md",
+      "templateCategoryIncludes": [
+        "references/technical-diagrams/er-diagram.md"
+      ]
+    }
+  },
+  {
+    "name": "builder-legacy-template-id-debug",
+    "runner": "build-prompt",
+    "args": [
+      "--template-id",
+      "fashion-lookbook-pose",
+      "--query",
+      "Pinterest风时尚穿搭lookbook，模特一只手拎包一只袖子滑落"
+    ],
+    "expect": {
+      "selectedTemplateId": "fashion-lookbook-pose",
+      "selectedTarget": "references/portraits-and-characters/fashion-lookbook-pose.md"
+    }
+  }
+]

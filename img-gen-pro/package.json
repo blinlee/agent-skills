@@ -1,0 +1,27 @@
+{
+  "name": "img-gen-pro",
+  "version": "0.1.0",
+  "description": "OpenClaw-first GPT Image 2 skill and script toolkit for prompt composition, runtime routing, and image generation/editing workflows.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check-mode": "node scripts/check-mode.js",
+    "build-prompt": "node scripts/build-prompt.mjs",
+    "compose": "node scripts/compose-templates.mjs",
+    "generate": "node scripts/generate.js",
+    "edit": "node scripts/edit.js",
+    "doctor": "node scripts/doctor-img-gen-pro.mjs"
+  },
+  "keywords": [
+    "openclaw",
+    "skill",
+    "gpt-image-2",
+    "image-generation",
+    "image-editing",
+    "prompt-engineering"
+  ]
+}

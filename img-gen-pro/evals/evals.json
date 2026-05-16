@@ -1,0 +1,102 @@
+{
+  "skill_name": "img-gen-pro",
+  "description": "Golden test prompts for execution eval. Each case covers a different template category and workflow path.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "ui-landing-page-hero",
+      "prompt": "帮我做一个 AI 视频剪辑应用的落地页主视觉，深色科技风，标题写 'AutoClip AI'",
+      "expected_behavior": {
+        "template_category": "ui-mockups or poster-and-campaigns",
+        "text_qa_triggered": true,
+        "critical_text": ["AutoClip AI"],
+        "ratio": "16:9"
+      }
+    },
+    {
+      "id": 2,
+      "name": "infographic-rag-explainer",
+      "prompt": "做一张 RAG（检索增强生成）技术详解信息图，目标读者是产品经理，用中文，要有流程图和模块说明",
+      "expected_behavior": {
+        "template_category": "infographics",
+        "text_qa_triggered": true,
+        "ratio": "3:4"
+      }
+    },
+    {
+      "id": 3,
+      "name": "edit-background-replacement",
+      "prompt": "把这张产品图的背景换成极简影棚风格，产品主体保持不动",
+      "expected_behavior": {
+        "template_category": "editing-workflows",
+        "workflow": "background-replacement",
+        "mode": "edit"
+      }
+    },
+    {
+      "id": 4,
+      "name": "reference-image-poster",
+      "prompt": "参考这张图做一版类似的海报，保留版式结构，换成我的品牌名 'LobsterKing'",
+      "expected_behavior": {
+        "reference_workflow_triggered": true,
+        "text_qa_triggered": true,
+        "critical_text": ["LobsterKing"]
+      }
+    },
+    {
+      "id": 5,
+      "name": "technical-architecture-diagram",
+      "prompt": "画一张微服务系统架构图，包含 API Gateway、用户服务、订单服务、消息队列、PostgreSQL、Redis 缓存，暗色风格",
+      "expected_behavior": {
+        "template_category": "technical-diagrams",
+        "ratio": "16:9"
+      }
+    },
+    {
+      "id": 6,
+      "name": "brand-mascot-kit",
+      "prompt": "设计一个可爱风格的 IP 吉祥物，是一只戴厨师帽的龙虾，要出品牌识别套装：主形象、三视图、表情包",
+      "expected_behavior": {
+        "template_category": "branding-and-packaging",
+        "template_file": "mascot-brand-kit.md"
+      }
+    },
+    {
+      "id": 7,
+      "name": "ecommerce-exploded-view",
+      "prompt": "做一个降噪耳机的产品爆炸视图海报，展示内部结构，顶部放品牌 logo",
+      "expected_behavior": {
+        "template_category": "product-visuals",
+        "template_file": "exploded-view-poster.md"
+      }
+    },
+    {
+      "id": 8,
+      "name": "academic-graphical-abstract",
+      "prompt": "给我的 CVPR 论文做一张 Graphical Abstract，主题是多模态目标检测，要横向四段式",
+      "expected_behavior": {
+        "template_category": "academic-figures",
+        "template_file": "graphical-abstract.md",
+        "ratio": "16:9"
+      }
+    },
+    {
+      "id": 9,
+      "name": "comic-four-panel",
+      "prompt": "画一个 4 格漫画，主题是程序员修 bug 的日常，要有对话气泡，可爱画风",
+      "expected_behavior": {
+        "template_category": "storyboards-and-sequences",
+        "template_file": "four-panel-comic.md"
+      }
+    },
+    {
+      "id": 10,
+      "name": "ambiguous-should-clarify",
+      "prompt": "帮我做个图",
+      "expected_behavior": {
+        "clarification_needed": true,
+        "should_ask_about": ["image type", "style", "content"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,937 @@
+{
+  "version": 1,
+  "status": "curated-overlap-v1",
+  "notes": [
+    "prompt engine is absorbed as prompt intelligence, not as a parallel canonical template surface.",
+    "Each current template maps to one primary C family plus optional secondary families.",
+    "Selection stays query-aware: compile-time overlap only provides candidate exemplars and structural hints."
+  ],
+  "templates": {
+    "ui-screenshot-system": {
+      "primaryTaskFamily": "ui-mockup",
+      "secondaryTaskFamilies": [
+        "social-post"
+      ],
+      "includeAny": [
+        "live stream",
+        "livestream",
+        "ui",
+        "interface",
+        "screen",
+        "screenshot",
+        "dashboard",
+        "landing page",
+        "design system",
+        "social media",
+        "mockup",
+        "newsletter"
+      ],
+      "excludeAny": [
+        "skeuomorphic icons",
+        "brand identity",
+        "merch board"
+      ],
+      "limit": 12
+    },
+    "infographic-engine": {
+      "primaryTaskFamily": "infographic",
+      "secondaryTaskFamilies": [
+        "ui-mockup"
+      ],
+      "includeAny": [
+        "infographic",
+        "explainer",
+        "atlas",
+        "comparison",
+        "workflow",
+        "timeline",
+        "slide",
+        "diagram",
+        "map",
+        "board"
+      ],
+      "excludeAny": [
+        "movie poster",
+        "livestream"
+      ],
+      "limit": 12
+    },
+    "scientific-scale-diagram": {
+      "primaryTaskFamily": "infographic",
+      "secondaryTaskFamilies": [
+        "product-ad"
+      ],
+      "includeAny": [
+        "scale",
+        "scientific",
+        "optical",
+        "hardware",
+        "diagram",
+        "zoom",
+        "micro",
+        "comparison",
+        "atlas"
+      ],
+      "excludeAny": [
+        "food map",
+        "travel guide",
+        "movie poster"
+      ],
+      "limit": 10
+    },
+    "poster-layout-system": {
+      "primaryTaskFamily": "poster-layout",
+      "secondaryTaskFamilies": [
+        "thumbnail"
+      ],
+      "includeAny": [
+        "poster",
+        "promo",
+        "campaign",
+        "editorial",
+        "cover",
+        "layout",
+        "magazine",
+        "seminar"
+      ],
+      "excludeAny": [
+        "sports",
+        "typography",
+        "science encyclopedia",
+        "movie pitch document"
+      ],
+      "limit": 12
+    },
+    "sports-campaign-poster": {
+      "primaryTaskFamily": "poster-layout",
+      "secondaryTaskFamilies": [
+        "product-ad"
+      ],
+      "includeAny": [
+        "sport",
+        "sports",
+        "soccer",
+        "football",
+        "basketball",
+        "athlete",
+        "match",
+        "campaign",
+        "fitness"
+      ],
+      "excludeAny": [
+        "beauty",
+        "food map",
+        "calligraphy"
+      ],
+      "limit": 10
+    },
+    "conceptual-typography-poster": {
+      "primaryTaskFamily": "poster-layout",
+      "secondaryTaskFamilies": [
+        "typography-art",
+        "thumbnail"
+      ],
+      "includeAny": [
+        "typography",
+        "type",
+        "headline",
+        "title",
+        "letter",
+        "cover",
+        "calligraphy",
+        "wordmark"
+      ],
+      "excludeAny": [
+        "sports",
+        "beauty campaign",
+        "city map"
+      ],
+      "limit": 10,
+      "preferredCategorySlugs": [
+        "creative-typography",
+        "poster-flyer",
+        "youtube-thumbnail"
+      ],
+      "bannedCategorySlugs": [
+        "ecommerce-main-image",
+        "product-marketing",
+        "infographic-edu-visual",
+        "infographic-edu-visual-public",
+        "community-experiment",
+        "app-web-design"
+      ],
+      "requireTitleAny": [
+        "typography",
+        "type",
+        "calligraphy",
+        "wordmark",
+        "title",
+        "headline",
+        "letter"
+      ],
+      "requireSignalAny": [
+        "headline"
+      ],
+      "strictIncludeAny": [
+        "typography",
+        "type",
+        "headline",
+        "title",
+        "letter",
+        "calligraphy",
+        "wordmark"
+      ],
+      "minScore": 46
+    },
+    "ink-double-exposure-poster": {
+      "primaryTaskFamily": "poster-layout",
+      "secondaryTaskFamilies": [
+        "social-post",
+        "portrait-photo"
+      ],
+      "includeAny": [
+        "double exposure",
+        "silhouette",
+        "portrait",
+        "ink",
+        "mask",
+        "split-face",
+        "dramatic"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "landing page",
+        "food map",
+        "summit banner",
+        "newsletter",
+        "encyclopedia infographic",
+        "dashboard board"
+      ],
+      "limit": 8,
+      "preferredCategorySlugs": [
+        "poster-flyer",
+        "artistic-creation",
+        "realistic-photography"
+      ],
+      "bannedCategorySlugs": [
+        "infographic-edu-visual",
+        "infographic-edu-visual-public",
+        "app-web-design",
+        "community-experiment"
+      ],
+      "requireAny": [
+        "double exposure",
+        "split-face",
+        "mask portrait",
+        "silhouette",
+        "ink portrait"
+      ],
+      "preferSignalAny": [
+        "headline"
+      ],
+      "minScore": 44,
+      "requireTitleAny": [
+        "double exposure",
+        "split-face",
+        "silhouette",
+        "mask"
+      ],
+      "bannedAny": [
+        "summit banner",
+        "newsletter",
+        "encyclopedia infographic",
+        "cat breed infographic"
+      ]
+    },
+    "nature-science-poster": {
+      "primaryTaskFamily": "poster-layout",
+      "secondaryTaskFamilies": [
+        "infographic",
+        "product-ad"
+      ],
+      "includeAny": [
+        "science",
+        "encyclopedia",
+        "botanical",
+        "biology",
+        "wildlife",
+        "specimen",
+        "nature",
+        "atlas"
+      ],
+      "excludeAny": [
+        "science fiction",
+        "movie poster",
+        "livestream"
+      ],
+      "limit": 10
+    },
+    "product-commerce-visual": {
+      "primaryTaskFamily": "ecommerce-conversion",
+      "secondaryTaskFamilies": [
+        "product-ad",
+        "ui-mockup"
+      ],
+      "includeAny": [
+        "e-commerce",
+        "ecommerce",
+        "product",
+        "hero",
+        "landing page",
+        "advertisement",
+        "commercial",
+        "campaign",
+        "conversion"
+      ],
+      "excludeAny": [
+        "livestream ui",
+        "infographic",
+        "city map"
+      ],
+      "limit": 14
+    },
+    "personalized-beauty-report": {
+      "primaryTaskFamily": "ecommerce-conversion",
+      "secondaryTaskFamilies": [
+        "ui-mockup",
+        "portrait-photo"
+      ],
+      "includeAny": [
+        "beauty",
+        "skincare",
+        "cosmetic",
+        "lipstick",
+        "shade",
+        "try-on",
+        "report",
+        "face",
+        "portrait"
+      ],
+      "excludeAny": [
+        "sports",
+        "city map",
+        "dashboard",
+        "live stream",
+        "livestream"
+      ],
+      "limit": 10,
+      "preferredCategorySlugs": [
+        "ecommerce-main-image",
+        "app-web-design",
+        "product-marketing"
+      ],
+      "bannedCategorySlugs": [
+        "celebrity-trending",
+        "community-experiment",
+        "game-assets"
+      ],
+      "requireAny": [
+        "beauty",
+        "skincare",
+        "cosmetic",
+        "lipstick",
+        "shade",
+        "try-on",
+        "report",
+        "face",
+        "portrait"
+      ],
+      "preferAny": [
+        "personalized",
+        "recommendation",
+        "analysis",
+        "report page",
+        "selfie",
+        "face analysis",
+        "shade recommendation",
+        "try-on report"
+      ],
+      "minScore": 40
+    },
+    "brand-identity-package": {
+      "primaryTaskFamily": "ui-mockup",
+      "secondaryTaskFamilies": [
+        "product-ad"
+      ],
+      "includeAny": [
+        "brand identity",
+        "guidelines",
+        "logo",
+        "visual system",
+        "design system board",
+        "mascot brand",
+        "identity"
+      ],
+      "excludeAny": [
+        "landing page",
+        "livestream",
+        "sports campaign"
+      ],
+      "limit": 10
+    },
+    "brand-touchpoint-board": {
+      "primaryTaskFamily": "ui-mockup",
+      "secondaryTaskFamilies": [
+        "product-ad",
+        "ecommerce-conversion"
+      ],
+      "includeAny": [
+        "merch board",
+        "packaging",
+        "touchpoint",
+        "social media profile",
+        "application",
+        "rollout",
+        "banner set",
+        "landing page"
+      ],
+      "excludeAny": [
+        "pure logo rules",
+        "movie poster",
+        "city map",
+        "youtube desktop ui",
+        "dashboard board"
+      ],
+      "limit": 12,
+      "preferredCategorySlugs": [
+        "app-web-design",
+        "product-marketing"
+      ],
+      "requireAny": [
+        "packaging",
+        "touchpoint",
+        "social media profile",
+        "merch",
+        "banner set",
+        "application",
+        "rollout",
+        "landing page"
+      ],
+      "preferSignalAny": [
+        "packaging",
+        "social profile"
+      ],
+      "minScore": 38,
+      "requireTitleAny": [
+        "board",
+        "merch",
+        "packaging",
+        "profile",
+        "landing page",
+        "banner",
+        "touchpoint"
+      ],
+      "bannedAny": [
+        "youtube desktop ui",
+        "dashboard board"
+      ]
+    },
+    "architecture-space": {
+      "primaryTaskFamily": "infographic",
+      "secondaryTaskFamilies": [
+        "game-asset",
+        "poster-layout"
+      ],
+      "includeAny": [
+        "city map",
+        "urban",
+        "architecture",
+        "street scene",
+        "travel guide",
+        "diorama",
+        "map",
+        "space render"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "social media mockup",
+        "beauty"
+      ],
+      "limit": 10
+    },
+    "realistic-photography": {
+      "primaryTaskFamily": "portrait-photo",
+      "secondaryTaskFamilies": [
+        "avatar-portrait",
+        "social-post"
+      ],
+      "includeAny": [
+        "photorealistic",
+        "portrait",
+        "flash",
+        "candid",
+        "travel",
+        "lifestyle",
+        "editorial",
+        "realistic"
+      ],
+      "excludeAny": [
+        "ui mockup",
+        "social media page",
+        "city map"
+      ],
+      "limit": 12
+    },
+    "street-accident-moment": {
+      "primaryTaskFamily": "portrait-photo",
+      "secondaryTaskFamilies": [
+        "social-post"
+      ],
+      "includeAny": [
+        "street",
+        "candid",
+        "snapshot",
+        "paparazzi",
+        "phone",
+        "everyday",
+        "flash",
+        "alley"
+      ],
+      "excludeAny": [
+        "social media mockup",
+        "dashboard",
+        "poster layout"
+      ],
+      "limit": 10,
+      "preferredCategorySlugs": [
+        "realistic-photography",
+        "celebrity-trending",
+        "social-media-post"
+      ],
+      "bannedCategorySlugs": [
+        "app-web-design",
+        "infographic-edu-visual",
+        "infographic-edu-visual-public"
+      ],
+      "requireAny": [
+        "street",
+        "candid",
+        "snapshot",
+        "paparazzi",
+        "phone",
+        "everyday",
+        "flash",
+        "alley"
+      ],
+      "requireTitleAny": [
+        "street",
+        "candid",
+        "paparazzi",
+        "snapshot",
+        "flash",
+        "lifestyle"
+      ],
+      "minScore": 42
+    },
+    "illustration-art-style": {
+      "primaryTaskFamily": "art-visual",
+      "secondaryTaskFamilies": [
+        "social-post",
+        "comic-storyboard"
+      ],
+      "includeAny": [
+        "illustration",
+        "fiber",
+        "embroidery",
+        "picture book",
+        "storybook",
+        "watercolor",
+        "collage",
+        "art"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "product hero",
+        "livestream",
+        "concept art sheet",
+        "educational infographic",
+        "school banner"
+      ],
+      "limit": 10,
+      "preferredCategorySlugs": [
+        "artistic-creation"
+      ],
+      "bannedCategorySlugs": [
+        "app-web-design",
+        "product-marketing",
+        "ecommerce-main-image",
+        "infographic-edu-visual",
+        "infographic-edu-visual-public",
+        "community-experiment"
+      ],
+      "requireAny": [
+        "illustration",
+        "fiber",
+        "embroidery",
+        "picture book",
+        "storybook",
+        "watercolor",
+        "collage",
+        "art"
+      ],
+      "preferAny": [
+        "gouache",
+        "paper cut",
+        "textile",
+        "storybook",
+        "editorial illustration"
+      ],
+      "minScore": 42,
+      "bannedAny": [
+        "concept art sheet",
+        "educational infographic",
+        "design document",
+        "school banner",
+        "infographic"
+      ]
+    },
+    "character-design-sheet": {
+      "primaryTaskFamily": "character-sheet",
+      "secondaryTaskFamilies": [
+        "ip-remix",
+        "comic-storyboard"
+      ],
+      "includeAny": [
+        "character sheet",
+        "reference card",
+        "expression",
+        "outfit",
+        "consistency",
+        "views",
+        "资料卡",
+        "设定"
+      ],
+      "excludeAny": [
+        "movie pitch",
+        "food map",
+        "brand poster"
+      ],
+      "limit": 10
+    },
+    "3d-collectible-toy": {
+      "primaryTaskFamily": "product-ad",
+      "secondaryTaskFamilies": [
+        "ip-remix",
+        "game-asset"
+      ],
+      "includeAny": [
+        "collectible",
+        "figure",
+        "toy",
+        "vinyl",
+        "building block",
+        "merchandise",
+        "mascot"
+      ],
+      "excludeAny": [
+        "identity board",
+        "newsletter",
+        "city map",
+        "brand identity",
+        "identity document",
+        "guidelines",
+        "moodboard"
+      ],
+      "limit": 8,
+      "preferredCategorySlugs": [
+        "product-marketing",
+        "game-assets",
+        "ip-character-remix"
+      ],
+      "bannedCategorySlugs": [
+        "app-web-design",
+        "community-experiment",
+        "infographic-edu-visual",
+        "infographic-edu-visual-public"
+      ],
+      "requireAny": [
+        "collectible",
+        "toy",
+        "vinyl",
+        "building block",
+        "merchandise",
+        "mascot",
+        "figurine",
+        "blind box"
+      ],
+      "requireTitleAny": [
+        "collectible",
+        "toy",
+        "building block",
+        "figurine",
+        "mascot",
+        "vinyl",
+        "blind box"
+      ],
+      "minScore": 44,
+      "bannedAny": [
+        "brand identity document",
+        "brand guidelines",
+        "identity document",
+        "guidelines"
+      ]
+    },
+    "scene-storytelling": {
+      "primaryTaskFamily": "comic-storyboard",
+      "secondaryTaskFamilies": [
+        "art-visual",
+        "social-post"
+      ],
+      "includeAny": [
+        "scene",
+        "story",
+        "key visual",
+        "cinematic",
+        "fantasy city",
+        "sequence",
+        "spread"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "landing page",
+        "identity board"
+      ],
+      "limit": 10
+    },
+    "history-classical-themes": {
+      "primaryTaskFamily": "infographic",
+      "secondaryTaskFamilies": [
+        "poster-layout"
+      ],
+      "includeAny": [
+        "history",
+        "classical",
+        "mythology",
+        "scroll",
+        "calligraphy",
+        "hanfu",
+        "dynasty",
+        "cultural"
+      ],
+      "excludeAny": [
+        "sports",
+        "dashboard",
+        "livestream"
+      ],
+      "limit": 10
+    },
+    "document-publishing": {
+      "primaryTaskFamily": "ui-mockup",
+      "secondaryTaskFamilies": [
+        "infographic",
+        "poster-layout"
+      ],
+      "includeAny": [
+        "newsletter",
+        "page layout",
+        "catalog",
+        "report",
+        "magazine",
+        "document",
+        "editorial"
+      ],
+      "excludeAny": [
+        "livestream",
+        "portrait photo",
+        "street shot"
+      ],
+      "limit": 10,
+      "preferredCategorySlugs": [
+        "app-web-design",
+        "poster-flyer",
+        "infographic-edu-visual",
+        "infographic-edu-visual-public"
+      ],
+      "bannedCategorySlugs": [
+        "social-media-post",
+        "celebrity-trending",
+        "ecommerce-main-image"
+      ],
+      "requireAny": [
+        "newsletter",
+        "page layout",
+        "catalog",
+        "report",
+        "magazine",
+        "document",
+        "editorial"
+      ],
+      "requireTitleAny": [
+        "newsletter",
+        "page layout",
+        "catalog",
+        "report",
+        "magazine",
+        "document",
+        "editorial"
+      ],
+      "minScore": 38
+    },
+    "concept-product-breakdown": {
+      "primaryTaskFamily": "infographic",
+      "secondaryTaskFamilies": [
+        "product-ad"
+      ],
+      "includeAny": [
+        "exploded view",
+        "breakdown",
+        "diagram",
+        "hardware",
+        "optical",
+        "workflow",
+        "product announcement",
+        "mechanism"
+      ],
+      "excludeAny": [
+        "livestream",
+        "beauty portrait",
+        "food map"
+      ],
+      "limit": 12
+    },
+    "city-creative-font": {
+      "primaryTaskFamily": "poster-layout",
+      "secondaryTaskFamilies": [
+        "art-visual",
+        "thumbnail"
+      ],
+      "includeAny": [
+        "city font",
+        "creative font",
+        "city name",
+        "typography",
+        "letterform",
+        "城市字体",
+        "创意字体",
+        "城市名",
+        "字形"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "livestream",
+        "brand guideline"
+      ],
+      "limit": 8
+    },
+    "fashion-lookbook-pose": {
+      "primaryTaskFamily": "portrait-photo",
+      "secondaryTaskFamilies": [
+        "avatar-portrait",
+        "social-post"
+      ],
+      "includeAny": [
+        "fashion",
+        "lookbook",
+        "pinterest",
+        "outfit",
+        "pose",
+        "editorial",
+        "穿搭",
+        "姿态",
+        "时尚"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "brand guideline",
+        "character sheet"
+      ],
+      "limit": 8
+    },
+    "impossible-concept-product": {
+      "primaryTaskFamily": "ecommerce-conversion",
+      "secondaryTaskFamilies": [
+        "product-ad",
+        "infographic"
+      ],
+      "includeAny": [
+        "impossible product",
+        "constraint-driven",
+        "no zipper",
+        "no seam",
+        "concept product",
+        "无拉链",
+        "无缝线",
+        "概念产品",
+        "约束"
+      ],
+      "excludeAny": [
+        "livestream",
+        "city map",
+        "newsletter"
+      ],
+      "limit": 8
+    },
+    "meme-viral-content": {
+      "primaryTaskFamily": "art-visual",
+      "secondaryTaskFamilies": [
+        "social-post",
+        "comic-storyboard"
+      ],
+      "includeAny": [
+        "meme",
+        "viral",
+        "parody",
+        "satire",
+        "shitpost",
+        "梗图",
+        "恶搞",
+        "玩梗",
+        "传播图"
+      ],
+      "excludeAny": [
+        "dashboard",
+        "brand guideline",
+        "technical diagram"
+      ],
+      "limit": 8
+    },
+    "multi-reference-composition": {
+      "primaryTaskFamily": "portrait-photo",
+      "secondaryTaskFamilies": [
+        "product-ad",
+        "ui-mockup"
+      ],
+      "includeAny": [
+        "multi reference",
+        "reference fusion",
+        "background swap",
+        "composite",
+        "merge photos",
+        "多参考图",
+        "融合",
+        "合成",
+        "光线统一"
+      ],
+      "excludeAny": [
+        "character sheet",
+        "brand guideline",
+        "city map"
+      ],
+      "limit": 8
+    },
+    "text-on-objects": {
+      "primaryTaskFamily": "portrait-photo",
+      "secondaryTaskFamilies": [
+        "poster-layout",
+        "ui-mockup"
+      ],
+      "includeAny": [
+        "text on object",
+        "surface text",
+        "banana text",
+        "screen content",
+        "render text",
+        "物体表面文字",
+        "香蕉写字",
+        "屏幕内容",
+        "曲面文字"
+      ],
+      "excludeAny": [
+        "brand guideline",
+        "city map",
+        "sports campaign"
+      ],
+      "limit": 8
+    }
+  }
+}

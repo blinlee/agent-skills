@@ -1,0 +1,35 @@
+{
+  "name": "llm-wiki",
+  "version": "0.1.0",
+  "description": "CLI-first markdown knowledge-base compiler for building human-governed, Obsidian-compatible LLM wikis.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "llm-wiki": "dist/src/cli.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "cli": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint:plan": "vitest run"
+  },
+  "keywords": [
+    "llm",
+    "wiki",
+    "knowledge-base",
+    "markdown",
+    "obsidian",
+    "cli"
+  ],
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

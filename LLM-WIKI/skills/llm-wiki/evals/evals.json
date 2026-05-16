@@ -1,0 +1,50 @@
+{
+  "skill_name": "llm-wiki",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a new LLM-WIKI knowledge root at /tmp/llm-wiki-eval, then tell me whether it is ready.",
+      "expected_output": "The agent runs init and status/lint from the package root with --silent, reports the knowledge root, and confirms required directories/files are present.",
+      "files": [],
+      "expectations": [
+        "Uses npm run --silent cli -- init with the requested root",
+        "Runs a validation command such as status or lint after init",
+        "Reports readiness and does not invent files outside the knowledge root"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I dropped a few markdown notes into raw/inbox; ingest them into the wiki and show me what needs review.",
+      "expected_output": "The agent treats raw/inbox as the input queue, runs ingest-inbox or ingest with no source, validates with lint, and reports review/taxonomy files without editing managed raw evidence.",
+      "files": [],
+      "expectations": [
+        "Chooses ingest-inbox or ingest with no explicit source for raw/inbox",
+        "Does not directly modify raw/staged or raw/archive",
+        "Runs lint after ingest and reports review gates"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Ask this LLM-WIKI what it knows about OpenClaw, and if the answer is reusable, save it as a durable synthesis.",
+      "expected_output": "The agent runs query, uses citations from the result, only promotes if a synthesis suggestion exists, and validates after save-synthesis.",
+      "files": [],
+      "expectations": [
+        "Runs query before attempting save-synthesis",
+        "Does not fabricate an answer when citations are empty",
+        "Runs save-synthesis with --confirm only for a returned suggestion id",
+        "Runs lint after promotion"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Audit this knowledge root for broken links, raw tampering, low-confidence pages, and scale problems. Do not change anything yet.",
+      "expected_output": "The agent runs lint read-only, interprets raw-source-drift and wiki quality warnings, and reports a concise audit without making repairs.",
+      "files": [],
+      "expectations": [
+        "Runs lint without mutation commands",
+        "Mentions raw-source-drift if present instead of editing raw",
+        "Reports broken links, low-confidence/contested pages, and scale warnings separately"
+      ]
+    }
+  ]
+}
