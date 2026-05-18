@@ -47,56 +47,40 @@
 
 ### 推荐方式：作为 Agent Skill 使用
 
-把 Skill 仓库克隆到本地或团队工作区：
+先把 Skill 仓库克隆到本地或团队工作区：
 
 ```bash
 git clone https://github.com/17636191639/agent-skill.git
-cd agent-skill/invest-analysis-pro
+cd agent-skill
 ```
 
-然后让你的 Agent 将 `invest-analysis-pro/` 作为一个 Skill / 项目上下文读取。普通用户不需要手动执行内部 CLI；只需要对 Agent 说“用 invest-analysis-pro 完整研究某只股票”。
+然后把 `invest-analysis-pro/` 作为一个本地 Skill 目录交给你的 Agent。普通用户不需要手动执行内部 CLI；只需要对 Agent 说“用 invest-analysis-pro 完整研究某只股票”。
 
 ### OpenClaw
 
-推荐把 `agent-skill/invest-analysis-pro/` 作为本地 Skill 目录接入 OpenClaw。接入后，OpenClaw Agent 应以 `SKILL.md` 为主入口，按其中的 evidence-first 流程执行研究。
-
-### Codex
-
-推荐二选一：
-
-1. 在工作区中直接打开 `agent-skill/invest-analysis-pro/`，让 Codex 读取 `SKILL.md`；
-2. 或将该目录软链接到 Codex 的本地 skills 目录：
+把整个 `invest-analysis-pro/` 文件夹复制到：
 
 ```bash
-mkdir -p ~/.codex/skills
-ln -s /path/to/agent-skill/invest-analysis-pro ~/.codex/skills/invest-analysis-pro
+~/.openclaw/skills/
 ```
 
-之后可以向 Codex 提出自然语言请求，例如：
+接入后，OpenClaw Agent 应以 `SKILL.md` 为主入口，按其中的 evidence-first 流程执行研究。
+
+### Codex / Claude Code / 其他 Agent
+
+对于 Codex、Claude Code 和其他支持本地 Skill 的 Agent，使用同一个原则：
+
+1. 把整个 `invest-analysis-pro/` 文件夹放到该 Agent 自己的 skills 目录下，或作为本地 Skill / 项目上下文接入；
+2. 让 Agent 以 `SKILL.md` 作为主入口；
+3. 按需读取 `references/`、`strategies/` 和本地数据适配代码；
+4. 如果 Agent 具备 shell 能力，可走本地 evidence 采集；
+5. 如果没有 shell 能力，可由用户或外部系统提供 evidence，Agent 只执行研究与报告流程。
+
+之后可以直接向 Agent 提出自然语言请求，例如：
 
 ```text
 用 invest-analysis-pro 完整研究中芯国际，默认深度即可。
 ```
-
-### Claude Code
-
-如果你的 Claude Code 环境支持本地 skills 目录，可以复制或软链接本目录：
-
-```bash
-mkdir -p ~/.claude/skills
-ln -s /path/to/agent-skill/invest-analysis-pro ~/.claude/skills/invest-analysis-pro
-```
-
-也可以直接把本目录作为项目上下文打开，并明确要求 Claude Code 遵循 `SKILL.md`。
-
-### 其他 Agent
-
-任何能读取文件上下文的 Agent 都可以使用该 Skill：
-
-1. 将 `SKILL.md` 作为主入口；
-2. 按需读取 `references/`、`strategies/` 和本地数据适配代码；
-3. 如果 Agent 具备 shell 能力，可走本地 evidence 采集；
-4. 如果没有 shell 能力，可由用户或外部系统提供 evidence，Agent 只执行研究与报告流程。
 
 ## 典型使用方式
 
@@ -180,6 +164,12 @@ Agent 可进入 provided-evidence 模式：不强行调用本地数据层，只�
 - 形成可在多种 Agent 平台复用的投资研究 Skill 标准包。
 - 支持团队内自定义策略库、行业模板、风控约束和报告风格。
 - 将非核心运行时能力拆成可选扩展，保持主 Skill 轻量、清晰、可审计。
+
+## 致谢与来源
+
+invest-analysis-pro 并不掩饰自己的来源。它建立在上游仓库 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis) 的数据能力、工程资产和历史思路之上，但当前对外产品语义、Skill 工作流、Agent 调度方式和文档组织已经围绕 `invest-analysis-pro` 重新整理。
+
+感谢上游项目为多市场股票数据、分析链路和工程实现提供的基础。当前仓库更关注 Agent-native、evidence-first、controller-led 的研究工作流。
 
 ## 免责声明
 

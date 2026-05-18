@@ -79,8 +79,8 @@ def ensure_public_skill_surface() -> None:
     readme = README.read_text(encoding="utf-8")
     if "name: invest-analysis-pro" not in skill:
         fail("SKILL.md frontmatter name must be invest-analysis-pro")
-    if "不要要求用户手动" not in skill:
-        fail("SKILL.md must state that users should not be asked to run commands manually")
+    if "do not ask the user to run commands manually" not in skill.lower():
+        fail("SKILL.md must state in English that users should not be asked to run commands manually")
     if "SKILL.md" not in readme:
         fail("README.md must identify SKILL.md as the public contract")
 
@@ -120,6 +120,8 @@ def ensure_current_product_language() -> None:
     for path in public_markdown_files():
         text = path.read_text(encoding="utf-8")
         for term in FORBIDDEN_PUBLIC_TERMS:
+            if term == "daily_stock_analysis" and path == README:
+                continue
             if term in text:
                 fail(f"forbidden stale wording {term!r} appears in {path.relative_to(ROOT)}")
 

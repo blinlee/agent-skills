@@ -1,114 +1,114 @@
 ---
 name: invest-analysis-pro
-description: invest-analysis-pro 是面向 Agent 的投资研究 Skill。当用户要求分析股票、研究公司/代码、市场复盘、新闻情报、资金流/龙虎榜、策略 YAML、回测解释、持仓或风险检查时应使用本 Skill。默认：用户给出股票并要求分析时执行 specialist 完整研究；只有用户明确要求快速/简短时才使用 quick。本 Skill 由 Agent 获取结构化 evidence、按 DAG 组织研究任务，并由主控 Agent 汇总报告；不要要求用户手动运行内部命令。
+description: invest-analysis-pro is an agent-native investment research skill. Use this skill whenever the user asks to analyze a stock, research a company or ticker, review market conditions, inspect news or intelligence, examine capital flow or leaderboard activity, interpret strategy YAML files, explain backtest results, or review portfolio or risk exposure. Default rule: if the user gives a stock and asks to analyze or research it, run the full specialist workflow unless the user explicitly asks for a faster or lighter mode. This skill gathers structured evidence, organizes research tasks as a DAG, and requires the controller agent to produce the final report; do not ask the user to run internal commands manually.
 ---
 
 # invest-analysis-pro
 
-## 触发条件
+## When to Use
 
-用户请求个股研究、市场复盘、新闻/情报收集、技术面证据、基本面证据、资金流/板块/龙虎榜、持仓风险、回测解释或策略 YAML 参考时使用。
+Use this skill whenever the user asks for single-stock research, market review, news or intelligence gathering, technical evidence, fundamental evidence, capital flow, sector or leaderboard signals, portfolio risk review, backtest interpretation, or strategy YAML guidance.
 
-默认规则：**只要用户给出某只股票并要求“看/分析/研究”，就按 specialist 研究模式执行最详细工作流**。quick / standard / full 都不是默认路径，只有用户明确要求降档时才使用。
+Default rule: **if the user provides a stock and asks to "look at", "analyze", or "research" it, run the most detailed `specialist` workflow by default**. `quick`, `standard`, and `full` are not default paths; only use them when the user explicitly asks for a lighter mode.
 
-## 必做流程
+## Mandatory Workflow
 
-1. 识别股票、市场、研究范围和用户是否明确要求降档。
-2. 读取 `references/evidence-contract.md`，由 Agent 自行调用内部数据适配层获取 JSON evidence；不要让用户手动敲命令。
-3. 读取 envelope 的 `status`、`coverage`、`source_chain`、`errors`、`warnings`。
-4. `status=failed` 时不要编造结论；说明失败原因并缩小范围或请求补充输入。
-5. `status=partial` 时可以继续分析，但必须披露缺失模块、失败原因和置信度影响。
-6. `full/specialist` 完整研究时，按 `references/dag-workflow.md` 组织研究子任务；最终 Decision / 报告由当前主控 Agent 完成，不把 Decision 作为独立研究任务派发。
-7. 最终报告按 `references/report-standard.md` 输出。
+1. Identify the stock, market, research scope, and whether the user explicitly requested a lower mode.
+2. Read `references/evidence-contract.md`, then let the agent call the internal deterministic data adapters to obtain JSON evidence; do not tell the user to type internal commands manually.
+3. Read the envelope fields: `status`, `coverage`, `source_chain`, `errors`, and `warnings`.
+4. If `status=failed`, do not invent conclusions; explain the failure and either narrow the task or request additional input.
+5. If `status=partial`, you may continue, but you must disclose the missing modules, failure reasons, and confidence impact.
+6. For `full` or `specialist`, organize the research tasks using `references/dag-workflow.md`; the final decision and final report must be completed by the current controller agent, not delegated as an independent research task.
+7. Produce the final report using `references/report-standard.md`.
 
-## 模式选择
+## Mode Selection
 
-| 模式 | 触发 | 研究 DAG | evidence 建议 |
+| Mode | Trigger | Research DAG | Evidence guidance |
 | --- | --- | --- | --- |
-| `quick` | 仅用户明确要求快速/简短/大概 | Technical → 主控 Decision | quote、technical、ma、volume，限制大字段 |
-| `standard` | 用户明确要求标准档 / standard | Technical + Intel → 主控 Decision | quote、history、technical、ma、volume、pattern，必要时补 news/intel |
-| `full` | 用户明确要求完整但不要策略专家 / full | Technical + Intel + Fundamentals & Flow → Risk → 主控 Decision | full evidence：技术、基本面、资金、板块、龙虎榜、新闻/情报 |
-| `specialist` | **默认：用户给出股票并要求分析/研究**；或用户明确要求最详细/专家/策略评估 | full + Strategy Specialist(s) → 主控 Decision | full evidence + `strategies/*.yaml`；无指定策略时按行情状态选择最多 3 个策略 |
+| `quick` | Only when the user explicitly asks for a quick, brief, rough, or lightweight view | Technical -> Controller Decision | quote, technical, ma, volume, with limited large fields |
+| `standard` | Only when the user explicitly asks for the standard tier | Technical + Intel -> Controller Decision | quote, history, technical, ma, volume, pattern, plus news/intel when needed |
+| `full` | Only when the user explicitly asks for a full run but does not want strategy specialists | Technical + Intel + Fundamentals & Flow -> Risk -> Controller Decision | full evidence: technicals, fundamentals, capital flow, sector, leaderboard, news/intel |
+| `specialist` | **Default:** the user provides a stock and asks for analysis or research; or explicitly asks for the most detailed, expert, or strategy-aware view | full + Strategy Specialist(s) -> Controller Decision | full evidence + `strategies/*.yaml`; if no strategy is specified, select up to 3 strategies based on the market state |
 
-## specialist 默认研究流程
+## Default Specialist Workflow
 
-1. 获取完整 evidence bundle：行情、历史、技术、均线、量价、形态、基本面、资金流、板块、龙虎榜；必要时补新闻/情报。
-2. 枚举并读取相关 `strategies/*.yaml`。用户未指定策略时，先按 Technical 结果判断行情状态，再选择最多 3 个 Strategy Specialist；无法判断时使用默认 router 策略 `bull_trend`、`shrink_pullback`。
-3. 做 Evidence Audit：确认哪些数据可用、哪些 partial/failed、哪些来源可用于结论。
-4. 按 DAG 派发研究子任务。
-5. 主控 Agent 汇总所有 opinion，输出标准报告。
+1. Gather a full evidence bundle: quote, history, technicals, moving averages, volume and price, patterns, fundamentals, capital flow, sector, and leaderboard data; add news or intelligence when needed.
+2. Enumerate and read the relevant `strategies/*.yaml` files. If the user did not specify a strategy, first infer the market state from the Technical result, then select up to 3 Strategy Specialists. If the state is unclear, use the default router strategies `bull_trend` and `shrink_pullback`.
+3. Perform an Evidence Audit: confirm which data is available, which modules are partial or failed, and which sources are usable for final conclusions.
+4. Dispatch the research subtasks according to the DAG.
+5. The controller agent synthesizes all opinions and writes the standard report.
 
-## 执行能力降级
+## Capability Fallback
 
-按当前 Agent 环境选择最高可用路径：
+Choose the highest available path for the current agent environment:
 
-1. **Local evidence mode**：可以执行本地命令时，优先由 Agent 调用内部数据适配层获取 JSON evidence。
-2. **Provided evidence mode**：不能执行本地命令，但用户或外部系统已提供行情、新闻、财务、资金流等结构化数据时，基于已提供 evidence 继续 DAG，并明确数据来源与缺口。
-3. **No evidence mode**：既不能执行本地命令，也没有可用 evidence 时，不做假分析；说明缺少哪些 evidence 才能完成研究。
+1. **Local evidence mode**: if the agent can execute local commands, prefer calling the internal data adapters to obtain JSON evidence.
+2. **Provided evidence mode**: if the agent cannot execute local commands but the user or an external system has already provided structured market, news, financial, or capital-flow evidence, continue the DAG using that evidence and explicitly disclose source quality and gaps.
+3. **No evidence mode**: if the agent can neither execute local commands nor access usable evidence, do not fake analysis; explain which evidence is required to complete the research.
 
-## DAG 子任务语义
+## DAG Task Semantics
 
-如果当前运行环境支持并行或独立研究任务，`standard/full/specialist` 应按 DAG 并行处理可并行分支；如果运行环境不支持并行任务，则在当前会话按同一 DAG 顺序完成，不要跳过分析。
+If the current runtime supports parallel or independent research tasks, `standard`, `full`, and `specialist` should run all parallelizable branches in parallel according to the DAG. If the runtime does not support parallel tasks, complete the same DAG sequentially in the current session without skipping analysis.
 
-派发规则：
+Dispatch rules:
 
-1. **只拆分研究员任务，不拆分 Decision**：Technical / Intel / Fundamentals & Flow / Risk / Strategy / Portfolio 可以作为独立研究任务；最终 Decision Synthesis 和报告写作必须由主控 Agent 完成。
-2. **quick**：只做 Technical Analyst，然后主控汇总。
-3. **standard 第一波可并行**：Evidence Audit 后，可同时派发 Technical Analyst 和 Intel Analyst。
-4. **full 第一波可并行**：Evidence Audit 后，可同时派发 Technical Analyst、Intel Analyst、Fundamentals & Flow Analyst。
-5. **Risk Officer 按依赖执行**：必须等待 Technical + Intel + Fundamentals & Flow 输出后再派发。
-6. **specialist 策略分支按依赖执行**：Strategy Specialist 必须附带对应 strategy YAML 和 Technical 输出；Portfolio Analyst 仅在组合/持仓任务中执行，且必须附带 portfolio/risk evidence 和单股基础意见。
-7. **主控等待依赖完成后汇总**：主控读取所有子任务输出、evidence `coverage/source_chain/errors/warnings`，再按 `references/report-standard.md` 产出最终报告。
+1. **Split researcher tasks, not Decision**: Technical, Intel, Fundamentals & Flow, Risk, Strategy, and Portfolio may run as independent research tasks. Final Decision Synthesis and final report writing must stay with the controller agent.
+2. **`quick`**: run only the Technical Analyst, then let the controller synthesize the result.
+3. **`standard` first wave**: after the Evidence Audit, Technical Analyst and Intel Analyst may run in parallel.
+4. **`full` first wave**: after the Evidence Audit, Technical Analyst, Intel Analyst, and Fundamentals & Flow Analyst may run in parallel.
+5. **Risk Officer is dependency-gated**: it must wait for Technical, Intel, and Fundamentals & Flow outputs.
+6. **Specialist strategy branches are dependency-gated**: a Strategy Specialist must receive the corresponding strategy YAML and the Technical output. A Portfolio Analyst only runs for portfolio or holdings tasks, and it must receive portfolio/risk evidence plus the single-stock base opinions.
+7. **Controller waits, then synthesizes**: the controller agent reads all subtask outputs and the evidence `coverage`, `source_chain`, `errors`, and `warnings`, then produces the final report using `references/report-standard.md`.
 
-## 子任务 payload 模板
+## Subtask Payload Template
 
-派发或模拟研究子任务时使用以下结构，保证每个研究任务只处理自己的职责：
+Use the following structure whenever you dispatch or simulate research subtasks, so that each task only handles its own responsibility:
 
 ```text
 Role: <Technical Analyst | Intel Analyst | Fundamentals & Flow Analyst | Risk Officer | Strategy Specialist | Portfolio Analyst>
 Prompt: references/prompts/<role>.md
 Stock: <code + name + market if known>
 Mode: <quick | standard | full | specialist>
-Evidence slices: <只附与该角色相关的 compact JSON evidence；必要时说明缺失模块>
+Evidence slices: <only the compact JSON evidence relevant to that role; describe missing modules when necessary>
 Prior opinions: <none | Technical output | Intel output | Fundamentals & Flow output | Strategy output>
-Strategy YAML: <仅 Strategy Specialist 需要；粘贴对应 strategies/*.yaml 内容>
+Strategy YAML: <required only for Strategy Specialist; paste the corresponding strategies/*.yaml content>
 Tool policy: do not call external tools or data adapters unless the controller explicitly authorizes it
 Output language: Chinese unless the user requested another language
 Required output: JSON only, no markdown fence, follow the prompt contract, no final investment recommendation
 Missing-data policy: mark unknown/missing_data and lower confidence; do not invent facts
 ```
 
-## 任务路由
+## Routing Guide
 
-| 用户意图 | 优先路径 |
+| User intent | Preferred path |
 | --- | --- |
-| 给出股票并要求分析/研究（默认） | `specialist`：完整 evidence + 策略框架 + 研究 DAG |
-| 明确要求快速看股票 | `quick`：少量 evidence + Technical |
-| 明确要求标准档 | `standard`：Technical + Intel |
-| 明确要求 full 但不要策略专家 | `full`：Technical + Intel + Fundamentals & Flow + Risk |
-| 新闻/事件/情报 | news/intel evidence + Intel Analyst |
-| 大盘/板块 | market/sector evidence + 主控市场复盘 |
-| 策略参考 | `strategies/*.yaml` + Strategy Specialist |
-| 回测解释 | backtest evidence + Technical/Strategy |
-| 持仓风险 | portfolio/risk evidence + Portfolio Analyst |
-| 保存研究结果 | 仅在环境提供保存接口且用户需要留档时，由主控保存已完成报告 |
+| User provides a stock and asks for analysis or research (default) | `specialist`: full evidence + strategy framework + research DAG |
+| User explicitly asks for a quick stock check | `quick`: minimal evidence + Technical |
+| User explicitly asks for the standard tier | `standard`: Technical + Intel |
+| User explicitly asks for `full` but does not want strategy specialists | `full`: Technical + Intel + Fundamentals & Flow + Risk |
+| News, event, or intelligence task | news/intel evidence + Intel Analyst |
+| Market or sector review | market/sector evidence + controller-led market review |
+| Strategy reference | `strategies/*.yaml` + Strategy Specialist |
+| Backtest interpretation | backtest evidence + Technical/Strategy |
+| Portfolio risk review | portfolio/risk evidence + Portfolio Analyst |
+| Save research output | Only if the environment provides a save interface and the user wants archiving; the controller saves the completed report |
 
 ## Gotchas
 
-- 本 Skill 的人类入口是自然语言请求，不是手动 CLI 教程；不要要求用户自己敲命令。
-- 内部数据适配层只产出 evidence，不调用 LLM，不生成自然语言报告或投资结论；研究子任务只产出分支 opinion；最终由主控 Agent 输出研究结论、风险披露和非个性化决策框架。
-- 不要求配置 OpenAI / Gemini / Anthropic / DeepSeek / LiteLLM key。
-- REST API、看板、通知、定时任务或桌面端如存在，只是可选承载或回看能力；默认不启动服务、不调用保存接口。
-- 不要忽略 envelope：`coverage`、`source_chain`、`errors`、`warnings` 是证据质量的一部分。
-- 数据源可能 partial / failed；不得编造缺失数据。
-- 大输出必须使用 compact / full / limit 或等价机制，避免上下文爆炸。
-- 不要为了补数据而大范围真实联网抓取；优先小范围、缓存或已有 evidence。
-- 公开语义、Skill 名称和报告标题统一使用 `invest-analysis-pro`。
+- The human entry point is a natural-language request, not a manual CLI tutorial; do not ask the user to run commands manually.
+- The internal data adapters only produce evidence. They do not call an LLM and do not produce a natural-language report or investment conclusion. Research subtasks only produce branch opinions. The controller agent produces the final conclusion, risk disclosure, and non-personalized decision framework.
+- Do not require any OpenAI, Gemini, Anthropic, DeepSeek, or LiteLLM key.
+- If REST APIs, dashboards, notifications, schedulers, or desktop surfaces exist, treat them as optional delivery or review layers; do not start services or call save interfaces by default.
+- Do not ignore the envelope. `coverage`, `source_chain`, `errors`, and `warnings` are part of evidence quality.
+- Data sources may return `partial` or `failed`; never invent missing data.
+- Large outputs must use `compact`, `full`, `limit`, or an equivalent mechanism to avoid context explosion.
+- Do not trigger broad live-network scraping just to fill gaps; prefer small-scope retrieval, cached data, or existing evidence.
+- Public product language, the skill name, and report titles must consistently use `invest-analysis-pro`.
 
-## 内部参考
+## Internal References
 
-- 数据适配层契约：`references/evidence-contract.md`
-- 研究 DAG：`references/dag-workflow.md`
-- 角色 prompt：`references/prompts/*.md`
-- 标准报告：`references/report-standard.md`
-- 策略框架：`strategies/*.yaml`
+- Evidence adapter contract: `references/evidence-contract.md`
+- Research DAG: `references/dag-workflow.md`
+- Role prompts: `references/prompts/*.md`
+- Standard report: `references/report-standard.md`
+- Strategy framework: `strategies/*.yaml`

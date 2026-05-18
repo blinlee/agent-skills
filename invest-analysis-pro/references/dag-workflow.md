@@ -1,111 +1,116 @@
-# invest-analysis-pro DAG 工作流
+# invest-analysis-pro DAG Workflow
 
-本文定义 `invest-analysis-pro` 在拿到 JSON evidence 之后的研究编排。内部数据适配层只负责数据采集、确定性计算和 JSON envelope 输出；研究判断、子任务派发、分歧处理和最终报告由主控 Agent 完成。
+This document defines how `invest-analysis-pro` should orchestrate research **after** the JSON evidence bundle has been collected. The internal data adapter layer is only responsible for data retrieval, deterministic calculations, caching, fallback handling, and JSON-envelope output. Research judgment, subtask dispatching, disagreement handling, and final report writing are owned by the controller agent.
 
-## 四档研究 DAG
+## Four Research Modes
 
-| 模式 | 触发 | DAG |
+| Mode | Trigger | DAG |
 | --- | --- | --- |
-| `quick` | 用户明确要求快速/简短/大概 | Evidence Audit → Technical Analyst → 主控 Decision |
-| `standard` | 用户明确要求标准档 / standard | Evidence Audit → Technical Analyst + Intel Analyst → 主控 Decision |
-| `full` | 用户明确要求完整但不要策略专家 / full | Evidence Audit → Technical + Intel + Fundamentals & Flow → Risk Officer → 主控 Decision |
-| `specialist` | **默认：用户给出股票并要求分析/研究**；或用户明确要求最详细/专家/策略评估 | full → Strategy Specialist(s) → 主控 Decision；组合/持仓任务可增加 Portfolio Analyst |
+| `quick` | The user explicitly asks for a quick, brief, rough, or lightweight view | Evidence Audit -> Technical Analyst -> Controller Decision |
+| `standard` | The user explicitly asks for the standard tier | Evidence Audit -> Technical Analyst + Intel Analyst -> Controller Decision |
+| `full` | The user explicitly asks for a full run but does not want strategy specialists | Evidence Audit -> Technical + Intel + Fundamentals & Flow -> Risk Officer -> Controller Decision |
+| `specialist` | **Default:** the user provides a stock and asks for analysis or research; or explicitly asks for the most detailed, expert, or strategy-aware view | full -> Strategy Specialist(s) -> Controller Decision; portfolio/holdings tasks may additionally use Portfolio Analyst |
 
-## 默认 DAG（specialist）
+## Default DAG (`specialist`)
 
 ```text
 0. Evidence Bundle
-   主控会话获取完整 JSON envelope
+   The controller session obtains the full JSON envelope
 
         ↓
 
-1. Evidence Audit（主控会话）
-   检查 status / coverage / source_chain / errors / warnings，决定哪些分支可执行
+1. Evidence Audit (controller session)
+   Check status / coverage / source_chain / errors / warnings
+   Decide which branches are executable
 
         ↓
 
-2. 第一层可并行研究
+2. First-layer parallel research
    ├─ Technical Analyst
    ├─ Intel Analyst
    ├─ Fundamentals & Flow Analyst
-   └─ Backtest Analyst（仅用户要求或 evidence 已包含时）
+   └─ Backtest Analyst (only when requested or already present in evidence)
 
         ↓
 
-3. 第二层依赖研究
+3. Second-layer dependency-gated research
    ├─ Risk Officer
-   │   依赖 Technical + Intel + Fundamentals & Flow
+   │   Depends on Technical + Intel + Fundamentals & Flow
    │
    ├─ Strategy Specialist(s)
-   │   依赖 Technical；部分策略也依赖 Fundamentals & Flow
+   │   Depends on Technical; some strategies also depend on Fundamentals & Flow
    │
-   └─ Portfolio Analyst（组合任务）
-       依赖单股基础意见 / 持仓 evidence
+   └─ Portfolio Analyst (portfolio tasks)
+       Depends on single-stock base opinions / holdings evidence
 
         ↓
 
-4. Decision Synthesis（主控会话完成，不作为独立研究任务）
-   主控会话汇总全部子研究意见，按 `references/report-standard.md` 生成标准产出物。
+4. Decision Synthesis (completed by the controller session; never dispatched as an independent research task)
+   The controller session synthesizes all sub-opinions and generates the standard outputs using
+   `references/report-standard.md`.
 ```
 
-默认 `specialist` 中，Strategy Specialist 的策略选择规则：优先使用用户指定策略；否则根据 Technical 结果识别行情状态并选择最多 3 个策略；若无法判断行情状态，使用默认 router 策略 `bull_trend`、`shrink_pullback`。
+Default strategy selection rules inside `specialist`:
+- First use user-specified strategies when provided.
+- Otherwise infer the market state from the Technical result and select up to 3 strategies.
+- If the market state cannot be inferred confidently, use the default router strategies `bull_trend` and `shrink_pullback`.
 
-## 为什么不是全串行
+## Why It Is Not Fully Sequential
 
-内部数据适配层先统一产出 evidence，多名研究员可以读取同一份事实源，因此第一层研究可以并行：Technical、Intel、Fundamentals & Flow 之间通常不存在强依赖。并行能减少等待时间，也能避免一个研究角色的叙事先入为主影响其他角色。
+The internal data adapter layer produces a shared evidence bundle first. Multiple researchers can read the same source of facts, so the first research wave can usually run in parallel: Technical, Intel, and Fundamentals & Flow do not normally have hard dependencies on one another. Parallelism reduces waiting time and avoids one research role anchoring the narrative too early for other roles.
 
-## 为什么不是全并行
+## Why It Is Not Fully Parallel
 
-部分节点依赖前序观点：
+Some nodes depend on prior opinions:
 
-| 节点 | 依赖 | 原因 |
+| Node | Dependencies | Why |
 | --- | --- | --- |
-| Risk Officer | Technical / Intel / Fundamentals & Flow | 风险判断要同时看破位、负面事件、资金流、估值和数据缺口。 |
-| Strategy Specialist | Technical，必要时 Fundamentals & Flow | YAML 策略通常要先确认趋势、关键价位、量价结构和策略条件。 |
-| Portfolio Analyst | 单股基础意见 / 持仓 evidence | 组合风险需要单股信号、置信度和持仓结构。 |
-| Decision Synthesis | 全部前序输出 | 最终结论必须综合全部 evidence、分歧和风险。 |
+| Risk Officer | Technical / Intel / Fundamentals & Flow | Risk screening must jointly consider breakdown risk, negative events, capital flow, valuation, and data-quality gaps. |
+| Strategy Specialist | Technical, sometimes Fundamentals & Flow | Strategy YAML rules usually require trend confirmation, key levels, volume-price structure, and strategy conditions first. |
+| Portfolio Analyst | Single-stock base opinions / holdings evidence | Portfolio risk requires single-stock signals, confidence levels, and position structure. |
+| Decision Synthesis | All prior outputs | The final conclusion must integrate all evidence, disagreements, and risks. |
 
-## 子任务派发模板
+## Subtask Dispatch Template
 
-主控 Agent 派发或模拟研究子任务时使用以下 payload。不要让研究任务重新规划整个工作流，也不要让研究任务输出最终投资结论。
+Use the following payload whenever the controller agent dispatches or simulates a research subtask. Do not let a research task re-plan the entire workflow, and do not let a research task produce the final investment conclusion.
 
 ```text
 Role: <Technical Analyst | Intel Analyst | Fundamentals & Flow Analyst | Risk Officer | Strategy Specialist | Portfolio Analyst>
 Prompt: references/prompts/<role>.md
 Stock: <code + name + market if known>
 Mode: <quick | standard | full | specialist>
-Objective: <本角色本轮要回答的问题>
+Objective: <the specific question this role must answer in this round>
 Evidence slices:
   - envelope.status: <ok|partial|failed>
   - coverage summary: <requested/succeeded/failed>
-  - relevant data: <compact JSON 或关键字段摘录>
+  - relevant data: <compact JSON or key-field excerpt>
   - errors/warnings relevant to this role: <list>
 Prior opinions: <none | Technical output | Intel output | Fundamentals & Flow output | Risk output>
-Strategy YAML: <仅 Strategy Specialist 需要；粘贴对应 strategies/*.yaml 内容>
+Strategy YAML: <required only for Strategy Specialist; paste the corresponding strategies/*.yaml content>
 Tool policy: do not call external tools or data adapters unless the controller explicitly authorizes it
 Output language: Chinese unless the user requested another language
-Output contract: JSON only; no markdown fence; follow prompt schema; no final report; no final buy/hold/sell decision unless prompt explicitly asks for local signal classification.
+Output contract: JSON only; no markdown fence; follow the prompt schema; no final report; no final buy/hold/sell decision unless the prompt explicitly asks for a local signal classification.
 Missing-data policy: mark unknown/missing_data, lower confidence, and state what evidence is required to resolve it.
 ```
 
-## 主控会话职责
+## Controller Responsibilities
 
-主控会话是投委会主席 / 报告作者：
+The controller session acts as the investment committee chair and final report author:
 
-1. 调用内部数据适配层并保存 evidence envelope。
-2. 做 Evidence Audit，披露 partial / failed / warnings。
-3. 按 DAG 派发可并行子任务。
-4. 等待依赖节点完成后再派发 Risk / Strategy / Portfolio。
-5. 不把 Decision 作为独立研究任务；主控自行按 `references/prompts/decision-synthesis.md` 和 `references/report-standard.md` 汇总。
-6. 如环境提供结果保存接口且用户需要留档，主控可以保存已完成报告；保存动作不得触发新的分析链路。
+1. Call the internal data adapter layer and retain the evidence envelope.
+2. Perform the Evidence Audit and disclose all `partial`, `failed`, and warning states.
+3. Dispatch all first-wave parallel subtasks according to the DAG.
+4. Wait for dependencies before dispatching Risk / Strategy / Portfolio.
+5. Never dispatch Decision as an independent research task; synthesize it locally using `references/prompts/decision-synthesis.md` and `references/report-standard.md`.
+6. If the environment exposes a result-save interface and the user wants archival, save the finished report only after the research is complete; the save step must not trigger a new analysis pipeline.
 
-## 推荐 prompt 文档
+## Recommended Prompt Assets
 
-- Technical：`references/prompts/technical-analyst.md`
-- Intel：`references/prompts/intel-analyst.md`
-- Fundamentals & Flow：`references/prompts/fundamentals-flow-analyst.md`
-- Risk：`references/prompts/risk-officer.md`
-- Strategy：`references/prompts/strategy-specialist.md`
-- Portfolio：`references/prompts/portfolio-analyst.md`
-- Decision / 主控汇总：`references/prompts/decision-synthesis.md`
-- 标准报告：`references/report-standard.md`
+- Technical: `references/prompts/technical-analyst.md`
+- Intel: `references/prompts/intel-analyst.md`
+- Fundamentals & Flow: `references/prompts/fundamentals-flow-analyst.md`
+- Risk: `references/prompts/risk-officer.md`
+- Strategy: `references/prompts/strategy-specialist.md`
+- Portfolio: `references/prompts/portfolio-analyst.md`
+- Decision / controller synthesis: `references/prompts/decision-synthesis.md`
+- Standard report: `references/report-standard.md`
