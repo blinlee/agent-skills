@@ -789,6 +789,23 @@ class SystemConfigServiceTestCase(unittest.TestCase):
             ["quick", "standard", "full", "specialist", "strategy", "skill"],
         )
 
+    def test_get_config_uses_specialist_as_orchestrator_default(self) -> None:
+        self._rewrite_env("")
+
+        payload = self.service.get_config(include_schema=True)
+        items = {item["key"]: item for item in payload["items"]}
+
+        self.assertEqual(items["AGENT_ORCHESTRATOR_MODE"]["schema"]["default_value"], "specialist")
+
+    def test_config_defaults_to_specialist_orchestrator_mode(self) -> None:
+        self._rewrite_env("")
+
+        with patch.dict(os.environ, {"ENV_FILE": str(self.env_path)}, clear=True):
+            Config.reset_instance()
+            config = Config.get_instance()
+
+        self.assertEqual(config.agent_orchestrator_mode, "specialist")
+
     @patch.object(
         Config,
         "_parse_litellm_yaml",

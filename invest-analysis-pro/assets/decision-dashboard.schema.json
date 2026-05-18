@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "invest-analysis-pro Decision Dashboard",
+  "type": "object",
+  "required": [
+    "stock_name",
+    "sentiment_score",
+    "trend_prediction",
+    "operation_advice",
+    "decision_type",
+    "confidence_level",
+    "dashboard",
+    "analysis_summary",
+    "key_points",
+    "risk_warning",
+    "evidence_quality"
+  ],
+  "properties": {
+    "stock_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sentiment_score": {
+      "type": [
+        "integer",
+        "number"
+      ],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "trend_prediction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation_advice": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_type": {
+      "type": "string",
+      "enum": [
+        "buy",
+        "hold",
+        "sell"
+      ]
+    },
+    "confidence_level": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dashboard": {
+      "type": "object",
+      "required": [
+        "core_conclusion",
+        "data_perspective",
+        "intelligence",
+        "battle_plan"
+      ],
+      "properties": {
+        "core_conclusion": {
+          "type": "object",
+          "required": [
+            "one_sentence",
+            "signal_type",
+            "time_sensitivity",
+            "position_advice"
+          ],
+          "properties": {
+            "one_sentence": {
+              "type": "string",
+              "minLength": 1
+            },
+            "signal_type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "time_sensitivity": {
+              "type": "string",
+              "minLength": 1
+            },
+            "position_advice": {
+              "type": "object",
+              "required": [
+                "no_position",
+                "has_position"
+              ],
+              "properties": {
+                "no_position": {
+                  "type": "string"
+                },
+                "has_position": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "data_perspective": {
+          "type": "object",
+          "required": [
+            "trend_status",
+            "price_position",
+            "volume_analysis",
+            "chip_structure"
+          ],
+          "properties": {
+            "trend_status": {
+              "type": "object"
+            },
+            "price_position": {
+              "type": "object"
+            },
+            "volume_analysis": {
+              "type": "object"
+            },
+            "chip_structure": {
+              "type": "object"
+            }
+          }
+        },
+        "intelligence": {
+          "type": "object",
+          "required": [
+            "latest_news",
+            "risk_alerts",
+            "positive_catalysts",
+            "earnings_outlook",
+            "sentiment_summary"
+          ],
+          "properties": {
+            "latest_news": {
+              "type": "string"
+            },
+            "risk_alerts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "positive_catalysts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "earnings_outlook": {
+              "type": "string"
+            },
+            "sentiment_summary": {
+              "type": "string"
+            }
+          }
+        },
+        "battle_plan": {
+          "type": "object",
+          "required": [
+            "sniper_points",
+            "position_strategy",
+            "action_checklist"
+          ],
+          "properties": {
+            "sniper_points": {
+              "type": "object"
+            },
+            "position_strategy": {
+              "type": "object"
+            },
+            "action_checklist": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "analysis_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "key_points": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "risk_warning": {
+      "type": "string",
+      "minLength": 1
+    },
+    "buy_reason": {
+      "type": "string"
+    },
+    "trend_analysis": {
+      "type": "string"
+    },
+    "short_term_outlook": {
+      "type": "string"
+    },
+    "medium_term_outlook": {
+      "type": "string"
+    },
+    "technical_analysis": {
+      "type": "string"
+    },
+    "ma_analysis": {
+      "type": "string"
+    },
+    "volume_analysis": {
+      "type": "string"
+    },
+    "pattern_analysis": {
+      "type": "string"
+    },
+    "fundamental_analysis": {
+      "type": "string"
+    },
+    "sector_position": {
+      "type": "string"
+    },
+    "company_highlights": {
+      "type": "string"
+    },
+    "news_summary": {
+      "type": "string"
+    },
+    "market_sentiment": {
+      "type": "string"
+    },
+    "hot_topics": {
+      "type": "string"
+    },
+    "evidence_quality": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

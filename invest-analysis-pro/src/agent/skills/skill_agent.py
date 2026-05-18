@@ -57,35 +57,39 @@ class SkillAgent(BaseAgent):
             instructions = self._skill.instructions or self._skill.description
             display = self._skill.display_name
         else:
-            instructions = f"Evaluate the '{self.skill_id}' skill."
+            instructions = f"Evaluate the '{self.skill_id}' strategy framework."
             display = self.skill_id
 
         return f"""\
-You are a **Skill Evaluation Agent** applying the **{display}** skill.
+You are a **Strategy Evaluation Agent** applying the **{display}** strategy framework.
 
-## Skill Instructions
+## Strategy Instructions
 {instructions}
 
 ## Task
-Evaluate whether the current stock conditions satisfy this skill's entry
-criteria. Use tools if needed to verify data points.
+Evaluate whether the current stock conditions satisfy this strategy's entry
+criteria. Use the provided evidence and prior analyst opinions. Use tools if
+needed to verify data points.
 
 ## Output Format
 Return **only** a JSON object:
 {{
   "skill_id": "{self.skill_id}",
+  "strategy_id": "{self.skill_id}",
   "signal": "strong_buy|buy|hold|sell|strong_sell",
   "confidence": 0.0-1.0,
   "conditions_met": ["list of satisfied conditions"],
   "conditions_missed": ["list of unsatisfied conditions"],
   "score_adjustment": -20 to +20,
-  "reasoning": "2-3 sentence skill evaluation"
+  "reasoning": "2-3 sentence strategy evaluation",
+  "invalidations": ["conditions that would make this strategy fail"],
+  "missing_data": ["list unavailable evidence modules"]
 }}
 """
 
     def build_user_message(self, ctx: AgentContext) -> str:
         parts = [
-            f"Evaluate **{self.skill_id}** skill for stock "
+            f"Evaluate **{self.skill_id}** strategy framework for stock "
             f"**{ctx.stock_code}** ({ctx.stock_name or 'unknown'}).",
         ]
         if ctx.opinions:
@@ -98,6 +102,8 @@ Return **only** a JSON object:
                         parts.append(
                             f"Technical data: {json.dumps(op.raw_data, ensure_ascii=False, default=str)[:2000]}"
                         )
+                elif op.agent_name == "fundamentals_flow":
+                    parts.append(f"\nFundamentals/flow summary: {op.reasoning}")
         return "\n".join(parts)
 
     def post_process(self, ctx: AgentContext, raw_text: str) -> Optional[AgentOpinion]:

@@ -1,0 +1,209 @@
+{
+  "skill": "invest-analysis-pro",
+  "version": 2,
+  "controller": {
+    "decision_owner": "controller",
+    "required_reads": [
+      "references/evidence-contract.md",
+      "references/dag-workflow.md",
+      "references/report-standard.md",
+      "references/workflow-manifest.json"
+    ],
+    "compliance_check_command": "python scripts/check_workflow_compliance.py --input <run-record.json> --strict",
+    "payload_template": "assets/subtask-payload-template.md"
+  },
+  "runtime_capabilities": {
+    "independent_task_execution": "The runtime can dispatch bounded role tasks outside the controller session and return their results to the controller.",
+    "concurrent_role_workers": "The runtime can run first-wave role tasks in parallel.",
+    "structured_artifact_return": "The runtime can return JSON artifacts from role tasks to the controller.",
+    "configurable_callable_agent_list": "The runtime may expose a config-managed allowlist of callable subagents for role dispatch."
+  },
+  "worker_selection": {
+    "policy": "prefer_callable_subagent_else_self_spawn",
+    "description": "When a host runtime provides a configured callable-agent list, select role workers from that list first. If no dedicated callable subagent is available for a mandatory role but independent task execution still exists, dispatch a same-agent/self-spawn worker and preserve the same role prompt and output contract."
+  },
+  "modes": {
+    "quick": {
+      "default": false,
+      "requires_explicit_request": true,
+      "dispatch_policy": "optional",
+      "report_variant": "brief_or_full",
+      "mandatory_nodes": [
+        "technical"
+      ],
+      "optional_nodes": [
+        "intel",
+        "fundamentals_flow",
+        "risk",
+        "strategy_specialist",
+        "portfolio"
+      ],
+      "mandatory_deliverables": [
+        "decision_dashboard_json",
+        "evidence_audit_appendix"
+      ],
+      "preferred_primary_report": "brief_summary_report"
+    },
+    "standard": {
+      "default": false,
+      "requires_explicit_request": true,
+      "dispatch_policy": "required_when_available",
+      "report_variant": "brief_or_full",
+      "mandatory_nodes": [
+        "technical",
+        "intel"
+      ],
+      "optional_nodes": [
+        "fundamentals_flow",
+        "risk",
+        "strategy_specialist",
+        "portfolio"
+      ],
+      "mandatory_deliverables": [
+        "decision_dashboard_json",
+        "evidence_audit_appendix"
+      ],
+      "preferred_primary_report": "brief_summary_report"
+    },
+    "full": {
+      "default": false,
+      "requires_explicit_request": true,
+      "dispatch_policy": "required_when_available",
+      "report_variant": "full_only",
+      "mandatory_nodes": [
+        "technical",
+        "intel",
+        "fundamentals_flow",
+        "risk"
+      ],
+      "optional_nodes": [
+        "strategy_specialist",
+        "portfolio"
+      ],
+      "mandatory_deliverables": [
+        "full_markdown_report",
+        "decision_dashboard_json",
+        "evidence_audit_appendix"
+      ],
+      "preferred_primary_report": "full_markdown_report"
+    },
+    "specialist": {
+      "default": true,
+      "requires_explicit_request": false,
+      "dispatch_policy": "required_when_available",
+      "report_variant": "full_only",
+      "mandatory_nodes": [
+        "technical",
+        "intel",
+        "fundamentals_flow",
+        "risk",
+        "strategy_specialist"
+      ],
+      "optional_nodes": [
+        "portfolio"
+      ],
+      "strategy_branch_count": {
+        "min": 1,
+        "max": 3
+      },
+      "mandatory_deliverables": [
+        "full_markdown_report",
+        "decision_dashboard_json",
+        "evidence_audit_appendix"
+      ],
+      "preferred_primary_report": "full_markdown_report"
+    }
+  },
+  "nodes": {
+    "technical": {
+      "role": "Technical Analyst",
+      "prompt": "references/prompts/technical-analyst.md",
+      "dependencies": [],
+      "wave": "first",
+      "parallelizable": true
+    },
+    "intel": {
+      "role": "Intel Analyst",
+      "prompt": "references/prompts/intel-analyst.md",
+      "dependencies": [],
+      "wave": "first",
+      "parallelizable": true
+    },
+    "fundamentals_flow": {
+      "role": "Fundamentals & Flow Analyst",
+      "prompt": "references/prompts/fundamentals-flow-analyst.md",
+      "dependencies": [],
+      "wave": "first",
+      "parallelizable": true
+    },
+    "risk": {
+      "role": "Risk Officer",
+      "prompt": "references/prompts/risk-officer.md",
+      "dependencies": [
+        "technical",
+        "intel",
+        "fundamentals_flow"
+      ],
+      "wave": "second",
+      "parallelizable": false
+    },
+    "strategy_specialist": {
+      "role": "Strategy Specialist",
+      "prompt": "references/prompts/strategy-specialist.md",
+      "dependencies": [
+        "technical"
+      ],
+      "secondary_dependencies": [
+        "fundamentals_flow"
+      ],
+      "wave": "second",
+      "parallelizable": true,
+      "strategy_yaml_required": true
+    },
+    "portfolio": {
+      "role": "Portfolio Analyst",
+      "prompt": "references/prompts/portfolio-analyst.md",
+      "dependencies": [
+        "technical",
+        "intel",
+        "fundamentals_flow"
+      ],
+      "wave": "second",
+      "parallelizable": false,
+      "conditional_on_portfolio_context": true
+    },
+    "decision": {
+      "role": "Controller Decision",
+      "prompt": "references/prompts/decision-synthesis.md",
+      "dependencies": [
+        "technical"
+      ],
+      "wave": "final",
+      "parallelizable": false,
+      "must_remain_in_controller": true
+    }
+  },
+  "deliverables": {
+    "ordered": [
+      "workflow_deviation_lines",
+      "full_markdown_report_or_brief_summary_report",
+      "decision_dashboard_json",
+      "evidence_audit_appendix"
+    ],
+    "assets": {
+      "full_markdown_report": "assets/final-report-template.md",
+      "brief_summary_report": "assets/brief-report-template.md",
+      "short_message_report": "assets/short-message-template.md",
+      "evidence_audit_appendix": "assets/evidence-audit-template.md",
+      "decision_dashboard_schema": "assets/decision-dashboard.schema.json"
+    }
+  },
+  "workflow_deviation_codes": [
+    "WORKFLOW_DEVIATION: no_subagent_dispatch",
+    "WORKFLOW_DEVIATION: role_prompt_not_read",
+    "WORKFLOW_DEVIATION: mandatory_node_skipped",
+    "WORKFLOW_DEVIATION: evidence_audit_missing",
+    "WORKFLOW_DEVIATION: decision_dashboard_missing",
+    "WORKFLOW_DEVIATION: report_schema_incomplete"
+  ]
+}

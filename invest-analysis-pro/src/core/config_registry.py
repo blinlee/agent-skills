@@ -2043,14 +2043,14 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     },
     "AGENT_ORCHESTRATOR_MODE": {
         "title": "Orchestrator Mode",
-        "description": "Pipeline mode when AGENT_ARCH=multi. 'quick' (tech→decision), 'standard' (tech→intel→decision), 'full' (tech→intel→risk→decision), 'specialist' (full + per-strategy specialist agents).",
+        "description": "Pipeline mode when AGENT_ARCH=multi. 'quick' (tech→decision), 'standard' (tech→intel→decision), 'full' (tech→intel→fundamentals/flow→risk→decision), 'specialist' (full + per-strategy specialist agents).",
         "category": "agent",
         "data_type": "string",
         "ui_control": "select",
         "is_sensitive": False,
         "is_required": False,
         "is_editable": True,
-        "default_value": "standard",
+        "default_value": "specialist",
         "options": [
             {"label": "Quick", "value": "quick"},
             {"label": "Standard", "value": "standard"},

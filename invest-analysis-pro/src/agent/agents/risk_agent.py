@@ -51,6 +51,8 @@ output a structured JSON risk assessment.
 5. **Lock-up Expirations** — large block unlocks within 30 days (解禁)
 6. **Valuation Extremes** — PE > 100 or negative, PB > 10 (flag as anomaly)
 7. **Technical Warning Signs** — death crosses, breaking key supports
+8. **Cross-opinion Conflicts** — disagreements among technical / intel / fundamentals-flow views
+9. **Data Quality Risk** — partial or missing upstream evidence that materially weakens confidence
 
 ## Severity Levels
 - "high": existential or material risk (lawsuits, fraud, massive insider selling)
@@ -64,7 +66,7 @@ Return **only** a JSON object:
   "risk_score": 0-100,
   "flags": [
     {
-      "category": "insider|earnings|regulatory|industry|lockup|valuation|technical",
+      "category": "insider|earnings|regulatory|industry|lockup|valuation|technical|data_quality|opinion_conflict",
       "severity": "high|medium|low",
       "description": "Clear description of the risk",
       "source": "Where this information came from"
@@ -72,11 +74,12 @@ Return **only** a JSON object:
   ],
   "veto_buy": true|false,
   "reasoning": "2-3 sentence overall risk assessment",
-  "signal_adjustment": "none|downgrade_one|downgrade_two|veto"
+  "signal_adjustment": "none|downgrade_one|downgrade_two|veto",
+  "missing_data": ["list unavailable evidence modules"]
 }
 
 Important: be thorough but factual. Only flag risks backed by evidence \
-from your search results. Do NOT invent risks.
+from your search results or prior opinions. Do NOT invent risks.
 """
 
     def build_user_message(self, ctx: AgentContext) -> str:
@@ -84,11 +87,35 @@ from your search results. Do NOT invent risks.
         if ctx.stock_name:
             parts[0] += f" ({ctx.stock_name})"
         parts.append("for ALL risk factors listed in your instructions.")
-        parts.append("Search for latest news if you haven't received intel data yet.")
+        parts.append(
+            "Use prior opinions first, then search only when you still need missing evidence. "
+            "Explicitly assess cross-opinion conflicts and data-quality gaps."
+        )
+
+        technical = next((op for op in ctx.opinions if op.agent_name == "technical"), None)
+        if technical is not None:
+            parts.append(f"\n[Technical opinion]\nSignal={technical.signal} Confidence={technical.confidence:.2f}\n{technical.reasoning}")
+            if technical.key_levels:
+                parts.append(f"Technical key levels: {json.dumps(technical.key_levels, ensure_ascii=False, default=str)}")
 
         # Feed any existing intel data so the risk agent doesn't redo searches
         if ctx.get_data("intel_opinion"):
             parts.append(f"\n[Existing intel data]\n{json.dumps(ctx.get_data('intel_opinion'), ensure_ascii=False, default=str)}")
+        else:
+            intel = next((op for op in ctx.opinions if op.agent_name == "intel"), None)
+            if intel is not None:
+                parts.append(f"\n[Intel opinion]\nSignal={intel.signal} Confidence={intel.confidence:.2f}\n{intel.reasoning}")
+
+        fundamentals_flow = ctx.get_data("fundamentals_flow_opinion")
+        if fundamentals_flow:
+            parts.append(f"\n[Fundamentals & flow opinion]\n{json.dumps(fundamentals_flow, ensure_ascii=False, default=str)}")
+        else:
+            fundamentals = next((op for op in ctx.opinions if op.agent_name == "fundamentals_flow"), None)
+            if fundamentals is not None:
+                parts.append(
+                    f"\n[Fundamentals & flow summary]\nSignal={fundamentals.signal} "
+                    f"Confidence={fundamentals.confidence:.2f}\n{fundamentals.reasoning}"
+                )
 
         return "\n".join(parts)
 
@@ -125,4 +152,3 @@ def _risk_to_signal(risk_level: str) -> str:
         "high": "strong_sell",
     }
     return mapping.get(risk_level, "hold")
-

@@ -2,14 +2,15 @@
 """
 AgentOrchestrator — multi-agent pipeline coordinator.
 
-Manages the lifecycle of specialised agents (Technical → Intel → Risk →
-Specialist → Decision) for a single stock analysis run.
+Manages the lifecycle of specialised agents (Technical → Intel →
+Fundamentals/Flow → Risk → Specialist → Decision) for a single stock analysis
+run.
 
 Modes:
 - ``quick``   : Technical only → Decision (fastest, ~2 LLM calls)
-- ``standard``: Technical → Intel → Decision (default)
-- ``full``    : Technical → Intel → Risk → Decision
-- ``specialist``: Technical → Intel → Risk → specialist evaluation → Decision
+- ``standard``: Technical → Intel → Decision
+- ``full``    : Technical → Intel → Fundamentals/Flow → Risk → Decision
+- ``specialist``: Technical → Intel → Fundamentals/Flow → Risk → strategy evaluation → Decision
 
 The orchestrator:
 1. Seeds an :class:`AgentContext` with the user query and stock code
@@ -85,7 +86,7 @@ class AgentOrchestrator:
         skill_instructions: str = "",
         technical_skill_policy: str = "",
         max_steps: int = AGENT_MAX_STEPS_DEFAULT,
-        mode: str = "standard",
+        mode: str = "specialist",
         skill_manager=None,
         config=None,
     ):
@@ -95,7 +96,7 @@ class AgentOrchestrator:
         self.technical_skill_policy = technical_skill_policy
         self.max_steps = max_steps
         normalized_mode = "specialist" if mode in {"strategy", "skill"} else mode
-        self.mode = normalized_mode if normalized_mode in VALID_MODES else "standard"
+        self.mode = normalized_mode if normalized_mode in VALID_MODES else "specialist"
         self.skill_manager = skill_manager
         self.config = config
 
@@ -520,11 +521,11 @@ class AgentOrchestrator:
 
             # Abort pipeline on critical failure.
             # Non-critical stages that degrade gracefully:
-            #   - intel / risk (standard support stages)
+            #   - intel / fundamentals_flow / risk (support stages)
             #   - skill agents (specialist evaluation, optional)
             if result.status == StageStatus.FAILED:
                 non_critical = (
-                    agent.agent_name in ("intel", "risk")
+                    agent.agent_name in ("intel", "fundamentals_flow", "risk")
                     or agent.agent_name in getattr(self, "_skill_agent_names", set())
                 )
                 if not non_critical:
@@ -586,6 +587,7 @@ class AgentOrchestrator:
         from src.agent.agents.technical_agent import TechnicalAgent
         from src.agent.agents.intel_agent import IntelAgent
         from src.agent.agents.decision_agent import DecisionAgent
+        from src.agent.agents.fundamentals_flow_agent import FundamentalsFlowAgent
         from src.agent.agents.risk_agent import RiskAgent
 
         self._skill_agent_names = set()
@@ -599,6 +601,7 @@ class AgentOrchestrator:
 
         technical = self._prepare_agent(TechnicalAgent(**common_kwargs))
         intel = self._prepare_agent(IntelAgent(**common_kwargs))
+        fundamentals_flow = self._prepare_agent(FundamentalsFlowAgent(**common_kwargs))
         risk = self._prepare_agent(RiskAgent(**common_kwargs))
         decision = self._prepare_agent(DecisionAgent(**common_kwargs))
 
@@ -607,13 +610,13 @@ class AgentOrchestrator:
         elif self.mode == "standard":
             return [technical, intel, decision]
         elif self.mode == "full":
-            return [technical, intel, risk, decision]
+            return [technical, intel, fundamentals_flow, risk, decision]
         elif self.mode == "specialist":
             # Specialist agents are inserted lazily right before the decision
             # stage so the router can see the finished technical opinion.
-            return [technical, intel, risk, decision]
+            return [technical, intel, fundamentals_flow, risk, decision]
         else:
-            return [technical, intel, decision]
+            return [technical, intel, fundamentals_flow, risk, decision]
 
     def _build_specialist_agents(self, ctx: AgentContext) -> list:
         """Build specialist sub-agents based on requested skills.

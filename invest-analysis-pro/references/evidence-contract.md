@@ -101,16 +101,13 @@ python main.py invest-analysis-pro portfolio --include-positions --limit 20
 
 1. Use `bundle` to prepare the base evidence set.
 2. Let the controller agent perform an Evidence Audit over `status`, `coverage`, `source_chain`, `errors`, and `warnings`.
-3. Choose `quick`, `standard`, `full`, or `specialist` according to `references/dag-workflow.md`:
-   - `quick`: Technical -> Controller Decision
-   - `standard`: Technical + Intel -> Controller Decision
-   - `full`: Technical + Intel + Fundamentals & Flow -> Risk -> Controller Decision
-   - `specialist`: full + Strategy Specialist(s) -> Controller Decision; this is the default tier when the user directly gives a stock and asks for analysis; portfolio/holdings tasks may additionally use Portfolio
+3. Choose `quick`, `standard`, `full`, or `specialist` according to `references/workflow-manifest.json` and the execution guidance in `references/dag-workflow.md`.
 4. If the user specified a strategy, call `strategies show <strategy_id>` and pass the strategy YAML to the Strategy Specialist prompt.
 5. If no strategy is specified, select up to 3 strategies based on the Technical result. If the market state is unclear, use the default router strategies `bull_trend` and `shrink_pullback`.
 6. If news is needed, call `news` or `intel` separately and control payload size with `--limit`.
-7. Never dispatch Decision as an independent research task; the calling controller agent must generate the final conclusion using `references/prompts/decision-synthesis.md` and `references/report-standard.md`.
-8. Technical / Intel / Risk / Strategy and related roles are prompt/workflow phases, not a built-in LLM runtime.
+7. Never dispatch Decision as an independent research task; the calling controller agent must generate the final conclusion using `references/prompts/decision-synthesis.md`, `references/report-standard.md`, and the bundled output assets.
+8. When strict acceptance, runtime adaptation, or workflow debugging is needed, validate the workflow run record with `python scripts/check_workflow_compliance.py --input <run-record.json> --strict`.
+9. Technical / Intel / Risk / Strategy and related roles are prompt/workflow phases, not a built-in LLM runtime.
 
 ## Optional Result Saving
 

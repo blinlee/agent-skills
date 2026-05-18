@@ -12,6 +12,9 @@ AGENTS = ROOT / "AGENTS.md"
 CLAUDE = ROOT / "CLAUDE.md"
 SKILL = ROOT / "SKILL.md"
 README = ROOT / "README.md"
+WORKFLOW_MANIFEST = ROOT / "references" / "workflow-manifest.json"
+COMPLIANCE_SCRIPT = ROOT / "scripts" / "check_workflow_compliance.py"
+DASHBOARD_SCHEMA = ROOT / "assets" / "decision-dashboard.schema.json"
 
 REMOVED_MARKDOWN_SURFACES = (
     ROOT / ".github" / "copilot-instructions.md",
@@ -83,6 +86,9 @@ def ensure_public_skill_surface() -> None:
         fail("SKILL.md must state in English that users should not be asked to run commands manually")
     if "SKILL.md" not in readme:
         fail("README.md must identify SKILL.md as the public contract")
+    ensure_file_exists(WORKFLOW_MANIFEST, "machine-readable workflow manifest")
+    ensure_file_exists(COMPLIANCE_SCRIPT, "workflow compliance script")
+    ensure_file_exists(DASHBOARD_SCHEMA, "Decision Dashboard schema")
 
 
 def ensure_removed_surfaces_not_tracked() -> None:
@@ -112,6 +118,7 @@ def ensure_local_removed_paths_absent() -> None:
 def public_markdown_files() -> list[Path]:
     paths = [SKILL, README, AGENTS, ROOT / "strategies" / "README.md"]
     paths.extend(sorted((ROOT / "references").rglob("*.md")))
+    paths.extend(sorted((ROOT / "assets").rglob("*.md")))
     paths.extend(sorted((ROOT / "evals").rglob("*.md")))
     return [p for p in paths if p.exists()]
 

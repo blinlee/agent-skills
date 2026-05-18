@@ -465,7 +465,7 @@ class TestIntelAgentPostProcess(unittest.TestCase):
 class TestOrchestratorModes(unittest.TestCase):
     """Test that _build_agent_chain returns the right agents for each mode."""
 
-    def _make_orchestrator(self, mode="standard"):
+    def _make_orchestrator(self, mode="specialist"):
         from src.agent.orchestrator import AgentOrchestrator
         mock_registry = MagicMock()
         mock_adapter = MagicMock()
@@ -494,11 +494,18 @@ class TestOrchestratorModes(unittest.TestCase):
         ctx = AgentContext(query="test", stock_code="600519")
         chain = orch._build_agent_chain(ctx)
         names = [a.agent_name for a in chain]
-        self.assertEqual(names, ["technical", "intel", "risk", "decision"])
+        self.assertEqual(names, ["technical", "intel", "fundamentals_flow", "risk", "decision"])
 
-    def test_invalid_mode_falls_back_to_standard(self):
+    def test_specialist_mode_base_chain(self):
+        orch = self._make_orchestrator("specialist")
+        ctx = AgentContext(query="test", stock_code="600519")
+        chain = orch._build_agent_chain(ctx)
+        names = [a.agent_name for a in chain]
+        self.assertEqual(names, ["technical", "intel", "fundamentals_flow", "risk", "decision"])
+
+    def test_invalid_mode_falls_back_to_specialist(self):
         orch = self._make_orchestrator("nonsense")
-        self.assertEqual(orch.mode, "standard")
+        self.assertEqual(orch.mode, "specialist")
 
     def test_chain_agents_inherit_orchestrator_max_steps(self):
         """Default/lowered limits cap agents; raised limits hard-override all agents."""
@@ -507,21 +514,21 @@ class TestOrchestratorModes(unittest.TestCase):
         high_limit_chain = orch._build_agent_chain(AgentContext(query="test", stock_code="600519"))
         self.assertEqual(
             {agent.agent_name: agent.max_steps for agent in high_limit_chain},
-            {"technical": 6, "intel": 4, "risk": 4, "decision": 3},
+            {"technical": 6, "intel": 4, "fundamentals_flow": 4, "risk": 4, "decision": 3},
         )
 
         orch.max_steps = 5
         low_limit_chain = orch._build_agent_chain(AgentContext(query="test", stock_code="600519"))
         self.assertEqual(
             {agent.agent_name: agent.max_steps for agent in low_limit_chain},
-            {"technical": 5, "intel": 4, "risk": 4, "decision": 3},
+            {"technical": 5, "intel": 4, "fundamentals_flow": 4, "risk": 4, "decision": 3},
         )
 
         orch.max_steps = AGENT_MAX_STEPS_DEFAULT + 2
         raised_limit_chain = orch._build_agent_chain(AgentContext(query="test", stock_code="600519"))
         self.assertEqual(
             {agent.agent_name: agent.max_steps for agent in raised_limit_chain},
-            {"technical": AGENT_MAX_STEPS_DEFAULT + 2, "intel": AGENT_MAX_STEPS_DEFAULT + 2, "risk": AGENT_MAX_STEPS_DEFAULT + 2, "decision": AGENT_MAX_STEPS_DEFAULT + 2},
+            {"technical": AGENT_MAX_STEPS_DEFAULT + 2, "intel": AGENT_MAX_STEPS_DEFAULT + 2, "fundamentals_flow": AGENT_MAX_STEPS_DEFAULT + 2, "risk": AGENT_MAX_STEPS_DEFAULT + 2, "decision": AGENT_MAX_STEPS_DEFAULT + 2},
         )
 
     def test_prepare_agent_raised_limit_overrides_low_default_agent(self):
@@ -635,6 +642,8 @@ class TestOrchestratorExecution(unittest.TestCase):
         technical.run.return_value = self._stage_result("technical")
         intel = MagicMock(agent_name="intel")
         intel.run.return_value = self._stage_result("intel")
+        fundamentals_flow = MagicMock(agent_name="fundamentals_flow")
+        fundamentals_flow.run.return_value = self._stage_result("fundamentals_flow")
         risk = MagicMock(agent_name="risk")
         risk.run.return_value = self._stage_result("risk")
         skill = MagicMock(agent_name="strategy_bull_trend")
@@ -642,7 +651,7 @@ class TestOrchestratorExecution(unittest.TestCase):
         decision = MagicMock(agent_name="decision")
         decision.run.return_value = self._stage_result("decision")
 
-        with patch.object(orch, "_build_agent_chain", return_value=[technical, intel, risk, decision]):
+        with patch.object(orch, "_build_agent_chain", return_value=[technical, intel, fundamentals_flow, risk, decision]):
             with patch.object(orch, "_build_specialist_agents", return_value=[skill]):
                 result = orch._execute_pipeline(ctx, parse_dashboard=False)
 
@@ -766,6 +775,7 @@ class TestOrchestratorExecution(unittest.TestCase):
 
     def test_execute_pipeline_timeout_after_decision_preserves_dashboard(self):
         orch = self._make_orchestrator(config=SimpleNamespace(agent_orchestrator_timeout_s=1, agent_risk_override=True))
+        orch.mode = "quick"
         ctx = AgentContext(query="test", stock_code="600519", stock_name="贵州茅台")
         decision = MagicMock(agent_name="decision")
 
@@ -912,6 +922,7 @@ class TestOrchestratorExecution(unittest.TestCase):
 
     def test_execute_pipeline_fails_when_dashboard_parse_fails(self):
         orch = self._make_orchestrator()
+        orch.mode = "quick"
         ctx = AgentContext(query="test", stock_code="600519")
         decision = MagicMock(agent_name="decision")
 
@@ -929,6 +940,7 @@ class TestOrchestratorExecution(unittest.TestCase):
 
     def test_execute_pipeline_chat_prefers_free_form_response(self):
         orch = self._make_orchestrator()
+        orch.mode = "quick"
         ctx = AgentContext(query="请总结一下", stock_code="600519")
         ctx.meta["response_mode"] = "chat"
         decision = MagicMock(agent_name="decision")
@@ -969,6 +981,9 @@ class TestOrchestratorExecution(unittest.TestCase):
         intel = MagicMock(agent_name="intel")
         intel.run.return_value = self._stage_result("intel")
 
+        fundamentals_flow = MagicMock(agent_name="fundamentals_flow")
+        fundamentals_flow.run.return_value = self._stage_result("fundamentals_flow")
+
         risk = MagicMock(agent_name="risk")
         risk.run.return_value = self._stage_result("risk")
 
@@ -992,7 +1007,7 @@ class TestOrchestratorExecution(unittest.TestCase):
             self.assertTrue(any(op.agent_name == "technical" for op in run_ctx.opinions))
             return [strategy]
 
-        with patch.object(orch, "_build_agent_chain", return_value=[technical, intel, risk, decision]):
+        with patch.object(orch, "_build_agent_chain", return_value=[technical, intel, fundamentals_flow, risk, decision]):
             with patch.object(orch, "_build_specialist_agents", side_effect=_build_specialist_agents) as build_specialist_agents:
                 result = orch._execute_pipeline(ctx, parse_dashboard=False)
 

@@ -1,0 +1,98 @@
+{
+  "mode": "specialist",
+  "runtime": {
+    "supports_independent_task_execution": true,
+    "supports_concurrent_role_workers": true,
+    "supports_structured_artifact_return": true
+  },
+  "required_reads": [
+    "references/evidence-contract.md",
+    "references/dag-workflow.md",
+    "references/report-standard.md",
+    "references/workflow-manifest.json"
+  ],
+  "role_prompts_read": [
+    "technical",
+    "intel",
+    "fundamentals_flow",
+    "risk",
+    "strategy_specialist"
+  ],
+  "executed_nodes": [
+    "technical",
+    "intel",
+    "fundamentals_flow",
+    "risk",
+    "strategy_specialist:bull_trend"
+  ],
+  "dispatched_nodes": [
+    "technical",
+    "intel",
+    "fundamentals_flow",
+    "risk",
+    "strategy_specialist:bull_trend"
+  ],
+  "execution_order": [
+    "technical",
+    "intel",
+    "fundamentals_flow",
+    "risk",
+    "strategy_specialist:bull_trend"
+  ],
+  "evidence_audit_completed": true,
+  "decision_owner": "controller",
+  "output_variant": "full_markdown_report",
+  "deliverable_order": [
+    "full_markdown_report",
+    "decision_dashboard_json",
+    "evidence_audit_appendix"
+  ],
+  "workflow_deviations": [],
+  "portfolio_context": false,
+  "strategy_branch_count": 1,
+  "decision_dashboard": {
+    "stock_name": "中芯国际",
+    "sentiment_score": 61,
+    "trend_prediction": "看多",
+    "operation_advice": "持有",
+    "decision_type": "hold",
+    "confidence_level": "中",
+    "dashboard": {
+      "core_conclusion": {
+        "one_sentence": "趋势偏强但需等待确认",
+        "signal_type": "🟡持有观望",
+        "time_sensitivity": "本周内",
+        "position_advice": {
+          "no_position": "等待回踩确认",
+          "has_position": "继续观察量价配合"
+        }
+      },
+      "data_perspective": {
+        "trend_status": {},
+        "price_position": {},
+        "volume_analysis": {},
+        "chip_structure": {}
+      },
+      "intelligence": {
+        "latest_news": "",
+        "risk_alerts": [],
+        "positive_catalysts": [],
+        "earnings_outlook": "",
+        "sentiment_summary": ""
+      },
+      "battle_plan": {
+        "sniper_points": {},
+        "position_strategy": {},
+        "action_checklist": []
+      }
+    },
+    "analysis_summary": "趋势、情绪与资金面存在分歧，需要更严格的执行条件。",
+    "key_points": [
+      "趋势修复",
+      "风险仍在",
+      "等待确认"
+    ],
+    "risk_warning": "若跌破关键支撑需重新评估。",
+    "evidence_quality": "partial"
+  }
+}

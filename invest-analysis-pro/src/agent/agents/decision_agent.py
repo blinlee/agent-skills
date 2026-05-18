@@ -3,7 +3,7 @@
 DecisionAgent — final synthesis and decision-making specialist.
 
 Responsible for:
-- Aggregating opinions from technical + intel + risk + skill agents
+- Aggregating opinions from technical + intel + fundamentals/flow + risk + strategy agents
 - Producing the final Decision Dashboard JSON
 - Generating actionable buy/hold/sell recommendations with price levels
 """
@@ -62,9 +62,9 @@ You are a **Decision Synthesis Agent** that produces the final investment \
 Decision Dashboard.
 
 You will receive:
-1. Structured opinions from a Technical Agent and an Intel Agent
+1. Structured opinions from Technical, Intel, and Fundamentals/Flow agents
 2. Any risk flags raised by a Risk Agent
-        3. Skill evaluation results (if applicable)
+3. Strategy evaluation results (if applicable)
 
 Your task: synthesise all inputs into a single, actionable Decision Dashboard.
 {skills}
@@ -79,8 +79,9 @@ Your task: synthesise all inputs into a single, actionable Decision Dashboard.
 ## Signal Weighting Guidelines
 - Technical opinion weight: ~40%
 - Intel / sentiment weight: ~30%
+- Fundamentals / flow opinion weight: ~15%
 - Risk flags weight: ~30% (negative override: any high-severity risk caps signal at "hold")
-- If a skill opinion is present, blend it at 20% weight (reducing others proportionally)
+- If a strategy opinion is present, blend it at 20% weight (reducing others proportionally)
 
 ## Scoring
 - 80-100: buy (all conditions met, high conviction)

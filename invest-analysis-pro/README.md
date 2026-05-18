@@ -21,7 +21,7 @@
 
 ## ✨ What is invest-analysis-pro?
 
-`invest-analysis-pro` 是一个 **给 Agent 使用** 的投资研究 Skill，不是面向终端用户手动操作的传统 App，也不是默认常驻的 REST 服务。
+`invest-analysis-pro` 是一个 **给 Agent 使用** 的投资研究 Skill，不是面向终端用户手动操作的传统 App。
 
 它的目标不是在数据层直接给出投资结论，而是把以下能力组织成一个可复用的研究工作流：
 
@@ -38,7 +38,7 @@
 ### ✅ This project is
 
 - 🤖 一个 **Agent Skill**
-- 🧪 一个 **CLI-first / evidence-first** 的投资研究工作流
+- 🧪 一个 **agent-native / evidence-first** 的投资研究工作流
 - 🔌 一个适配 **OpenClaw / Codex / Claude Code / 其他本地 Skill Agent** 的研究能力包
 - 🎓 一个默认以 **`specialist`** 模式运行的完整研究流程
 
@@ -89,7 +89,6 @@
 | Strategy framework reuse | `strategies/*.yaml` 作为策略框架、判断规则与 prompt reference |
 | Standard report outputs | Full Markdown report / Brief summary / IM message / Decision Dashboard JSON |
 | Agent compatibility | 支持本地 shell 执行、provided evidence 模式、no evidence 降级模式 |
-| Runtime compatibility | 保留 Web / API / bot / docker 等兼容运行时，不作为当前主入口 |
 
 ---
 
@@ -192,11 +191,8 @@ cd agent-skill
 | `references/prompts/` | 各研究角色 prompt |
 | `references/report-standard.md` | 标准报告结构与输出格式约束 |
 | `strategies/` | 策略框架、规则 YAML、prompt reference |
-| `src/agent/` | 面向 Agent 的工具封装与 evidence 采集入口 |
+| `src/agent/` | 面向 Agent 的工具封装、evidence 采集入口与研究辅助能力 |
 | `data_provider/` / `src/services/` | 数据源、缓存、降级、计算与业务能力复用层 |
-| `api/` / `apps/` | 可选观察、配置、回看与管理界面 |
-| `bot/` | 来自上游开源仓库的机器人接入层，当前作为兼容保留能力 |
-| `docker/` | 来自上游开源仓库的容器化部署层，当前作为兼容保留能力 |
 | `templates/` | 可选报告模板资产，核心结构已收敛到 `references/report-standard.md` |
 
 ---
@@ -205,9 +201,8 @@ cd agent-skill
 
 - 当前最稳定的使用方式是：**Agent 读取 Skill + evidence 获取 / 接收 + Agent 生成最终报告**
 - 数据采集路径不要求任何 OpenAI / Gemini / Anthropic / DeepSeek / LiteLLM key
-- 默认不要求启动 REST API、Web、bot 或 docker
-- Web / API / 通知 / 定时任务等能力目前作为兼容面与观察面保留
-- `bot/`、`docker/` 属于兼容保留运行时层，不作为新用户的首选入口
+- 默认不要求启动额外服务
+- 数据适配层只负责取证、结构化输出、缓存和降级；最终研究判断始终由调用方 Agent 完成
 
 ---
 
@@ -218,7 +213,6 @@ cd agent-skill
 - 继续收敛公开入口，保持 `SKILL.md` + README 的清晰职责分工
 - 补充 OpenClaw / Codex / Claude Code 的更明确安装示例
 - 增加离线 fixture 与 eval，验证不同 Agent 对四档流程的稳定执行能力
-- 梳理 `bot/`、`docker/`、Web / API 等兼容运行时的拆分策略
 
 ### Mid term 🧭
 
