@@ -131,8 +131,8 @@ Agent 可进入 provided-evidence 模式：不强行调用本地数据层，只�
 | `src/agent/` | 面向 Agent 的工具封装与本地 evidence 采集入口。 |
 | `data_provider/`、`src/services/` | 数据源、缓存、降级、计算和业务能力的复用层。 |
 | `api/`、`apps/` | 可选观察、配置、回看和管理界面；不是 Skill 默认入口。 |
-| `bot/` | 上游项目保留下来的机器人接入能力，当前主要作为后续本地化候选，不是默认路径。 |
-| `docker/` | 上游项目保留下来的容器化部署能力，当前不作为 Skill 推荐安装方式。 |
+| `bot/` | 来自上游开源仓库的机器人接入层，当前作为兼容保留能力；不属于本 Skill 的默认入口。 |
+| `docker/` | 来自上游开源仓库的容器化部署层，当前作为兼容保留能力；不作为本 Skill 的推荐安装方式。 |
 | `templates/` | 可选报告模板资产，核心报告约束已整理到 `references/report-standard.md`。 |
 
 ## 当前状态与边界
@@ -140,8 +140,8 @@ Agent 可进入 provided-evidence 模式：不强行调用本地数据层，只�
 - 当前最稳定的使用方式是 **Agent 读取 Skill + 本地或外部 evidence + Agent 生成报告**。
 - 数据采集路径不要求配置任何 LLM provider key。
 - 默认不启动 REST API，不要求用户手动运行 Web、bot 或 docker。
-- Web/API/通知/定时任务等能力保留为兼容面和观察面，后续会继续拆分哪些应作为 Skill 附属能力，哪些应移出。
-- `bot/`、`docker/` 仍有较强的上游项目痕迹，现阶段不推荐作为新用户入口。
+- Web/API/通知/定时任务等能力目前作为兼容面与观察面保留，后续将继续区分哪些应作为 Skill 附属能力维护，哪些应拆分为独立运行时。
+- `bot/`、`docker/` 当前属于兼容保留的运行时层，不作为新用户的首选入口。
 
 ## 蓝图 / Roadmap
 
@@ -157,7 +157,7 @@ Agent 可进入 provided-evidence 模式：不强行调用本地数据层，只�
 - 强化 evidence coverage 评分、来源链解释和 partial failure 诊断。
 - 把更多报告模板和策略框架转成 Agent 更容易读取的结构化 reference。
 - 增加多市场、多行业、多风格的标准评测用例。
-- 建立面向维护者的上游项目选择性吸收流程：只吸收数据源、缓存、降级、测试等基础能力改进，避免回退当前 Skill 产品语义。
+- 建立面向维护者的上游同步策略：优先吸收数据源、缓存、降级、测试等基础能力改进，同时维持 `invest-analysis-pro` 的现有对外产品语义。
 
 ### 长期
 
@@ -167,9 +167,9 @@ Agent 可进入 provided-evidence 模式：不强行调用本地数据层，只�
 
 ## 致谢与来源
 
-invest-analysis-pro 并不掩饰自己的来源。它建立在上游仓库 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis) 的数据能力、工程资产和历史思路之上，但当前对外产品语义、Skill 工作流、Agent 调度方式和文档组织已经围绕 `invest-analysis-pro` 重新整理。
+`invest-analysis-pro` 派生自开源仓库 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis)。上游项目采用 **MIT License** 发布；本仓库在遵循相应许可条款的前提下，复用了部分数据能力与工程资产，并围绕 `invest-analysis-pro` 重新组织了 Skill 入口、Agent 工作流、文档结构和对外产品语义。
 
-感谢上游项目为多市场股票数据、分析链路和工程实现提供的基础。当前仓库更关注 Agent-native、evidence-first、controller-led 的研究工作流。
+特此对上游项目在多市场股票数据处理、分析链路和工程实现方面提供的基础表示感谢。当前仓库的重点是构建面向 Agent 的、evidence-first、controller-led 投资研究工作流。
 
 ## 免责声明
 
