@@ -19,37 +19,37 @@
 
 ---
 
-## What is invest-analysis-pro?
+## ✨ What is invest-analysis-pro?
 
 `invest-analysis-pro` 是一个 **给 Agent 使用** 的投资研究 Skill，不是面向终端用户手动操作的传统 App，也不是默认常驻的 REST 服务。
 
 它的目标不是在数据层直接给出投资结论，而是把以下能力组织成一个可复用的研究工作流：
 
-- 股票与市场数据采集
-- 结构化 evidence 整理
-- 技术面 / 情报面 / 基本面与资金面 / 风险面 / 策略面研究拆分
-- DAG 方式的研究任务编排
-- 标准化 Markdown 报告与 Decision Dashboard 输出
+- 📈 股票与市场数据采集
+- 🧾 结构化 evidence 整理
+- 🧠 技术面 / 情报面 / 基本面与资金面 / 风险面 / 策略面研究拆分
+- 🔀 DAG 方式的研究任务编排
+- 📝 标准化 Markdown 报告与 Decision Dashboard 输出
 
 对于调用方 Agent 来说，这个 Skill 提供的是一套 **“先取证、再分析、最后汇总”** 的研究框架。
 
-## Project Positioning
+## 🎯 Project Positioning
 
-### This project is
+### ✅ This project is
 
-- 一个 **Agent Skill**
-- 一个 **CLI-first / evidence-first** 的投资研究工作流
-- 一个适配 **OpenClaw / Codex / Claude Code / 其他本地 Skill Agent** 的研究能力包
-- 一个默认以 **`specialist`** 模式运行的完整研究流程
+- 🤖 一个 **Agent Skill**
+- 🧪 一个 **CLI-first / evidence-first** 的投资研究工作流
+- 🔌 一个适配 **OpenClaw / Codex / Claude Code / 其他本地 Skill Agent** 的研究能力包
+- 🎓 一个默认以 **`specialist`** 模式运行的完整研究流程
 
-### This project is not
+### ✅ This project is not
 
-- 一个要求用户手动敲 CLI 的终端工具教程
-- 一个默认常驻运行的 Web / REST 服务产品
-- 一个内置 LLM provider 调度与自动荐股程序
-- 一个在数据适配层直接输出自然语言投资结论的系统
+- ⌨️ 一个要求用户手动敲 CLI 的终端工具教程
+- 🌐 一个默认常驻运行的 Web / REST 服务产品
+- 🧠 一个内置 LLM provider 调度与自动荐股程序
+- 📣 一个在数据适配层直接输出自然语言投资结论的系统
 
-## Public Entry Points
+## 🚪 Public Entry Points
 
 对外公开入口只有两个：
 
@@ -64,7 +64,7 @@
 
 ---
 
-## Market Coverage
+## 🌍 Market Coverage
 
 | 市场 / 对象 | 覆盖说明 |
 | --- | --- |
@@ -74,11 +74,11 @@
 | ETF / 指数 / 市场 | 可作为市场温度、行业对照、风险背景和组合分析辅助 evidence |
 | 策略与持仓 | 可读取策略 YAML、回测结果、持仓 / 风险上下文，作为 Agent 判断框架 |
 
-> 外部数据源可能因为接口变更、限流、时延或字段缺失而返回部分数据。`invest-analysis-pro` 要求 Agent 区分 `ok` / `partial` / `failed`，保留可用 evidence，不编造缺失信息。
+> ⚠️ 外部数据源可能因为接口变更、限流、时延或字段缺失而返回部分数据。`invest-analysis-pro` 要求 Agent 区分 `ok` / `partial` / `failed`，保留可用 evidence，不编造缺失信息。
 
 ---
 
-## Core Capabilities
+## 🧩 Core Capabilities
 
 | 能力 | 说明 |
 | --- | --- |
@@ -93,11 +93,11 @@
 
 ---
 
-## Workflow Overview
+## 🔄 Workflow Overview
 
 `invest-analysis-pro` 采用 **controller-led** 的研究模式。
 
-### Default workflow
+### 🧠 Default workflow
 
 1. **Identify the task**
    确认股票、市场、研究目标、时间范围、是否要求快速模式。
@@ -114,7 +114,7 @@
 5. **Controller synthesis**
    由主控 Agent 汇总分支意见、处理冲突、披露缺口，并生成最终报告。
 
-### Research modes
+### 📚 Research modes
 
 | 模式 | 何时使用 | 默认性 |
 | --- | --- | --- |
@@ -125,18 +125,18 @@
 
 ---
 
-## Installation
+## 🚀 Installation
 
-### 1. Clone the repository
+### 1. 📦 Clone the repository
 
 ```bash
 git clone https://github.com/17636191639/agent-skill.git
 cd agent-skill
 ```
 
-### 2. Install as a local skill
+### 2. 🛠️ Install as a local skill
 
-#### OpenClaw
+#### OpenClaw 🦅
 
 将整个 `invest-analysis-pro/` 目录复制到：
 
@@ -144,7 +144,7 @@ cd agent-skill
 ~/.openclaw/skills/
 ```
 
-#### Codex / Claude Code / other agent runtimes
+#### Codex / Claude Code / other agent runtimes 🤖
 
 遵循相同原则：
 
@@ -152,7 +152,7 @@ cd agent-skill
 2. 作为本地 Skill / 项目上下文接入；并
 3. 让 Agent 以 `SKILL.md` 为主入口执行。
 
-### 3. Start using it from the agent
+### 3. 💬 Start using it from the agent
 
 安装完成后，直接向 Agent 发出自然语言请求：
 
@@ -162,7 +162,7 @@ cd agent-skill
 
 ---
 
-## Typical Requests
+## 💡 Typical Requests
 
 ```text
 帮我完整研究中芯国际。
@@ -182,7 +182,7 @@ cd agent-skill
 
 ---
 
-## Repository Layout
+## 🗂️ Repository Layout
 
 | 路径 | 说明 |
 | --- | --- |
@@ -201,7 +201,7 @@ cd agent-skill
 
 ---
 
-## Runtime Boundaries
+## 🧱 Runtime Boundaries
 
 - 当前最稳定的使用方式是：**Agent 读取 Skill + evidence 获取 / 接收 + Agent 生成最终报告**
 - 数据采集路径不要求任何 OpenAI / Gemini / Anthropic / DeepSeek / LiteLLM key
@@ -211,23 +211,23 @@ cd agent-skill
 
 ---
 
-## Roadmap
+## 🛣️ Roadmap
 
-### Near term
+### Near term 🧪
 
 - 继续收敛公开入口，保持 `SKILL.md` + README 的清晰职责分工
 - 补充 OpenClaw / Codex / Claude Code 的更明确安装示例
 - 增加离线 fixture 与 eval，验证不同 Agent 对四档流程的稳定执行能力
 - 梳理 `bot/`、`docker/`、Web / API 等兼容运行时的拆分策略
 
-### Mid term
+### Mid term 🧭
 
 - 强化 evidence coverage 评分、source chain 解释和 partial failure 诊断
 - 将更多报告模板与策略框架转为 Agent 更易消费的结构化 reference
 - 增加多市场、多行业、多风格标准评测用例
 - 建立面向维护者的上游同步策略，优先吸收基础能力改进并维持当前产品语义
 
-### Long term
+### Long term 🌱
 
 - 形成可跨多种 Agent 平台复用的投资研究 Skill 标准包
 - 支持团队级策略库、行业模板、风控约束与报告风格扩展
@@ -235,7 +235,7 @@ cd agent-skill
 
 ---
 
-## Attribution
+## 🙏 Attribution
 
 `invest-analysis-pro` 派生自开源仓库 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis)。
 
@@ -245,10 +245,10 @@ cd agent-skill
 
 ---
 
-## License
+## 📄 License
 
 This project is distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 `invest-analysis-pro` 仅提供研究工作流、数据整理与报告结构辅助。所有输出均依赖数据源质量、Agent 执行能力与用户提供的约束条件，不构成投资建议，也不保证任何收益或风险规避效果。
