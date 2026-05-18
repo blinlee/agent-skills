@@ -28,54 +28,137 @@
 
 ## 标准产出物
 
-### 1. Markdown 报告
+### 1. Markdown 完整报告
+
+完整报告吸收 `templates/report_markdown.j2` 的展示结构：先给统计摘要，再按股票/标的输出情报、核心结论、市场快照、数据透视、作战计划、风险和数据缺口。Agent 不依赖 Jinja2；这里只把模板结构转成当前 Skill 的报告约束。
 
 建议结构：
 
 ```markdown
-# invest-analysis-pro 研究报告：{stock_code} {stock_name}
+# 🎯 invest-analysis-pro 研究报告：{report_date}
 
-## 1. 核心结论
+> 分析标的：{count} | 🟢 buy:{buy_count} 🟡 hold:{hold_count} 🔴 sell:{sell_count}
+
+## 📊 总览摘要
+- {stock_name}({stock_code})：{operation_advice} | 信号分 {sentiment_score} | {trend_prediction}
+- ...
+
+---
+
+## {signal_emoji} {stock_name} ({stock_code})
+
+### 🧾 Evidence Audit
+- evidence status：ok|partial|failed
+- 覆盖范围：{coverage.requested/succeeded/failed}
+- 来源链路：{source_chain}
+- 关键 errors/warnings：{errors/warnings}
+
+### 📰 情报与事件
+- 最新消息：{dashboard.intelligence.latest_news}
+- 情绪摘要：{dashboard.intelligence.sentiment_summary}
+- 业绩展望：{dashboard.intelligence.earnings_outlook}
+- 正向催化：{dashboard.intelligence.positive_catalysts}
+- 风险提示：{dashboard.intelligence.risk_alerts}
+
+### 📌 核心结论
 - 决策类型：buy|hold|sell
 - 情绪/信号分：0-100
 - 置信度：高|中|低
-- 一句话结论：...
+- 一句话结论：{dashboard.core_conclusion.one_sentence}
+- 时间敏感度：{dashboard.core_conclusion.time_sensitivity}
 
-## 2. Evidence Audit
-- evidence status：ok|partial|failed
-- 覆盖范围：...
-- 来源链路：...
-- 关键 errors/warnings：...
+| 持仓状态 | 行动建议 |
+| --- | --- |
+| 空仓者 | {dashboard.core_conclusion.position_advice.no_position} |
+| 持仓者 | {dashboard.core_conclusion.position_advice.has_position} |
 
-## 3. 分阶段研究意见
-### Technical
-...
-### Intel
-...
-### Fundamentals & Flow
-...
-### Risk
-...
-### Strategy / Portfolio（如适用）
-...
+### 📈 市场快照（如 evidence 支持）
+| 当前价 | 前收 | 开盘 | 最高 | 最低 | 涨跌幅 | 成交量 | 成交额 | 来源 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... |
 
-## 4. 决策仪表盘
-- 空仓者：...
-- 持仓者：...
-- 理想买入点：...
-- 次优买入点：...
-- 止损位：...
-- 目标位：...
-- 行动清单：✅ / ⚠️ / ❌
+### 📊 数据透视
+- 趋势状态：均线结构、趋势强度、多空排列。
+- 价格位置：现价、MA5/MA10/MA20、支撑位、压力位、乖离状态。
+- 量价结构：量比、成交状态、换手率、量能含义。
+- 筹码结构：获利比例、平均成本、集中度、健康度。
 
-## 5. 风险与失效条件
+### 🧩 分阶段研究意见
+#### Technical
+...
+#### Intel
+...
+#### Fundamentals & Flow
+...
+#### Risk
+...
+#### Strategy / Portfolio（如适用）
 ...
 
-## 6. 数据缺口与后续观察
+### 🎯 作战计划
+- 理想买入点：{dashboard.battle_plan.sniper_points.ideal_buy}
+- 次优买入点：{dashboard.battle_plan.sniper_points.secondary_buy}
+- 止损位：{dashboard.battle_plan.sniper_points.stop_loss}
+- 目标位：{dashboard.battle_plan.sniper_points.take_profit}
+- 仓位计划：{dashboard.battle_plan.position_strategy.suggested_position}
+- 入场计划：{dashboard.battle_plan.position_strategy.entry_plan}
+- 风控计划：{dashboard.battle_plan.position_strategy.risk_control}
+
+### ✅ 行动清单
+- ✅ ...
+- ⚠️ ...
+- ❌ ...
+
+### ⚠️ 风险与失效条件
+...
+
+### 🕳️ 数据缺口与后续观察
 ...
 ```
 
-### 2. Decision Dashboard JSON
+### 2. Brief 摘要报告
+
+Brief 形态吸收 `templates/report_brief.j2` 的短摘要结构，适用于用户只要结论、消息窗口空间有限、或最终报告前的中间概览。
+
+```markdown
+# 🎯 {report_date} invest-analysis-pro 摘要
+
+> {count} 个标的 | 🟢{buy_count} 🟡{hold_count} 🔴{sell_count}
+
+**{stock_name}({stock_code})** {signal_emoji} {operation_advice} | 分数 {sentiment_score} | {one_sentence}
+**...**
+
+*{generated_at}*
+```
+
+Brief 必须保留：标的、操作倾向、分数、一句话结论、生成时间；不得省略 partial/failed 对置信度的影响，如有关键缺口，应在一句话后附 `（数据不完整）` 或单独一行说明。
+
+### 3. 短消息 / IM 报告
+
+短消息形态吸收 `templates/report_wechat.j2` 的压缩结构，适用于飞书、企业微信、钉钉、Telegram、Slack 等消息窗口。该形态不是单独分析流程，只是完整报告的压缩表达。
+
+```markdown
+## 🎯 {report_date} invest-analysis-pro
+
+> {count} 个标的 | 🟢buy:{buy_count} 🟡hold:{hold_count} 🔴sell:{sell_count}
+
+### {signal_emoji} {signal_text} | {stock_name}({stock_code})
+📌 {one_sentence}
+📊 业绩/基本面：{earnings_outlook}
+💭 情绪：{sentiment_summary}
+🚨 风险：{top_1_2_risk_alerts}
+✨ 催化：{top_1_2_positive_catalysts}
+🎯 理想买入:{ideal_buy} | 🛑 止损:{stop_loss} | 🎊 目标:{take_profit}
+🆕 空仓：{no_position}
+💼 持仓：{has_position}
+⚠️ 重点检查：{top_failed_or_warning_checklist}
+
+*报告时间：{HH:MM}*
+```
+
+短消息必须优先保留：一句话结论、主要风险、狙击点/止损点、空仓/持仓差异建议。超过平台长度限制时，优先截断新闻细节和次要催化，不得截断风险与数据缺口。
+
+### 4. Decision Dashboard JSON
 
 主控会话在最终汇总时生成以下 JSON，字段名保持稳定，便于保存、回看或二次处理。
 
@@ -135,6 +218,22 @@
     "hot_topics": "相关热点"
 }
 ```
+
+## 模板字段映射
+
+从 Jinja 报告模板吸收的字段，主控会话应按以下来源填充；缺字段时必须写 `N/A`、`unknown` 或在数据缺口中说明，不得编造。
+
+| 报告字段 | 优先来源 | 缺失处理 |
+| --- | --- | --- |
+| `{report_date}` / `{generated_at}` | evidence envelope `generated_at` 或当前会话时间 | 标注生成时间不可确认 |
+| `{buy_count}` / `{hold_count}` / `{sell_count}` | 各标的 `decision_type` 统计 | 单标的时也要统计为 1/0 |
+| `{signal_emoji}` / `{signal_text}` | `decision_type` + `sentiment_score` + `confidence_level` | 使用 ⚠️ 并说明置信度不足 |
+| `{one_sentence}` | `dashboard.core_conclusion.one_sentence`，否则 `analysis_summary` | 用主控一句话概括并标注低置信度 |
+| 市场快照 | quote / market_snapshot evidence | 没有则整段省略，并在数据缺口说明 |
+| 情报与事件 | Intel opinion + `dashboard.intelligence` | 新闻缺失时写 `not_available` |
+| 数据透视 | Technical / Fundamentals & Flow opinions + `dashboard.data_perspective` | 逐项写 unknown，不用空表冒充完整 |
+| 作战计划 | `dashboard.battle_plan` + Technical key levels | 缺少价格 evidence 时不得给具体价格 |
+| 行动清单 | 主控从证据一致性、风险、触发条件生成 | 必须包含 ✅/⚠️/❌ 至少一种状态 |
 
 ## 评分标准
 

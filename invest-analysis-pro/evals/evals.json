@@ -11,7 +11,8 @@
         "先获取完整 evidence bundle 并做 Evidence Audit",
         "按 DAG 派发 Technical、Intel、Fundamentals & Flow、Risk、Strategy 研究任务",
         "Decision 由主控会话完成，不派发 Decision 子 Agent",
-        "最终报告包含核心结论、Evidence Audit、分阶段意见、仪表盘、风险和数据缺口"
+        "最终报告包含核心结论、Evidence Audit、分阶段意见、仪表盘、风险和数据缺口",
+        "最终报告采用完整报告结构：总览摘要、Evidence Audit、情报与事件、核心结论、市场快照、数据透视、作战计划、风险和数据缺口"
       ]
     },
     {
@@ -73,6 +74,15 @@
         "不编造行情、新闻、财务或资金流数据",
         "说明无法完成研究判断",
         "列出完成研究所需的 evidence 模块"
+      ]
+    },
+    {
+      "id": "brief-output-request",
+      "prompt": "帮我简短输出贵州茅台的研究摘要，但不要省略关键风险",
+      "expected_behavior": [
+        "使用 Brief 摘要报告形态",
+        "保留标的、操作倾向、分数、一句话结论和生成时间",
+        "如果 evidence 为 partial 或存在关键风险，不因简短模式省略风险和数据缺口"
       ]
     }
   ]
