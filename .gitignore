@@ -7,3 +7,5 @@ tmp/
 .env
 .env.*
 !.env.example
+
+docs/
