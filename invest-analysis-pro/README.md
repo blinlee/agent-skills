@@ -1,176 +1,254 @@
+<div align="center">
+
 # invest-analysis-pro
 
-`invest-analysis-pro` 是一个面向 Agent 的投资研究 Skill：把股票数据采集、结构化证据整理、策略框架、角色化研究流程和标准报告格式封装成可被主控 Agent 调用的研究能力。
+**Agent-native investment research skill for A-share, Hong Kong, and US equity workflows**
 
-它的公开入口只有：
+面向 Agent 的投资研究 Skill：以 **evidence-first** 为核心，复用现有数据能力与策略资产，
+由主控 Agent 完成研究编排、分支分析与最终报告生成。
 
-- `SKILL.md`：Agent 使用时读取的主契约。
-- `README.md`：给人类快速理解定位、边界、安装方式和维护状态的辅助说明。
+<p>
+  <img src="https://img.shields.io/badge/Skill-invest--analysis--pro-0F172A?style=flat-square" alt="skill" />
+  <img src="https://img.shields.io/badge/Markets-A%20%7C%20HK%20%7C%20US-2563EB?style=flat-square" alt="markets" />
+  <img src="https://img.shields.io/badge/Default%20Mode-specialist-7C3AED?style=flat-square" alt="default mode" />
+  <img src="https://img.shields.io/badge/Runtime-OpenClaw%20%7C%20Codex%20%7C%20Claude%20Code-059669?style=flat-square" alt="runtime" />
+  <img src="https://img.shields.io/badge/License-MIT-black?style=flat-square" alt="license" />
+</p>
 
-本 Skill 不是给人类手动操作的程序包说明，也不把 Web 服务、桌面端、REST API 或命令行教程作为当前产品入口。人类只需要把这个 Skill 交给支持本地文件/命令执行的 Agent，然后直接提出研究请求。
+</div>
 
-## 当前定位
+---
 
-- **Skill 名称**：`invest-analysis-pro`
-- **面向对象**：OpenClaw / Codex / Claude Code / 其他可读取 Skill 并执行本地工具的 Agent
-- **产品形态**：Agent-native investment research workflow
-- **核心职责**：为 Agent 提供投资研究数据采集、证据审计、多人设研究 DAG、标准报告约束
-- **默认行为**：用户给出股票并要求分析时，默认执行 `specialist` 完整研究流程
-- **输出边界**：最终判断和报告由调用方 Agent 完成；内部数据适配层只返回结构化 evidence
-- **使用边界**：适合研究辅助、信息整理、策略复盘和 Agent 工作流编排；不承诺收益，不构成个性化投资建议
+## What is invest-analysis-pro?
 
-## 覆盖市场与研究对象
+`invest-analysis-pro` 是一个 **给 Agent 使用** 的投资研究 Skill，不是面向终端用户手动操作的传统 App，也不是默认常驻的 REST 服务。
+
+它的目标不是在数据层直接给出投资结论，而是把以下能力组织成一个可复用的研究工作流：
+
+- 股票与市场数据采集
+- 结构化 evidence 整理
+- 技术面 / 情报面 / 基本面与资金面 / 风险面 / 策略面研究拆分
+- DAG 方式的研究任务编排
+- 标准化 Markdown 报告与 Decision Dashboard 输出
+
+对于调用方 Agent 来说，这个 Skill 提供的是一套 **“先取证、再分析、最后汇总”** 的研究框架。
+
+## Project Positioning
+
+### This project is
+
+- 一个 **Agent Skill**
+- 一个 **CLI-first / evidence-first** 的投资研究工作流
+- 一个适配 **OpenClaw / Codex / Claude Code / 其他本地 Skill Agent** 的研究能力包
+- 一个默认以 **`specialist`** 模式运行的完整研究流程
+
+### This project is not
+
+- 一个要求用户手动敲 CLI 的终端工具教程
+- 一个默认常驻运行的 Web / REST 服务产品
+- 一个内置 LLM provider 调度与自动荐股程序
+- 一个在数据适配层直接输出自然语言投资结论的系统
+
+## Public Entry Points
+
+对外公开入口只有两个：
+
+- `SKILL.md`：Agent 运行时读取的主契约
+- `README.md`：给人类查看的项目说明、安装方式与维护边界
+
+普通使用时，用户无需手动执行内部命令，只需要对 Agent 提出请求，例如：
+
+```text
+用 invest-analysis-pro 完整研究中芯国际。
+```
+
+---
+
+## Market Coverage
 
 | 市场 / 对象 | 覆盖说明 |
 | --- | --- |
-| A 股 | 个股行情、历史走势、技术指标、资金流、板块、龙虎榜、部分基本面与新闻舆情等，取决于本地数据源可用性。 |
-| 港股 | 个股行情、历史走势、技术面、部分基本面与新闻舆情等，取决于数据源覆盖。 |
-| 美股 | 个股行情、历史走势、技术面、部分基本面与新闻舆情等，取决于数据源覆盖。 |
-| ETF / 指数 / 市场 | 可作为市场温度、行业对照、风险背景和组合分析的辅助 evidence。 |
-| 策略与持仓 | 可读取策略 YAML、回测结果、持仓/风险相关上下文，供 Agent 作为判断框架和约束条件。 |
+| A 股 | 个股行情、历史走势、技术指标、资金流、板块、龙虎榜、部分基本面与新闻舆情等 |
+| 港股 | 个股行情、历史走势、技术面、部分基本面与新闻舆情等 |
+| 美股 | 个股行情、历史走势、技术面、部分基本面与新闻舆情等 |
+| ETF / 指数 / 市场 | 可作为市场温度、行业对照、风险背景和组合分析辅助 evidence |
+| 策略与持仓 | 可读取策略 YAML、回测结果、持仓 / 风险上下文，作为 Agent 判断框架 |
 
-外部数据源可能因接口变更、网络质量、限流、字段缺失而返回部分数据。Skill 的流程要求 Agent 区分 `ok`、`partial`、`failed`，保留可用 evidence，不编造缺失项。
+> 外部数据源可能因为接口变更、限流、时延或字段缺失而返回部分数据。`invest-analysis-pro` 要求 Agent 区分 `ok` / `partial` / `failed`，保留可用 evidence，不编造缺失信息。
 
-## 主要功能
+---
+
+## Core Capabilities
 
 | 能力 | 说明 |
 | --- | --- |
-| 结构化数据包 | 获取或接收 quote、history、technical、trend、均线、量价、形态、chip、fundamentals、stock info、capital flow、板块、龙虎榜、市场数据、news/intel、backtest、portfolio/risk、strategies、bundle 等 evidence。 |
-| 多档研究流程 | 支持 `quick`、`standard`、`full`、`specialist` 四档；默认 `specialist`，除非用户明确要求快速模式。 |
-| 角色化研究 | 把技术面、信息面、风险面、估值/基本面、策略框架等研究任务拆成可并行或依赖执行的 DAG，最终由主控 Agent 汇总决策。 |
-| 策略框架 | `strategies/*.yaml` 作为 Agent 可读取的交易框架、判断规则和提示参考，不触发内部 LLM 自动决策。 |
-| 标准报告 | `references/report-standard.md` 约束完整报告、简报、短消息和决策面板的结构，吸收了原有报告模板中的核心栏目。 |
-| 主流 Agent 兼容 | 支持本地 shell 能力、Agent 提供 evidence、或无本地工具的降级模式。 |
-| 可选运行时 | Web、API、通知、定时任务、bot、docker 等目录保留为兼容和后续本地化基础，不是当前 Skill 的默认主路径。 |
+| Structured evidence bundle | quote、history、technical、trend、ma、volume、pattern、chip、fundamentals、stock info、capital flow、boards、dragon-tiger、market、news、intel、backtest、portfolio、risk、strategies、bundle |
+| Multi-depth workflow | `quick` / `standard` / `full` / `specialist` 四档研究流程 |
+| Specialist-by-default | 用户只要给股票并要求分析，默认走最完整的 `specialist` 工作流 |
+| DAG orchestration | 支持 Technical / Intel / Fundamentals & Flow / Risk / Strategy / Portfolio 的并行或依赖式编排 |
+| Strategy framework reuse | `strategies/*.yaml` 作为策略框架、判断规则与 prompt reference |
+| Standard report outputs | Full Markdown report / Brief summary / IM message / Decision Dashboard JSON |
+| Agent compatibility | 支持本地 shell 执行、provided evidence 模式、no evidence 降级模式 |
+| Runtime compatibility | 保留 Web / API / bot / docker 等兼容运行时，不作为当前主入口 |
 
-## 安装与接入方式
+---
 
-### 推荐方式：作为 Agent Skill 使用
+## Workflow Overview
 
-先把 Skill 仓库克隆到本地或团队工作区：
+`invest-analysis-pro` 采用 **controller-led** 的研究模式。
+
+### Default workflow
+
+1. **Identify the task**
+   确认股票、市场、研究目标、时间范围、是否要求快速模式。
+
+2. **Collect evidence**
+   由 Agent 调用内部数据适配层获取结构化 JSON evidence，或接收外部提供的 evidence。
+
+3. **Run Evidence Audit**
+   检查 `status`、`coverage`、`source_chain`、`errors`、`warnings`。
+
+4. **Dispatch research DAG**
+   根据模式运行 Technical / Intel / Fundamentals & Flow / Risk / Strategy / Portfolio 分支。
+
+5. **Controller synthesis**
+   由主控 Agent 汇总分支意见、处理冲突、披露缺口，并生成最终报告。
+
+### Research modes
+
+| 模式 | 何时使用 | 默认性 |
+| --- | --- | --- |
+| `quick` | 用户明确要求快速、简短、粗看 | 否 |
+| `standard` | 用户明确要求标准档 | 否 |
+| `full` | 用户明确要求完整分析，但不需要策略专家分支 | 否 |
+| `specialist` | 用户给股票并要求分析 / 研究；或明确要求最详细视角 | **默认** |
+
+---
+
+## Installation
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/17636191639/agent-skill.git
 cd agent-skill
 ```
 
-然后把 `invest-analysis-pro/` 作为一个本地 Skill 目录交给你的 Agent。普通用户不需要手动执行内部 CLI；只需要对 Agent 说“用 invest-analysis-pro 完整研究某只股票”。
+### 2. Install as a local skill
 
-### OpenClaw
+#### OpenClaw
 
-把整个 `invest-analysis-pro/` 文件夹复制到：
+将整个 `invest-analysis-pro/` 目录复制到：
 
 ```bash
 ~/.openclaw/skills/
 ```
 
-接入后，OpenClaw Agent 应以 `SKILL.md` 为主入口，按其中的 evidence-first 流程执行研究。
+#### Codex / Claude Code / other agent runtimes
 
-### Codex / Claude Code / 其他 Agent
+遵循相同原则：
 
-对于 Codex、Claude Code 和其他支持本地 Skill 的 Agent，使用同一个原则：
+1. 将整个 `invest-analysis-pro/` 目录放入该 Agent 的本地 `skills` 目录；或
+2. 作为本地 Skill / 项目上下文接入；并
+3. 让 Agent 以 `SKILL.md` 为主入口执行。
 
-1. 把整个 `invest-analysis-pro/` 文件夹放到该 Agent 自己的 skills 目录下，或作为本地 Skill / 项目上下文接入；
-2. 让 Agent 以 `SKILL.md` 作为主入口；
-3. 按需读取 `references/`、`strategies/` 和本地数据适配代码；
-4. 如果 Agent 具备 shell 能力，可走本地 evidence 采集；
-5. 如果没有 shell 能力，可由用户或外部系统提供 evidence，Agent 只执行研究与报告流程。
+### 3. Start using it from the agent
 
-之后可以直接向 Agent 提出自然语言请求，例如：
+安装完成后，直接向 Agent 发出自然语言请求：
 
 ```text
-用 invest-analysis-pro 完整研究中芯国际，默认深度即可。
+用 invest-analysis-pro 完整研究中芯国际。
 ```
 
-## 典型使用方式
+---
+
+## Typical Requests
 
 ```text
 帮我完整研究中芯国际。
 ```
 
-默认执行 `specialist` 模式：采集/整理完整 evidence，按多角色 DAG 研究，最后由主控 Agent 汇总为标准报告。
-
 ```text
 快速看一下大唐发电的技术面和主要风险。
 ```
-
-用户明确要求快速模式时，才使用 `quick`。
 
 ```text
 用趋势跟踪和缩量回调两个策略框架评估贵州茅台。
 ```
 
-Agent 应读取 `strategies/` 中相关 YAML，将其作为判断框架，而不是让策略文件自动生成结论。
-
 ```text
-我只有下面这些行情和新闻数据，请按 invest-analysis-pro 的报告标准分析。
+我只有这些行情和新闻数据，请按 invest-analysis-pro 的报告标准分析。
 ```
 
-Agent 可进入 provided-evidence 模式：不强行调用本地数据层，只基于用户提供 evidence 做审计、分析和报告。
+---
 
-## 标准工作流
+## Repository Layout
 
-1. **识别任务**：确认股票、市场、时间范围、研究深度和用户特别关注点。
-2. **获取 evidence**：优先构建结构化 bundle；若外部源失败，保留可用数据并标注缺口。
-3. **审计 evidence**：检查新鲜度、覆盖度、缺失字段、来源链和异常值。
-4. **角色化研究**：按模式执行技术面、信息面、基本面/估值、风险、策略框架等研究任务。
-5. **主控汇总**：主控 Agent 对各角色结论做冲突处理、置信度标注和投资假设整理。
-6. **生成报告**：按 `references/report-standard.md` 输出完整报告、简报或短消息。
-7. **记录限制**：明确未覆盖数据、失败来源、时效风险和不可验证假设。
-
-## 内部资料组织
-
-| 路径 | 作用 |
+| 路径 | 说明 |
 | --- | --- |
-| `SKILL.md` | Skill 主入口，只保留触发条件、核心流程、模式选择和关键 gotchas。 |
-| `README.md` | 给人类看的项目定位、安装接入和维护边界说明。 |
-| `references/` | Agent 运行时可按需读取的工作流、prompt、报告标准、输出契约等资料。 |
-| `references/prompts/` | 角色化研究任务说明，供主控 Agent 派发子任务时使用。 |
-| `references/report-standard.md` | 标准报告结构和输出格式约束。 |
-| `strategies/` | 交易框架、判断规则和 prompt reference。 |
-| `src/agent/` | 面向 Agent 的工具封装与本地 evidence 采集入口。 |
-| `data_provider/`、`src/services/` | 数据源、缓存、降级、计算和业务能力的复用层。 |
-| `api/`、`apps/` | 可选观察、配置、回看和管理界面；不是 Skill 默认入口。 |
-| `bot/` | 来自上游开源仓库的机器人接入层，当前作为兼容保留能力；不属于本 Skill 的默认入口。 |
-| `docker/` | 来自上游开源仓库的容器化部署层，当前作为兼容保留能力；不作为本 Skill 的推荐安装方式。 |
-| `templates/` | 可选报告模板资产，核心报告约束已整理到 `references/report-standard.md`。 |
+| `SKILL.md` | Skill 主入口，只保留触发条件、核心流程、模式选择和关键 gotchas |
+| `README.md` | 项目说明、安装方式、边界、路线图 |
+| `references/` | Agent 运行时按需读取的工作流、prompt、报告标准、契约文档 |
+| `references/prompts/` | 各研究角色 prompt |
+| `references/report-standard.md` | 标准报告结构与输出格式约束 |
+| `strategies/` | 策略框架、规则 YAML、prompt reference |
+| `src/agent/` | 面向 Agent 的工具封装与 evidence 采集入口 |
+| `data_provider/` / `src/services/` | 数据源、缓存、降级、计算与业务能力复用层 |
+| `api/` / `apps/` | 可选观察、配置、回看与管理界面 |
+| `bot/` | 来自上游开源仓库的机器人接入层，当前作为兼容保留能力 |
+| `docker/` | 来自上游开源仓库的容器化部署层，当前作为兼容保留能力 |
+| `templates/` | 可选报告模板资产，核心结构已收敛到 `references/report-standard.md` |
 
-## 当前状态与边界
+---
 
-- 当前最稳定的使用方式是 **Agent 读取 Skill + 本地或外部 evidence + Agent 生成报告**。
-- 数据采集路径不要求配置任何 LLM provider key。
-- 默认不启动 REST API，不要求用户手动运行 Web、bot 或 docker。
-- Web/API/通知/定时任务等能力目前作为兼容面与观察面保留，后续将继续区分哪些应作为 Skill 附属能力维护，哪些应拆分为独立运行时。
-- `bot/`、`docker/` 当前属于兼容保留的运行时层，不作为新用户的首选入口。
+## Runtime Boundaries
 
-## 蓝图 / Roadmap
+- 当前最稳定的使用方式是：**Agent 读取 Skill + evidence 获取 / 接收 + Agent 生成最终报告**
+- 数据采集路径不要求任何 OpenAI / Gemini / Anthropic / DeepSeek / LiteLLM key
+- 默认不要求启动 REST API、Web、bot 或 docker
+- Web / API / 通知 / 定时任务等能力目前作为兼容面与观察面保留
+- `bot/`、`docker/` 属于兼容保留运行时层，不作为新用户的首选入口
 
-### 近期
+---
 
-- 继续收敛公开入口，让顶层只暴露 `SKILL.md` 与 README 的清晰语义。
-- 为 OpenClaw、Codex、Claude Code 补充更明确的安装适配说明和示例任务。
-- 增加离线 fixture 与 eval，验证不同 Agent 是否能稳定执行 quick / standard / full / specialist 四档流程。
-- 梳理 `bot/`、`docker/`、Web/API 等可选运行时，明确哪些保留、哪些拆出、哪些改造成纯观察面。
+## Roadmap
 
-### 中期
+### Near term
 
-- 强化 evidence coverage 评分、来源链解释和 partial failure 诊断。
-- 把更多报告模板和策略框架转成 Agent 更容易读取的结构化 reference。
-- 增加多市场、多行业、多风格的标准评测用例。
-- 建立面向维护者的上游同步策略：优先吸收数据源、缓存、降级、测试等基础能力改进，同时维持 `invest-analysis-pro` 的现有对外产品语义。
+- 继续收敛公开入口，保持 `SKILL.md` + README 的清晰职责分工
+- 补充 OpenClaw / Codex / Claude Code 的更明确安装示例
+- 增加离线 fixture 与 eval，验证不同 Agent 对四档流程的稳定执行能力
+- 梳理 `bot/`、`docker/`、Web / API 等兼容运行时的拆分策略
 
-### 长期
+### Mid term
 
-- 形成可在多种 Agent 平台复用的投资研究 Skill 标准包。
-- 支持团队内自定义策略库、行业模板、风控约束和报告风格。
-- 将非核心运行时能力拆成可选扩展，保持主 Skill 轻量、清晰、可审计。
+- 强化 evidence coverage 评分、source chain 解释和 partial failure 诊断
+- 将更多报告模板与策略框架转为 Agent 更易消费的结构化 reference
+- 增加多市场、多行业、多风格标准评测用例
+- 建立面向维护者的上游同步策略，优先吸收基础能力改进并维持当前产品语义
 
-## 致谢与来源
+### Long term
 
-`invest-analysis-pro` 派生自开源仓库 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis)。上游项目采用 **MIT License** 发布；本仓库在遵循相应许可条款的前提下，复用了部分数据能力与工程资产，并围绕 `invest-analysis-pro` 重新组织了 Skill 入口、Agent 工作流、文档结构和对外产品语义。
+- 形成可跨多种 Agent 平台复用的投资研究 Skill 标准包
+- 支持团队级策略库、行业模板、风控约束与报告风格扩展
+- 将非核心运行时拆分为可选扩展，保持主 Skill 轻量、清晰、可审计
 
-特此对上游项目在多市场股票数据处理、分析链路和工程实现方面提供的基础表示感谢。当前仓库的重点是构建面向 Agent 的、evidence-first、controller-led 投资研究工作流。
+---
 
-## 免责声明
+## Attribution
 
-invest-analysis-pro 只提供研究工作流、数据整理和报告结构辅助。所有输出都依赖数据源质量、Agent 执行能力和用户提供的约束条件，不构成投资建议，也不保证任何收益或风险规避效果。
+`invest-analysis-pro` 派生自开源仓库 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis)。
+
+上游项目采用 **MIT License** 发布；本仓库在遵循相应许可条款的前提下，复用了部分数据能力与工程资产，并围绕 `invest-analysis-pro` 重新组织了 Skill 入口、Agent 工作流、文档结构与对外产品语义。
+
+感谢上游项目在多市场股票数据处理、分析链路和工程实现方面提供的基础。
+
+---
+
+## License
+
+This project is distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
+
+## Disclaimer
+
+`invest-analysis-pro` 仅提供研究工作流、数据整理与报告结构辅助。所有输出均依赖数据源质量、Agent 执行能力与用户提供的约束条件，不构成投资建议，也不保证任何收益或风险规避效果。
