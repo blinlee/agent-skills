@@ -1,0 +1,151 @@
+# 环境变量文件（包含敏感信息，禁止提交）
+.env
+.env.*
+*.env
+*.env.local
+.env.*.local
+
+# 测试文件（可能包含敏感配置）
+# 仅忽略仓库根目录下的临时 test_*.py 脚本；tests/ 目录下的单元测试需要纳入版本控制。
+/test_*.py
+/test.sh
+
+# 本地评审与高级路由配置（可能包含敏感信息或临时分析产物）
+/.codex
+/review.md
+/litellm_config.yaml
+/litellm_config.*.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursorrules
+
+# 数据和日志
+/data/
+logs/
+reports/
+*.db
+*.sqlite
+*.sqlite3
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+
+local/
+
+run.sh
+
+verify_*.py
+
+# ignore local Claude/OpenClaw workspace artifacts
+.claude/
+
+# ignore static files
+static/
+/apps/dsa-desktop/dist/
+/apps/dsa-desktop/node_modules/
+
+# OpenClaw / local runtime artifacts
+.omx/
+
+# Python tool caches
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.cache/
+
+# Coverage artifacts
+.coverage.*
+coverage.xml
+
+# Temp files
+*.tmp
+*.temp
+
+# Open-source release / local runtime artifacts
+.openclaw/
+.agents/
+*.log
+*.log.*
+*.pid
+*.prof
+*.bak
+*.backup
+*.orig
+*.rej
+*.dump
+*.trace
+*.session
+*.ndjson
+*.jsonl
+
+# Python / tooling caches
+.ipynb_checkpoints/
+.pyre/
+.dmypy.json
+dmypy.json
+
+# Frontend / desktop generated artifacts
+/apps/dsa-web/dist/
+/apps/dsa-web/coverage/
+/apps/dsa-web/playwright-report/
+/apps/dsa-web/test-results/
+/apps/dsa-web/.vite/
+/apps/dsa-web/.turbo/
+/apps/dsa-web/node_modules/
+/apps/dsa-desktop/build/
+/apps/dsa-desktop/out/
+/apps/dsa-desktop/release/
+/apps/dsa-desktop/.electron-builder-cache/
+
+# Local data/export outputs
+/data/*.db-*
+/data/*.sqlite-*
+/output/
+/outputs/
+/exports/
+/tmp/
+/temp/
+*.csv.tmp
+*.xlsx.tmp
+# Local detailed docs are not part of the public repo surface
+/docs/

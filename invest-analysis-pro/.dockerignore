@@ -1,0 +1,78 @@
+# 忽略 Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 忽略虚拟环境
+venv/
+.venv/
+env/
+.env.local
+
+# 忽略 IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 忽略数据文件（可选，如果想持久化就注释掉）
+# data/
+# logs/
+# reports/
+
+# 忽略测试文件
+test_*.py
+*_test.py
+
+# 忽略文档
+*.md
+!README.md
+
+# Local secrets and runtime state
+.env
+.env.*
+*.env
+.omx/
+.openclaw/
+.codex/
+.agents/
+.claude/reviews/
+
+# Local data/log/report outputs
+data/
+logs/
+reports/
+output/
+outputs/
+exports/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Frontend / desktop generated artifacts
+apps/dsa-web/node_modules/
+apps/dsa-web/dist/
+apps/dsa-web/coverage/
+apps/dsa-web/playwright-report/
+apps/dsa-web/test-results/
+apps/dsa-desktop/node_modules/
+apps/dsa-desktop/dist/
+apps/dsa-desktop/build/
+apps/dsa-desktop/out/
+apps/dsa-desktop/release/
+
+# VCS / IDE
+.git/
+.github/

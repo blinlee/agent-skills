@@ -1,0 +1,79 @@
+{
+  "skill_name": "invest-analysis-pro",
+  "version": 1,
+  "evals": [
+    {
+      "id": "default-specialist-stock-request",
+      "prompt": "帮我完整研究中芯国际",
+      "expected_behavior": [
+        "触发 invest-analysis-pro",
+        "默认选择 specialist，而不是 quick",
+        "先获取完整 evidence bundle 并做 Evidence Audit",
+        "按 DAG 派发 Technical、Intel、Fundamentals & Flow、Risk、Strategy 研究任务",
+        "Decision 由主控会话完成，不派发 Decision 子 Agent",
+        "最终报告包含核心结论、Evidence Audit、分阶段意见、仪表盘、风险和数据缺口"
+      ]
+    },
+    {
+      "id": "explicit-quick-technical",
+      "prompt": "快速看看大唐发电的技术面就行",
+      "expected_behavior": [
+        "识别用户明确要求快速",
+        "选择 quick 模式",
+        "只需要 quote、technical、ma、volume 等紧凑 evidence",
+        "只执行 Technical Analyst，再由主控简要汇总",
+        "不默认展开完整 specialist DAG"
+      ]
+    },
+    {
+      "id": "partial-data-continue",
+      "prompt": "分析 688981，如果新闻或者资金流拿不到也继续，但要告诉我缺什么",
+      "expected_behavior": [
+        "允许 status=partial 继续分析",
+        "披露 failed/partial 模块、errors、warnings 和 source_chain",
+        "降低受影响结论的置信度",
+        "不得编造缺失新闻、资金流或基本面字段"
+      ]
+    },
+    {
+      "id": "strategy-framework-evaluation",
+      "prompt": "用 bull_trend 和 shrink_pullback 两个策略评估贵州茅台",
+      "expected_behavior": [
+        "读取对应 strategies/*.yaml",
+        "把策略 YAML 作为 Strategy Specialist 的输入",
+        "Strategy Specialist 只判断 evidence 是否满足策略条件",
+        "最终是否采纳策略由主控在标准报告中综合决定"
+      ]
+    },
+    {
+      "id": "human-cli-avoidance",
+      "prompt": "我不会用命令行，帮我研究一下宁德时代",
+      "expected_behavior": [
+        "不要求用户手动运行 CLI",
+        "由 Agent 自行调用内部数据适配层",
+        "保持用户可见入口为自然语言研究请求",
+        "最终输出研究报告而不是命令教程"
+      ]
+    },
+    {
+      "id": "provided-evidence-mode",
+      "prompt": "我这里贴了行情和新闻摘要，但你不能运行本地命令，帮我基于这些数据分析一下",
+      "expected_behavior": [
+        "选择 Provided evidence mode",
+        "不要求用户手动运行命令",
+        "基于用户提供的 evidence 继续 DAG",
+        "明确披露数据来源、缺口和置信度影响"
+      ]
+    },
+    {
+      "id": "no-evidence-mode",
+      "prompt": "不能联网也不能运行命令，我也没有数据，但帮我判断这只股票能买吗",
+      "expected_behavior": [
+        "选择 No evidence mode",
+        "不编造行情、新闻、财务或资金流数据",
+        "说明无法完成研究判断",
+        "列出完成研究所需的 evidence 模块"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "name": "invest-analysis-pro-desktop",
+  "version": "3.16.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "electron": "^31.4.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "pro.investanalysis.desktop",
+    "productName": "invest-analysis-pro",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../../.env.example",
+        "to": ".env.example"
+      },
+      {
+        "from": "../../dist/backend/invest_analysis_pro",
+        "to": "backend/invest_analysis_pro"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "publish": [
+        {
+          "provider": "github",
+          "owner": "invest-analysis-pro",
+          "repo": "invest-analysis-pro"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": false,
+      "include": "installer.nsh"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  }
+}

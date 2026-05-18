@@ -1,0 +1,8 @@
+# Binary strategy/demo assets should not be text-diffed if future Skill assets are added.
+sources/**/*.ai binary
+sources/**/*.gif binary
+sources/**/*.ico binary
+sources/**/*.jpg binary
+sources/**/*.jpeg binary
+sources/**/*.png binary
+sources/**/*.psd binary
