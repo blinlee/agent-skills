@@ -407,8 +407,10 @@ def build_parser() -> argparse.ArgumentParser:
     stock_cmd("quote", "Realtime quote evidence.")
     h = stock_cmd("history", "Historical OHLCV evidence.")
     h.add_argument("--days", type=int, default=60)
-    stock_cmd("technical", "Technical trend analysis evidence.")
-    stock_cmd("trend", "Alias of technical.")
+    tech = stock_cmd("technical", "Technical trend analysis evidence.")
+    tech.add_argument("--days", type=int, default=60)
+    trend = stock_cmd("trend", "Alias of technical.")
+    trend.add_argument("--days", type=int, default=60)
     ma = stock_cmd("ma", "Moving-average evidence.")
     ma.add_argument("--periods", default="5,10,20,30,60,120,250")
     ma.add_argument("--days", type=int, default=120)
@@ -513,8 +515,8 @@ def run_command(args: argparse.Namespace, registry: Optional[ToolRegistry] = Non
     simple_map: Dict[str, Tuple[str, Callable[[argparse.Namespace], Dict[str, Any]]]] = {
         "quote": ("get_realtime_quote", lambda a: {"stock_code": a.stock_code}),
         "history": ("get_daily_history", lambda a: {"stock_code": a.stock_code, "days": a.days}),
-        "technical": ("analyze_trend", lambda a: {"stock_code": a.stock_code}),
-        "trend": ("analyze_trend", lambda a: {"stock_code": a.stock_code}),
+        "technical": ("analyze_trend", lambda a: {"stock_code": a.stock_code, "days": a.days}),
+        "trend": ("analyze_trend", lambda a: {"stock_code": a.stock_code, "days": a.days}),
         "ma": ("calculate_ma", lambda a: {"stock_code": a.stock_code, "periods": a.periods, "days": a.days}),
         "volume": ("get_volume_analysis", lambda a: {"stock_code": a.stock_code, "days": a.days}),
         "pattern": ("analyze_pattern", lambda a: {"stock_code": a.stock_code, "days": a.days}),
@@ -534,7 +536,7 @@ def run_command(args: argparse.Namespace, registry: Optional[ToolRegistry] = Non
 
     if command == "local-analysis":
         modules = {
-            "analyze_trend": {"stock_code": args.stock_code},
+            "analyze_trend": {"stock_code": args.stock_code, "days": args.days},
             "calculate_ma": {"stock_code": args.stock_code, "days": args.days},
             "get_volume_analysis": {"stock_code": args.stock_code, "days": args.days},
             "analyze_pattern": {"stock_code": args.stock_code, "days": args.days},
@@ -612,8 +614,8 @@ def run_command(args: argparse.Namespace, registry: Optional[ToolRegistry] = Non
         mapping = {
             "quote": ("get_realtime_quote", {"stock_code": args.stock_code}),
             "history": ("get_daily_history", {"stock_code": args.stock_code, "days": args.days}),
-            "technical": ("analyze_trend", {"stock_code": args.stock_code}),
-            "trend": ("analyze_trend", {"stock_code": args.stock_code}),
+            "technical": ("analyze_trend", {"stock_code": args.stock_code, "days": args.days}),
+            "trend": ("analyze_trend", {"stock_code": args.stock_code, "days": args.days}),
             "ma": ("calculate_ma", {"stock_code": args.stock_code, "days": max(args.days, 120)}),
             "volume": ("get_volume_analysis", {"stock_code": args.stock_code, "days": min(args.days, 60)}),
             "pattern": ("analyze_pattern", {"stock_code": args.stock_code, "days": args.days}),

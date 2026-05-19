@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -23,7 +24,7 @@ def _fake_registry():
     registry = ToolRegistry()
     registry.register(_tool("get_realtime_quote", lambda stock_code: {"code": stock_code, "price": 10, "source": "fixture"}))
     registry.register(_tool("get_daily_history", lambda stock_code, days=60: {"code": stock_code, "source": "fixture-cache", "data": [{"date": f"2026-01-0{i}", "close": i} for i in range(1, 6)]}, [ToolParameter("stock_code", "string", "stock code"), ToolParameter("days", "integer", "days", required=False, default=60)]))
-    registry.register(_tool("analyze_trend", lambda stock_code: {"trend_status": "fixture"}))
+    registry.register(_tool("analyze_trend", lambda stock_code, days=60: {"trend_status": "fixture", "days": days}, [ToolParameter("stock_code", "string", "stock code"), ToolParameter("days", "integer", "days", required=False, default=60)]))
     registry.register(_tool("calculate_ma", lambda stock_code, periods="5,10", days=120: {"ma": {"ma5": {"value": 10}}}, [ToolParameter("stock_code", "string", "stock code"), ToolParameter("periods", "string", "periods", required=False, default="5,10"), ToolParameter("days", "integer", "days", required=False, default=120)]))
     registry.register(_tool("get_volume_analysis", lambda stock_code, days=30: {"volume_status": "fixture"}, [ToolParameter("stock_code", "string", "stock code"), ToolParameter("days", "integer", "days", required=False, default=30)]))
     registry.register(_tool("analyze_pattern", lambda stock_code, days=60: {"patterns": []}, [ToolParameter("stock_code", "string", "stock code"), ToolParameter("days", "integer", "days", required=False, default=60)]))
@@ -89,6 +90,13 @@ def test_single_tool_run_and_no_llm_key_required(monkeypatch):
     assert envelope["source_chain"] == [{"source": "fixture"}]
 
 
+def test_technical_command_accepts_days_and_forwards_it(monkeypatch):
+    envelope = _run_cli(monkeypatch, ["technical", "600519", "--days", "90"])
+    assert envelope["status"] == "ok"
+    assert envelope["input"]["days"] == 90
+    assert envelope["data"]["analyze_trend"]["days"] == 90
+
+
 def test_bundle_partial_failure_and_compact_limit(monkeypatch):
     envelope = _run_cli(monkeypatch, ["bundle", "600519", "--include", "quote,history,chip", "--limit", "2"])
     assert envelope["status"] == "partial"
@@ -117,7 +125,7 @@ def test_argument_error_is_json_envelope(capsys):
 
 
 def test_command_help_for_representative_subcommands():
-    for argv in (["quote", "--help"], ["bundle", "--help"], ["strategies", "list", "--help"]):
+    for argv in (["quote", "--help"], ["technical", "--help"], ["bundle", "--help"], ["strategies", "list", "--help"]):
         result = subprocess.run(
             [sys.executable, "main.py", "invest-analysis-pro", *argv],
             text=True,
@@ -126,6 +134,17 @@ def test_command_help_for_representative_subcommands():
         )
         assert result.returncode == 0
         assert "usage:" in result.stdout
+
+
+def test_user_facing_templates_do_not_require_raw_dashboard_json():
+    final_template = Path("assets/final-report-template.md").read_text(encoding="utf-8")
+    brief_template = Path("assets/brief-report-template.md").read_text(encoding="utf-8")
+    assert "## Decision Dashboard JSON" not in final_template
+    assert "```json" not in final_template
+    assert "## Decision Dashboard JSON" not in brief_template
+    assert "```json" not in brief_template
+    assert "研究报告" in final_template
+    assert "摘要" in brief_template
 
 
 def test_legacy_standalone_entrypoints_remain_visible_and_not_agent_routed():

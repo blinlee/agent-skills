@@ -1632,9 +1632,9 @@ class DatabaseManager:
         分析均线形态
         
         判断条件：
-        - 多头排列：close > ma5 > ma10 > ma20
-        - 空头排列：close < ma5 < ma10 < ma20
-        - 震荡整理：其他情况
+        - 价在线上且均线多头：close > ma5 > ma10 > ma20
+        - 价在线下且均线空头：close < ma5 < ma10 < ma20
+        - 其余情况按价格与短期均线相对位置给出较弱描述
         """
         # 注意：这里的均线形态判断基于“close/ma5/ma10/ma20”静态比较，
         # 未考虑均线拐点、斜率、或不同数据源复权口径差异。
@@ -1645,15 +1645,15 @@ class DatabaseManager:
         ma20 = data.ma20 or 0
         
         if close > ma5 > ma10 > ma20 > 0:
-            return "多头排列 📈"
+            return "价在线上且均线多头 📈"
         elif close < ma5 < ma10 < ma20 and ma20 > 0:
-            return "空头排列 📉"
+            return "价在线下且均线空头 📉"
         elif close > ma5 and ma5 > ma10:
-            return "短期向好 🔼"
+            return "价格站上短期均线 🔼"
         elif close < ma5 and ma5 < ma10:
-            return "短期走弱 🔽"
+            return "价格跌破短期均线 🔽"
         else:
-            return "震荡整理 ↔️"
+            return "价格与均线震荡整理 ↔️"
 
     @staticmethod
     def _parse_published_date(value: Optional[str]) -> Optional[datetime]:

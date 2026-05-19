@@ -1423,15 +1423,15 @@ class StockAnalysisPipeline:
         ma10 = ma10 or 0
         ma20 = ma20 or 0
         if close > ma5 > ma10 > ma20 > 0:
-            return "多头排列 📈"
+            return "价在线上且均线多头 📈"
         elif close < ma5 < ma10 < ma20 and ma20 > 0:
-            return "空头排列 📉"
+            return "价在线下且均线空头 📉"
         elif close > ma5 and ma5 > ma10:
-            return "短期向好 🔼"
+            return "价格站上短期均线 🔼"
         elif close < ma5 and ma5 < ma10:
-            return "短期走弱 🔽"
+            return "价格跌破短期均线 🔽"
         else:
-            return "震荡整理 ↔️"
+            return "价格与均线震荡整理 ↔️"
 
     def _augment_historical_with_realtime(
         self, df: pd.DataFrame, realtime_quote: Any, code: str

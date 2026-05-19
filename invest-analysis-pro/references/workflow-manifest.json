@@ -190,6 +190,11 @@
       "decision_dashboard_json",
       "evidence_audit_appendix"
     ],
+    "default_user_facing_order": [
+      "workflow_deviation_lines",
+      "full_markdown_report_or_brief_summary_report",
+      "evidence_audit_appendix"
+    ],
     "assets": {
       "full_markdown_report": "assets/final-report-template.md",
       "brief_summary_report": "assets/brief-report-template.md",

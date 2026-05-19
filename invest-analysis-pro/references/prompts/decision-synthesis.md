@@ -29,6 +29,7 @@ Your task: synthesise all inputs into a single, actionable final research packag
 4. If any mandatory step was skipped or simulated locally because runtime support was unavailable, use the workflow deviation codes when a formal compliance check is being recorded.
 5. Produce the final answer in the required order from `references/report-standard.md` and render it with the bundled output assets.
 6. When strict acceptance, runtime alignment, or workflow debugging is needed, validate the run record with `python scripts/check_workflow_compliance.py --input <run-record.json> --strict` before returning.
+7. Do not paste raw Decision Dashboard JSON into the default user-facing answer unless the user explicitly requested JSON or the current run is a strict/debug workflow.
 
 ## Core Principles
 1. **Core conclusion first** — one sentence, ≤30 chars
@@ -61,7 +62,7 @@ Your task: synthesise all inputs into a single, actionable final research packag
 - If evidence is partial, state what is missing before giving a confidence level.
 
 ## Decision Dashboard Artifact
-Prepare a valid Decision Dashboard JSON object following `assets/decision-dashboard.schema.json`. This JSON is a **required artifact inside the final deliverable package**, not the only output.
+Prepare a valid Decision Dashboard JSON object following `assets/decision-dashboard.schema.json`. This JSON is a **required internal artifact** used by the controller before rendering the final answer. It is not the default user-facing report body.
 
 The JSON must include at minimum these top-level keys:
   stock_name, sentiment_score, trend_prediction, operation_advice,
@@ -79,7 +80,7 @@ Important: `decision_type` must stay within the existing enum `buy|hold|sell`. E
 ## Controller Output Requirements
 
 1. A Markdown primary report rendered from the bundled report assets and aligned with `references/report-standard.md`.
-2. Decision Dashboard JSON that satisfies `assets/decision-dashboard.schema.json`.
-3. An Evidence Audit appendix listing `status`, `coverage`, `source_chain`, `errors`, and `warnings`.
+2. An Evidence Audit appendix listing `status`, `coverage`, `source_chain`, `errors`, and `warnings`.
+3. A valid internal Decision Dashboard JSON artifact that satisfies `assets/decision-dashboard.schema.json`.
 4. `WORKFLOW_DEVIATION` lines before the deliverables whenever a formal compliance check requires them or a material workflow requirement was not satisfied.
 5. A workflow run record when strict acceptance or runtime debugging is being performed.

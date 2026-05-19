@@ -55,7 +55,7 @@ Use the mode rules from `references/workflow-manifest.json`.
 6. If the runtime supports independent task execution and structured artifact return, dispatch all mandatory `standard`, `full`, and `specialist` role tasks independently. If the runtime also supports concurrent role workers, run the first wave in parallel. In multi-agent host runtimes such as OpenClaw-style environments, a runtime config may restrict the callable subagent list; if no callable specialist is available for a required role, spawn the same agent type/model as the current session and keep the role contract unchanged.
 7. Use `assets/subtask-payload-template.md` for every dispatched or simulated role task.
 8. Decision Synthesis and final report writing **must remain in the controller session** and must not be delegated as an independent role task.
-9. Do not produce any user-facing final analysis before the required artifact package has been prepared. For `specialist`, this means the mandatory role nodes must be completed, Decision Dashboard JSON must exist, Evidence Audit Appendix must exist, and the final report must be rendered from the bundled template assets.
+9. Do not produce any user-facing final analysis before the required artifact package has been prepared. For `specialist`, this means the mandatory role nodes must be completed, the internal Decision Dashboard JSON must exist, the Evidence Audit Appendix must exist, and the final report must be rendered from the bundled template assets.
 10. Render deliverables with `assets/final-report-template.md`, `assets/brief-report-template.md`, `assets/short-message-template.md`, `assets/evidence-audit-template.md`, and `assets/decision-dashboard.schema.json`.
 11. When you are validating a new runtime, doing strict acceptance, or debugging workflow drift, run the deterministic compliance gate described in `references/compliance-protocol.md`.
 
@@ -102,6 +102,7 @@ The final prose should be rendered **from** the assembled artifacts rather than 
 - Do not treat an empty callable-subagent list as “cannot dispatch”; if independent task execution exists, use same-agent/self-spawn workers.
 - Do not return a natural-language final answer before the required artifact package exists.
 - `Decision Dashboard JSON` and the `Evidence Audit Appendix` are mandatory artifacts even in `quick` and `standard` when the run is otherwise compliant.
+- Do not paste raw `Decision Dashboard JSON` into the default user-facing output unless the user explicitly asks for JSON or the current run is a strict/debug workflow.
 - If a mandatory node, prompt read, dispatch step, or deliverable is missing, the controller must treat the run as non-compliant and use the workflow deviation codes when a formal compliance check is being recorded.
 - Large evidence payloads must use `compact`, `full`, `limit`, or an equivalent truncation guard.
 - Use `references/failure-modes.md` as an anti-pattern reference when a runtime repeatedly drifts from the workflow.

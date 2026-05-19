@@ -2,7 +2,7 @@
 
 This document defines the standard outputs for `invest-analysis-pro` **after** the controller agent has received the evidence bundle and the role opinions. Decision Synthesis is always completed by the controller session and is never dispatched as an independent task.
 
-`references/workflow-manifest.json` is the machine-readable source of truth for deliverable order and required artifacts. This document focuses on how to render those artifacts cleanly during normal execution.
+`references/workflow-manifest.json` is the machine-readable source of truth for required artifacts, internal package order, and the default user-facing rendering order. This document focuses on how to render those artifacts cleanly during normal execution.
 
 ## Standard Flow
 
@@ -24,8 +24,9 @@ This document defines the standard outputs for `invest-analysis-pro` **after** t
 
 4. **Deliverable Rendering**
    - Render the primary report from one of the bundled report templates.
-   - Emit the Decision Dashboard JSON.
+   - Prepare the Decision Dashboard JSON as an internal required artifact.
    - Append the Evidence Audit Appendix.
+   - Do not dump raw machine artifacts into the user-facing report unless the user explicitly asked for them or a strict/debug workflow requires them.
    - Use workflow deviation codes only when a formal compliance check or a material workflow shortfall needs to be disclosed.
 
 ## Artifact Assembly Order
@@ -46,14 +47,14 @@ Use this order:
 
 1. `WORKFLOW_DEVIATION` lines when applicable
 2. Primary report (`full_markdown_report` or `brief_summary_report` depending on the mode and request)
-3. Decision Dashboard JSON
-4. Evidence Audit Appendix
+3. Evidence Audit Appendix
 
 Rules:
 
 - `specialist` and `full` default to `full_markdown_report`.
 - `quick` and `standard` may use `brief_summary_report` only when the user explicitly asked for a brief/lightweight output.
-- `decision_dashboard_json` and `evidence_audit_appendix` are mandatory for every compliant mode.
+- `decision_dashboard_json` is a mandatory internal artifact for every compliant mode, but it is **not** a default user-facing report section.
+- `evidence_audit_appendix` remains part of the default user-facing package unless the user explicitly asks for a shorter rendering.
 - `short_message_report` is an additional rendering surface, not a replacement for the mandatory package.
 
 ## Output Assets

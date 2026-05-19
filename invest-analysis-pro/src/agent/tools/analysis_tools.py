@@ -14,22 +14,22 @@ from src.agent.tools.registry import ToolParameter, ToolDefinition
 logger = logging.getLogger(__name__)
 
 
-def _fetch_trend_data(stock_code: str):
+def _fetch_trend_data(stock_code: str, days: int = 60):
     """Fetch historical OHLCV (DataFrame) for trend analysis. DB first, then DataFetcher fallback."""
     from src.services.history_loader import load_history_df
 
-    df, _ = load_history_df(stock_code, days=60)
+    df, _ = load_history_df(stock_code, days=days)
     return df
 
 
-def _handle_analyze_trend(stock_code: str) -> dict:
+def _handle_analyze_trend(stock_code: str, days: int = 60) -> dict:
     """Run technical trend analysis on a stock."""
     from src.stock_analyzer import StockTrendAnalyzer
 
     if not (stock_code and str(stock_code).strip()):
         return {"error": "stock_code is required"}
 
-    df = _fetch_trend_data(stock_code)
+    df = _fetch_trend_data(stock_code, days=max(int(days or 60), 20))
     if df is None or df.empty:
         return {"error": f"No historical data available for trend analysis on {stock_code}"}
 
@@ -93,6 +93,13 @@ analyze_trend_tool = ToolDefinition(
             type="string",
             description="Stock code to analyze, e.g., '600519'",
         ),
+        ToolParameter(
+            name="days",
+            type="integer",
+            description="Number of trading days to fetch for the trend analysis window (default: 60).",
+            required=False,
+            default=60,
+        ),
     ],
     handler=_handle_analyze_trend,
     category="analysis",
@@ -102,6 +109,29 @@ analyze_trend_tool = ToolDefinition(
 # ============================================================
 # calculate_ma — flexible moving average calculator
 # ============================================================
+
+def _describe_price_vs_ma(above_count: int, total_count: int) -> str:
+    if total_count == 0:
+        return "均线数据不足"
+    if above_count == total_count:
+        return "价格站上全部均线"
+    if above_count == 0:
+        return "价格跌破全部均线"
+    return f"价格位于{above_count}/{total_count}条均线上方"
+
+
+def _describe_ma_order(ma_payload: dict) -> str:
+    ma5 = (ma_payload.get("ma5") or {}).get("value")
+    ma10 = (ma_payload.get("ma10") or {}).get("value")
+    ma20 = (ma_payload.get("ma20") or {}).get("value")
+    if not all(isinstance(v, (int, float)) for v in [ma5, ma10, ma20]):
+        return "MA5/MA10/MA20 数据不足，无法判断均线顺序"
+    if ma5 > ma10 > ma20:
+        return "均线多头顺排（MA5>MA10>MA20）"
+    if ma5 < ma10 < ma20:
+        return "均线空头顺排（MA5<MA10<MA20）"
+    return "均线未形成顺排"
+
 
 def _handle_calculate_ma(stock_code: str, periods: Optional[str] = None, days: int = 120) -> dict:
     """Calculate moving averages for arbitrary periods from historical K-line data."""
@@ -148,13 +178,30 @@ def _handle_calculate_ma(stock_code: str, periods: Optional[str] = None, days: i
     # Summary: how many MAs is the price above?
     ma_values = [v for v in result["ma"].values() if v is not None]
     above_count = sum(1 for v in ma_values if v["price_above"])
+    total_ma_count = len(ma_values)
+    price_vs_ma_status = _describe_price_vs_ma(above_count, total_ma_count)
+    ma_order_status = _describe_ma_order(result["ma"])
+    ma5 = (result["ma"].get("ma5") or {}).get("value")
+    ma10 = (result["ma"].get("ma10") or {}).get("value")
+    ma20 = (result["ma"].get("ma20") or {}).get("value")
     result["above_ma_count"] = above_count
-    result["total_ma_count"] = len(ma_values)
-    result["ma_alignment"] = (
-        "多头排列" if above_count == len(ma_values)
-        else "空头排列" if above_count == 0
-        else f"混合({above_count}/{len(ma_values)}条均线上方)"
+    result["total_ma_count"] = total_ma_count
+    result["price_vs_ma_status"] = price_vs_ma_status
+    result["ma_order_status"] = ma_order_status
+    result["full_bullish_alignment"] = bool(
+        isinstance(ma5, (int, float))
+        and isinstance(ma10, (int, float))
+        and isinstance(ma20, (int, float))
+        and current_price > ma5 > ma10 > ma20 > 0
     )
+    result["full_bearish_alignment"] = bool(
+        isinstance(ma5, (int, float))
+        and isinstance(ma10, (int, float))
+        and isinstance(ma20, (int, float))
+        and 0 < current_price < ma5 < ma10 < ma20
+    )
+    result["ma_alignment"] = price_vs_ma_status
+    result["summary"] = f"{price_vs_ma_status}；{ma_order_status}"
     return result
 
 
@@ -162,7 +209,8 @@ calculate_ma_tool = ToolDefinition(
     name="calculate_ma",
     description="Calculate moving averages (MA5/10/20/30/60/120/250 or custom periods) "
                 "for a stock. Returns each MA value, price bias %, and whether price "
-                "is above each MA. Also returns overall MA alignment (多头/空头/混合).",
+                "is above each MA. Also returns price-vs-MA status and MA-order status "
+                "so price position and MA sequence are not conflated.",
     parameters=[
         ToolParameter(
             name="stock_code",

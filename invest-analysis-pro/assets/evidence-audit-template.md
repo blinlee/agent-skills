@@ -1,16 +1,16 @@
-# Evidence Audit Appendix Template
+# 中文证据审计附录模板
 
 ```markdown
-## Evidence Audit Appendix
+## 证据审计附录
 
-- status: ok|partial|failed
-- requested modules: [...]
-- succeeded modules: [...]
-- failed modules: [...]
-- source_chain: [...]
-- errors: [...]
-- warnings: [...]
-- confidence impact: <short explanation>
+- 状态: ok|partial|failed
+- 请求模块: [...]
+- 成功模块: [...]
+- 失败模块: [...]
+- 来源链: [...]
+- 错误: [...]
+- 警告: [...]
+- 对置信度的影响: <简短说明>
 ```
 
 Rules:
