@@ -134,8 +134,8 @@ node scripts/doctor-img-gen-pro.mjs
 
 By default, generated runtime artifacts are kept local:
 
-- prompts are written under `garden-gpt-image-2/prompt/`
-- generated images are written under `garden-gpt-image-2/image/`
+- prompts are written under `img-gen-pro/prompt/`
+- generated images are written under `img-gen-pro/image/`
 
 These runtime artifacts are intentionally git-ignored.
 

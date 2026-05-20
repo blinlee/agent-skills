@@ -11,7 +11,7 @@ function printHelp() {
 Options:
   --prompt <text>          Prompt text
   --promptfile <path>      Prompt file path
-  --output-path <path>     Desired image output path (defaults under garden-gpt-image-2/image/)
+  --output-path <path>     Desired image output path (defaults under img-gen-pro/image/)
   --instruction-path <p>   Explicit instruction file path
   --last-message-path <p>  Explicit codex last-message path
   --codex-bin <name>       Codex binary name/path (default: codex)

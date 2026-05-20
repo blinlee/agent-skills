@@ -80,7 +80,7 @@ if (wantJson) {
   console.log(JSON.stringify(result, null, 2));
 } else {
   const pad = (s) => s.padEnd(24, " ");
-  console.log("--- gpt-image-2 runtime mode ---");
+  console.log("--- img-gen-pro runtime mode ---");
   console.log(`${pad("mode")}: ${result.mode}`);
   console.log(`${pad("recommendation")}: ${result.recommendation}`);
   console.log(`${pad("garden_mode_enabled")}: ${result.garden_mode_enabled}`);

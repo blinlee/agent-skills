@@ -105,9 +105,9 @@ async function main() {
   }
 
   const gitignore = await readFile(path.join(root, '.gitignore'), 'utf8');
-  if (/^garden-gpt-image-2\/$/m.test(gitignore)) ok('.gitignore ignores runtime render artifacts');
+  if (/^img-gen-pro\/$/m.test(gitignore)) ok('.gitignore ignores runtime render artifacts');
   else {
-    fail('.gitignore missing garden-gpt-image-2/ ignore rule');
+    fail('.gitignore missing img-gen-pro/ ignore rule');
     failed = true;
   }
   if (/^\.dev\/tmp\/$/m.test(gitignore)) ok('.gitignore ignores local tmp test artifacts');

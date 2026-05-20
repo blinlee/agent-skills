@@ -1,9 +1,10 @@
 ---
-name: gpt-image-2
+name: img-gen-pro
+user-invocable: true
 description: 面向 GPT Image 2 的图像生成 / 编辑技能。当用户提到做图、出图、生成图片、做海报、做信息图、做 UI 样机、做产品图、做头像、做漫画、做分镜、做技术架构图、做品牌设计、做包装、做地图、做 PPT、编辑图片、换背景、去水印、修图、P 图、画一张、配图、设计封面、参考图复刻、图片二次开发等图像相关需求时，都应触发此技能。不要裸写 prompt——本技能使用 110+ canonical 模板（17 个 references 目录）+ 13 个 retrieval categories + 28 个 template hubs 的分层收敛体系，再叠加 text QA gate 与参考图工作流，质量远优于自由发挥。即使用户只说"帮我画一张图"，也应触发本技能做模板收敛。支持 4 种运行模式：(A) Garden 本地出图、(B) 委托宿主 Agent 出图、(C) Codex CLI 出图、(D) 纯 prompt 顾问。
 ---
 
-# GPT Image 2
+# img-gen-pro
 
 面向 GPT Image 2 的聚焦型图像生成 / 编辑技能。当前使用 110+ 个 canonical 模板（按 17 个 `references/` 目录组织），并通过 13 个 retrieval categories 与 28 个 template hubs 做模糊输入收敛，覆盖海报 / UI / 产品 / 信息图 / 学术图 / 技术架构图 / 漫画 / 头像 / 流程板 / 电影分镜 / IP 周边 / 编辑工作流等场景。
 
@@ -142,7 +143,7 @@ node scripts/check-mode.js --json
 **行为**：完整端到端跑通"选模板 → 写 prompt → 调用脚本 → 出图落盘"。
 
 - 用 `scripts/generate.js` 文本生图、`scripts/edit.js` 编辑现有图。
-- prompt 默认落盘到 `garden-gpt-image-2/prompt/`、图片落盘到 `garden-gpt-image-2/image/`。
+- prompt 默认落盘到 `img-gen-pro/prompt/`、图片落盘到 `img-gen-pro/image/`。
 - 这是最强的模式：你是图像工具的"持有者"。
 
 ### Mode B · Host-Native 委托宿主出图
@@ -160,7 +161,7 @@ node scripts/check-mode.js --json
 1. 仍按"选模板 → 填字段 → 渲染最终 prompt"的流程走。
 2. **不要调用 `node scripts/generate.js`**（没有 API key、必失败）。
 3. 直接调用宿主自带的图像工具，把渲染好的 prompt 作为输入。
-4. 如用户希望可顺手把 prompt 文件保存到 `garden-gpt-image-2/prompt/`，但图片去向由宿主决定，不强制。
+4. 如用户希望可顺手把 prompt 文件保存到 `img-gen-pro/prompt/`，但图片去向由宿主决定，不强制。
 
 ### Mode C · Codex CLI 出图
 
@@ -181,7 +182,7 @@ node scripts/check-mode.js --json
 **行为**：本 Skill 退化为"高质量 prompt 撰写顾问"——
 
 1. 按"选模板 → 填字段 → 渲染最终 prompt"流程走，缺信息就问用户。
-2. 把最终 prompt **直接打印给用户** + 保存一份到 `garden-gpt-image-2/prompt/<task-slug>-<timestamp>.md`。
+2. 把最终 prompt **直接打印给用户** + 保存一份到 `img-gen-pro/prompt/<task-slug>-<timestamp>.md`。
 3. 附一句简短的"如何使用"建议（如：丢进 ChatGPT / Midjourney / DALL·E / Sora / Nano Banana / 自己后端 / 第三方 GPT Image 2 网关）。
 4. **不要假装出图成功**。明确告知用户："已生成可直接复用的高质量 prompt，请用你的图像工具执行。"
 
@@ -252,8 +253,8 @@ node scripts/check-mode.js --json
 
 如果用户没有明确指定输出路径，统一使用当前工作区下的：
 
-- 提示词目录：`garden-gpt-image-2/prompt/`（**A / B / C / D 四种模式都建议用**，方便复用与版本管理）
-- 图片目录：`garden-gpt-image-2/image/`（**Mode A / C 使用**；Mode B 由宿主决定，Mode D 不产生图）
+- 提示词目录：`img-gen-pro/prompt/`（**A / B / C / D 四种模式都建议用**，方便复用与版本管理）
+- 图片目录：`img-gen-pro/image/`（**Mode A / C 使用**；Mode B 由宿主决定，Mode D 不产生图）
 
 如果目录不存在，脚本（Mode A / C）必须自动创建；Mode B / D 在写 prompt 前手动 `mkdir -p`。
 
@@ -263,8 +264,8 @@ node scripts/check-mode.js --json
 
 命名规则：
 
-- 提示词：`garden-gpt-image-2/prompt/<task-slug>-<timestamp>.md`
-- 图片：`garden-gpt-image-2/image/<task-slug>-<timestamp>.png`
+- 提示词：`img-gen-pro/prompt/<task-slug>-<timestamp>.md`
+- 图片：`img-gen-pro/image/<task-slug>-<timestamp>.png`
 
 其中：
 
@@ -273,8 +274,8 @@ node scripts/check-mode.js --json
 
 示例：
 
-- `garden-gpt-image-2/prompt/live-commerce-ui-20260424-153045.md`
-- `garden-gpt-image-2/image/live-commerce-ui-20260424-153045.png`
+- `img-gen-pro/prompt/live-commerce-ui-20260424-153045.md`
+- `img-gen-pro/image/live-commerce-ui-20260424-153045.png`
 
 ## Prompt 保存规则
 
@@ -288,14 +289,14 @@ node scripts/check-mode.js --json
 通用规则（适用三种模式）：
 
 1. 如果用户显式给了 prompt 文件路径，可直接使用该文件作为输入。
-2. 如果用户直接给的是文本 prompt，也要先把最终 prompt 保存到 `garden-gpt-image-2/prompt/`。
+2. 如果用户直接给的是文本 prompt，也要先把最终 prompt 保存到 `img-gen-pro/prompt/`。
 3. 如果用户显式指定了 `--prompt-output`，则尊重用户指定路径。
 4. 否则使用默认命名规则自动保存。
 
 ## 图片保存规则（仅 Mode A）
 
 1. 如果用户显式指定了 `--image` 或 `--output`，则尊重用户指定路径。
-2. 否则默认保存到 `garden-gpt-image-2/image/`。
+2. 否则默认保存到 `img-gen-pro/image/`。
 3. 文件名应和当前任务语义相关，并附加时间戳。
 
 Mode B 由宿主图像工具决定保存方式；Mode C 必须先落本地后再决定是否发送；Mode D 不产生图片.
@@ -334,7 +335,7 @@ node scripts/generate.js \
 
 ```bash
 node scripts/generate.js \
-  --promptfile garden-gpt-image-2/prompt/poster-20260424-153045.md
+  --promptfile img-gen-pro/prompt/poster-20260424-153045.md
 ```
 
 ### 5. 编辑已有图片（Mode A）
@@ -360,7 +361,7 @@ node scripts/edit.js \
 
 - **Mode B**：渲染好最终 prompt → 调用宿主自带的 `image_generation` 类工具（参数中传入 prompt）→ 拿到图。
 - **Mode C**：渲染好最终 prompt → 优先直接运行 `scripts/run-codex-render.mjs`（它内部会准备 plan、执行 Codex、校验落图、写 result artifact）→ 整个调用仍必须通过 OpenClaw `exec(pty=true)` 发起 → 图先落本地 → 再做人类 / 主控验收。
-- **Mode D**：渲染好最终 prompt → 保存到 `garden-gpt-image-2/prompt/<task-slug>-<timestamp>.md` → 把内容直接展示给用户 → 提示用户在哪些图像工具中可以直接复用。
+- **Mode D**：渲染好最终 prompt → 保存到 `img-gen-pro/prompt/<task-slug>-<timestamp>.md` → 把内容直接展示给用户 → 提示用户在哪些图像工具中可以直接复用。
 
 ## 模板工作方式（JSON / 结构化自然语言）
 

@@ -21,7 +21,7 @@ Options:
   --prompt <text>            Prompt text
   --promptfile <path>        Prompt file path
   --prompt-output <path>     Save final prompt to a specific file
-  --output-path <path>       Output image path (defaults under garden-gpt-image-2/image/)
+  --output-path <path>       Output image path (defaults under img-gen-pro/image/)
   --instruction-path <path>  Explicit instruction file path
   --last-message-path <path> Explicit codex last-message path
   --plan-path <path>         Explicit execution plan JSON path

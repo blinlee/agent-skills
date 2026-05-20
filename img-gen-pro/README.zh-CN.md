@@ -134,8 +134,8 @@ node scripts/doctor-img-gen-pro.mjs
 
 默认情况下，运行时产物只保留在本地：
 
-- prompt 写入 `garden-gpt-image-2/prompt/`
-- 生成图片写入 `garden-gpt-image-2/image/`
+- prompt 写入 `img-gen-pro/prompt/`
+- 生成图片写入 `img-gen-pro/image/`
 
 这些运行产物默认会被 git ignore。
 

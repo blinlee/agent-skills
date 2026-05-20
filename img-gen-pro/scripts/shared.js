@@ -3,8 +3,8 @@ import process from "node:process";
 import { homedir } from "node:os";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
-export const DEFAULT_IMAGE_DIR = "garden-gpt-image-2/image";
-export const DEFAULT_PROMPT_DIR = "garden-gpt-image-2/prompt";
+export const DEFAULT_IMAGE_DIR = "img-gen-pro/image";
+export const DEFAULT_PROMPT_DIR = "img-gen-pro/prompt";
 export const DEFAULT_MODEL = "gpt-image-2";
 
 export async function readEnvFile(filePath) {
