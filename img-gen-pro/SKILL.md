@@ -1,16 +1,16 @@
 ---
 name: img-gen-pro
 user-invocable: true
-description: 面向 GPT Image 2 的图像生成 / 编辑技能。当用户提到做图、出图、生成图片、做海报、做信息图、做 UI 样机、做产品图、做头像、做漫画、做分镜、做技术架构图、做品牌设计、做包装、做地图、做 PPT、编辑图片、换背景、去水印、修图、P 图、画一张、配图、设计封面、参考图复刻、图片二次开发等图像相关需求时，都应触发此技能。不要裸写 prompt——本技能使用 110+ canonical 模板（17 个 references 目录）+ 13 个 retrieval categories + 28 个 template hubs 的分层收敛体系，再叠加 text QA gate 与参考图工作流，质量远优于自由发挥。即使用户只说"帮我画一张图"，也应触发本技能做模板收敛。支持 4 种运行模式：(A) Garden 本地出图、(B) 委托宿主 Agent 出图、(C) Codex CLI 出图、(D) 纯 prompt 顾问。
+description: 面向 GPT Image 2 的图像生成 / 编辑技能。当用户提到做图、出图、生成图片、做海报、做信息图、做 UI 样机、做产品图、做头像、做漫画、做分镜、做技术架构图、做品牌设计、做包装、做地图、做 PPT、编辑图片、换背景、去水印、修图、P 图、画一张、配图、设计封面、参考图复刻、图片二次开发等图像相关需求时，都应触发此技能。不要裸写 prompt——本技能先用 routing brief 区分视觉意图、用途、版式、风格与内容负载，再使用 110+ canonical 模板（17 个 references 目录）+ 13 个 retrieval categories + 28 个 template hubs 做分层收敛，并叠加 text QA gate 与参考图工作流。即使用户只说"帮我画一张图"，也应触发本技能做模板收敛。支持 4 种运行模式：(A) Garden 本地出图、(B) 委托宿主 Agent 出图、(C) Codex CLI 出图、(D) 纯 prompt 顾问。
 ---
 
 # img-gen-pro
 
 面向 GPT Image 2 的聚焦型图像生成 / 编辑技能。当前使用 110+ 个 canonical 模板（按 17 个 `references/` 目录组织），并通过 13 个 retrieval categories 与 28 个 template hubs 做模糊输入收敛，覆盖海报 / UI / 产品 / 信息图 / 学术图 / 技术架构图 / 漫画 / 头像 / 流程板 / 电影分镜 / IP 周边 / 编辑工作流等场景。
 
-**核心工作流：先做模板方向收敛（category -> style -> scene -> example cases），再组装 prompt，最后判断运行模式。**
+**核心工作流：先把用户输入拆成 routing brief，再做模板方向收敛（category -> style -> scene -> example cases），再组装 prompt，最后判断运行模式。**
 
-> 2026-05-12 起 `build-prompt.mjs` 采用 **composer-first + legacy fallback**：默认先尝试把需求统一拆成 `primary / supporting / style / constraints` 多模板组合；简单需求会自然退化为 `primary only`。当 composer 不能稳定给出存在且可信的 primary canonical target 时，再回退到 legacy selector/debug 路径，避免为了统一而牺牲现有覆盖面。
+> `build-prompt.mjs` 当前采用 **routing-brief first**：先判断哪些信息适合参与模板匹配（视觉类型、用途、版式、风格），哪些信息应保留为内容负载或弱匹配信号（具体题材、公式、直播文字、架构节点、细节要求）。随后再把 routing brief 交给 Template Composer 形成 `primary / supporting / style / constraints` 组合计划；如果 composer 没有稳定、可信且存在的 primary canonical target，则改走 selector path 做单模板解析。
 
 > **为什么先收敛模板再判断模式？** 模板方向决定 prompt 结构和所需槽位。如果先判断模式再选模板，prompt 质量会受模式探测噪声干扰。先确定"做什么图"再决定"怎么出图"，是更稳定的路径。
 
@@ -33,22 +33,30 @@ description: 面向 GPT Image 2 的图像生成 / 编辑技能。当用户提到
    - 再提炼 `keep` / `change`：哪些视觉元素要保留，哪些地方是用户明确想改的
    - 不要承诺"逆推出原始 prompt / seed / 参数"；目标只是形成一个足够好的 **rebuild brief**
    - 这个 brief 是后续模板匹配与 prompt 标准化的输入，不是绕过模板库直接自由发挥
-1. 优先由 Template Composer 建立 `primary / supporting / style / constraints` 组合计划
-2. `primary` 决定画面骨架；`supporting` / `style` 只能借兼容的结构、风格或约束，不能反客为主
-3. 如果 composer 无法给出存在且可信的 `primary`，再回退到 legacy selector 兜底，而不是硬上错误组合
-4. 如果有参考图，把上面的视觉摘要一起作为匹配信号；必要时参考 example cases 与 prompt variants 做 disambiguation
-5. **如果前两个方向都合理，但会导向不同的 prompt 结构，必须先问用户一个最小选择题**
+1. 先建立 routing brief：拆出 `visualTaskType / outputPurpose / layoutIntent / styleIntent / routingQuery / contentPayload / weakMatchTerms`
+2. 由 Template Composer 使用 `routingQuery` 建立 `primary / supporting / style / constraints` 组合计划
+3. `primary` 决定画面骨架；`supporting` / `style` 只能借兼容的结构、风格或约束，不能反客为主
+4. 如果 composer 无法给出存在且可信的 `primary`，改走 selector path 做单模板解析，而不是硬上错误组合
+5. 如果有参考图，把上面的视觉摘要一起作为匹配信号；必要时参考 example cases 与 prompt variants 做 disambiguation
+6. **如果前两个方向都合理，但会导向不同的 prompt 结构，必须先问用户一个最小选择题**
    - 问题要描述**结果差异**，不能暴露内部模板名、文件路径或 template id
    - 例如问"你更想让标题字成为主角，还是让主体画面与构图成为主角？"
    - 如果一个方向明显更专、命中了专项 prompt / exact case，就直接选，不要多问
    > **为什么要问？** 不同方向的 prompt 结构差异大（比如"大字海报"和"产品主图"的布局逻辑完全不同），选错了用户必然不满。一个 5 秒的选择题省掉一次返工。
-5. 最终落到 `references/` 里的 primary canonical Markdown，并保留本次参考的 supporting / style 模板类别
-6. 完成 prompt 产出后，必须向用户说明本次参考了哪些模板类别（来自 `templateCategoryUserSummary` / `templateCategorySummary`）
-7. 只有当 prompt 基本成型后，才判断运行模式（A / B / C / D）
+7. 最终落到 `references/` 里的 primary canonical Markdown，并保留本次参考的 supporting / style 模板类别
+8. 完成 prompt 产出后，必须向用户说明本次参考了哪些模板类别（来自 `templateCategoryUserSummary` / `templateCategorySummary`）
+9. 只有当 prompt 基本成型后，才判断运行模式（A / B / C / D）
+
+routing brief 的边界：
+
+- `routingQuery` 只表达视觉任务、用途、版式、媒介和风格，用来匹配模板。
+- `contentPayload` 保留具体题材、公式、架构节点、直播文案、商品细节、必须出现元素，用来填最终 prompt。
+- `weakMatchTerms` 可以作为辅助信号，但不能压过 `visualTaskType / outputPurpose / layoutIntent`。
+- 当用户请求学术原理图、机制图、ER 图、拓扑图时，不要因为它们有标签和说明文字就当成 generic infographic。
 
 ### Prompt Builder（Phase 1.5）
 
-模板方向确定后，不要直接裸写 prompt。要把 canonical 模板 + prompt intelligence + prompt fragments + 文本校验规则一起压进最终 prompt。
+模板方向确定后，不要直接裸写 prompt。最终 prompt 以 canonical 模板为骨架，只吸收兼容的结构信号、prompt fragments 与文本校验规则；prompt intelligence 可用于排序和诊断，但不能把匹配到的上游 prompt body 原文注入最终 prompt。
 
 > **为什么不裸写？** 裸写 prompt 会丢失模板里的结构约束、文字校验规则、比例规范和 avoid 清单。100+ 模板是社区逆向提炼的工业级结构，自由发挥的质量远不如模板驱动。
 
@@ -65,12 +73,13 @@ builder 的职责：
 - 基于当前模板、query 和 detector 结果，识别最多 1~2 个高影响补槽问题（不是问模板名）
 - 标记 text-bearing 风险与 inspection zones
 - 在参考图模式下把 visual brief / keep-change note 重新并回主链
+- 保留用户具体内容到最终 prompt，但不要让无关 prompt variant body 覆盖当前模板语义
 
 运行时契约：
-- canonical template 可以是 JSON-first，也可以是结构化自然语言
-- builder 内部会先做 normalized prompt draft
-- 当前 Mode A / B / C / D 的最终 handoff 统一是 **prompt string**
-- 也就是说：**选中 JSON-first 模板 ≠ 最终一定输出 JSON**；JSON 目前是 canonical prompt-instance surface，不是最终模型输入契约
+- canonical template 可以是 JSON-first，也可以是结构化模板说明；这只影响模板来源，不影响最终交付格式
+- builder 内部必须渲染出一个**内容为标准 JSON 的 prompt string**
+- 当前 Mode A / B / C / D 的最终 handoff 统一是 **JSON prompt string**
+- 也就是说：最终交给图像模型的 prompt 文本本身必须能被 `JSON.parse` 解析；不得在 JSON 外追加自然语言段落
 
 **重要：如果存在方向冲突或关键槽位待澄清，必须先停下并问用户，不得直接继续出 prompt / 生图。**
 - 方向冲突：抛一个最小选择题，让用户在两种结果之间选
@@ -170,7 +179,7 @@ node scripts/check-mode.js --json
 **行为**：本 Skill 继续复用当前 prompt 主链，只把最终执行换成 Codex CLI render backend——
 
 1. 仍按"选模板 → 填字段 → 渲染最终 prompt"的流程走。
-2. 用 `scripts/prepare-codex-render.mjs` 把 prompt string 准备成 render plan。
+2. 用 `scripts/prepare-codex-render.mjs` 把 JSON prompt string 准备成 render plan。
 3. 真正执行时，**必须通过 OpenClaw `exec(pty=true)` 跑 `codex exec`**。
 4. **`codex -o` 只保存最后一条 assistant message**，不是完整 transcript；不要误当成完整会话记录。
 5. **默认先落本地，不自动回聊天**。先让主控 / 人类看 render 结果，再决定是否发送或继续迭代。
@@ -217,9 +226,11 @@ node scripts/check-mode.js --json
 
 - `scripts/check-mode.js`：在准备实际调用本地脚本时使用，用于检测运行模式（A / B / C / D）
 - `scripts/check-codex-route.mjs`：检测 Codex CLI 是否可用
+- `scripts/analyze-routing-intent.mjs`：输出 routing brief，用于检查哪些信息参与模板匹配、哪些保留为内容负载
+- `scripts/routing-brief.mjs`：routing brief 的共享实现，供 builder / composer / selector 复用
 - `scripts/generate.js`：文本生图（仅 Mode A 使用）
 - `scripts/edit.js`：基于原图 / 遮罩改图（仅 Mode A 使用）
-- `scripts/prepare-codex-render.mjs`：把 prompt string 准备成 Codex render plan（仅 Mode C 使用）
+- `scripts/prepare-codex-render.mjs`：把 JSON prompt string 准备成 Codex render plan（仅 Mode C 使用）
 - `scripts/run-codex-render.mjs`：Mode C 端到端执行器，负责落 prompt、准备 instruction、调用 Codex CLI、校验图片与写 result artifact
 - `scripts/shared.js`：共享请求、保存、环境变量读取逻辑
 - `scripts/select-template.mjs`：基于检索索引做 fuzzy-input → candidate template ranking
@@ -306,6 +317,7 @@ Mode B 由宿主图像工具决定保存方式；Mode C 必须先落本地后再
 ### 1. 先构建 prompt / 模板组合（推荐）
 
 ```bash
+node scripts/analyze-routing-intent.mjs --query "ToF 激光雷达测距原理图，包含公式标注" --json
 node scripts/build-prompt.mjs --query "做一个 AI 视频应用的落地页主视觉" --json
 node scripts/build-prompt.mjs --query "做一张 RAG 技术详解信息图" --json
 node scripts/compose-templates.mjs --query "顶级期刊论文里的系统架构图" --json
@@ -359,17 +371,17 @@ node scripts/edit.js \
 
 没有命令行入口——本 Skill 此时只是**提示词工程指南**：
 
-- **Mode B**：渲染好最终 prompt → 调用宿主自带的 `image_generation` 类工具（参数中传入 prompt）→ 拿到图。
-- **Mode C**：渲染好最终 prompt → 优先直接运行 `scripts/run-codex-render.mjs`（它内部会准备 plan、执行 Codex、校验落图、写 result artifact）→ 整个调用仍必须通过 OpenClaw `exec(pty=true)` 发起 → 图先落本地 → 再做人类 / 主控验收。
-- **Mode D**：渲染好最终 prompt → 保存到 `img-gen-pro/prompt/<task-slug>-<timestamp>.md` → 把内容直接展示给用户 → 提示用户在哪些图像工具中可以直接复用。
+- **Mode B**：渲染好最终 JSON prompt string → 调用宿主自带的 `image_generation` 类工具（参数中传入这段 JSON 字符串）→ 拿到图。
+- **Mode C**：渲染好最终 JSON prompt string → 优先直接运行 `scripts/run-codex-render.mjs`（它内部会准备 plan、执行 Codex、校验落图、写 result artifact）→ 整个调用仍必须通过 OpenClaw `exec(pty=true)` 发起 → 图先落本地 → 再做人类 / 主控验收。
+- **Mode D**：渲染好最终 JSON prompt string → 保存到 `img-gen-pro/prompt/<task-slug>-<timestamp>.md` → 把内容直接展示给用户 → 提示用户在哪些图像工具中可以直接复用。
 
-## 模板工作方式（JSON / 结构化自然语言）
+## 模板工作方式（标准 JSON 最终交付）
 
-当 `references/` 中提供 JSON 模板，或结构化自然语言模板时，按下面规则使用：
+当 `references/` 中提供 JSON 模板，或结构化模板说明时，按下面规则使用：
 
 1. 先从 `SKILL.md` 找到最贴近的分类目录。
 2. 再定位到具体模板文件。
-3. 模板中的 `{argument ...}` 表示可替换参数；无论外层是 JSON 还是自然语言段落，这一层含义都一样。
+3. 模板中的 `{argument ...}` 表示可替换参数；最终 JSON prompt string 不得保留未渲染的模板占位语法。
 4. 用户明确提供的值，直接填入。
 5. 用户没有提供，但模板标了 `default` 的，**不能直接继续**；先判断这是否属于关键槽位。
 6. 如果缺失信息会显著影响结果，必须先询问用户；优先用选择题，不要闷头默认。
@@ -377,8 +389,9 @@ node scripts/edit.js \
 
 补充说明：
 
-- **不是所有 canonical 模板都应该强行写成 JSON。** 对于自由构图、高风格自由度、或以整体语言气质为主的任务，结构化自然语言模板更稳。
-- **JSON 只是 prompt-instance 的一种写法，不是唯一合法写法。** 判断标准是：能否稳定表达构图约束、提问槽位、默认值和 avoid 规则。
+- canonical 模板文件不必全部改写成 JSON；已有结构化模板说明可以作为来源继续存在。
+- 但最终输出给图像模型的 prompt 必须是标准 JSON：JSON-first 模板按原结构渲染，非 JSON 模板转换为生成的 JSON 对象。
+- 组合模板、avoid、文字检查、比例、平台和用户具体内容都必须进入 JSON 字段，不得以 JSON 外的自然语言尾巴追加。
 
 ## 询问规则
 
@@ -407,8 +420,8 @@ node scripts/edit.js \
 
 通用：
 
-- 模板文件中的 JSON 只是**提示词结构模板的一种形态**，不是 API 请求体模板；结构化自然语言模板同样是 canonical prompt surface。
-- 三种模式下，最终交给图像模型的都是"渲染后的 prompt 字符串"——可以是拍平的 JSON、可以是结构化自然语言段落，按模板原样使用。
+- 模板文件中的 JSON 是**提示词结构模板**，不是 API 请求体模板；最终 prompt 仍作为字符串传给图像模型。
+- 三种模式下，最终交给图像模型的都是"内容为标准 JSON 的 prompt 字符串"；禁止 JSON 外自然语言、Markdown 小标题或追加说明。
 - 除非用户明确要求，否则**不要把 SKILL.md 里的"模式说明"复制到最终 prompt 里**——那是给 Agent 看的元信息。
 
 仅 Mode A 适用：
@@ -442,11 +455,13 @@ node scripts/edit.js \
 
 - **参考图不是旁路。** 用户给了参考图不代表可以跳过模板匹配。先看图 → rebuild brief → 回到模板主链 → 落到 canonical 模板 → 渲染 prompt。
 
+- **内容负载不是模板方向。** 公式、架构节点、商品名、直播文案、化学/生物/物理细节通常应进入 `contentPayload` 和最终 prompt，不应直接主导模板匹配。先判断它要成为什么图，再填它讲什么内容。
+
 - **不要逆推原始 prompt。** 参考图模式的目标是形成 rebuild brief（可见结构 + keep + change），不是逆向工程出原始 seed / 参数 / 完整 prompt。
 
 - **问用户时不暴露内部名。** 不要把模板名、文件路径、template id 或任何历史内部来源叫法暴露给用户。问题要描述结果差异，例如"你更想让标题字成为主角，还是让画面构图成为主角？"
 
-- **比例不要猜。** 用户没指定时，按任务类型推断（UI → 16:9，社交 → 9:16，信息图 → 3:4，产品 → 4:5）。不要默认出 1:1。见 `scripts/prompt-compose-utils.mjs` 中的 `detectRatio` 逻辑。
+- **比例不要乱猜。** 用户没指定时，按任务类型推断（dashboard / 架构 / 学术图 → 16:9，直播 / 社交界面 → 9:16，信息图 → 3:4，产品转化图 → 4:5）。不要默认出 1:1。见 `scripts/prompt-compose-utils.mjs` 中的 `detectRatio` 逻辑。
 
 - **Mode A 缺 KEY 时不要假装出图成功。** 检测到 `A?` 模式时，主动告诉用户需要配置 `OPENAI_API_KEY`，或询问是否切到 B / C / D。
 

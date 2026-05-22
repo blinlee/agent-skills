@@ -123,7 +123,7 @@
       "keep the composition, swap in my product, make the title area more conversion-led"
     ],
     "expect": {
-      "status": "needs-slot-clarify",
+      "status": "ready",
       "selectedTarget": "references/product-visuals/ecommerce-marketing-board.md",
       "preferredOutputRatio": "16:9",
       "textInspectionRequired": true,
@@ -257,16 +257,16 @@
         "references/academic-figures/scientific-schematic.md"
       ],
       "promptIncludes": [
-        "Template composition plan",
-        "Primary structure template: references/technical-diagrams/system-architecture.md",
-        "Supporting templates to borrow from: references/academic-figures/scientific-schematic.md"
+        "\"template_composition_plan\"",
+        "\"primary_structure_template\": \"references/technical-diagrams/system-architecture.md\"",
+        "references/academic-figures/scientific-schematic.md"
       ],
       "primaryTarget": "references/technical-diagrams/system-architecture.md",
       "templateCategoryIncludes": [
         "references/technical-diagrams/system-architecture.md"
       ],
+      "promptBodyInjectionAbsent": true,
       "promptExcludes": [
-        "Matched prompt body to preserve semantically",
         "概念产品研发拆解",
         "工业设计提案板"
       ]
@@ -287,16 +287,14 @@
         "references/infographics/bento-grid-infographic.md"
       ],
       "promptIncludes": [
-        "Template composition plan",
-        "Primary structure template: references/slides-and-visual-docs/visual-report-page.md"
+        "\"template_composition_plan\"",
+        "\"primary_structure_template\": \"references/slides-and-visual-docs/visual-report-page.md\""
       ],
       "primaryTarget": "references/slides-and-visual-docs/visual-report-page.md",
       "templateCategoryIncludes": [
         "references/slides-and-visual-docs/visual-report-page.md"
       ],
-      "promptExcludes": [
-        "Matched prompt body to preserve semantically"
-      ]
+      "promptBodyInjectionAbsent": true
     }
   },
   {
@@ -333,12 +331,13 @@
       ],
       "preferredOutputRatio": "16:9",
       "promptIncludes": [
-        "Template composition plan",
-        "Primary structure template: references/technical-diagrams/system-architecture.md",
-        "Style templates to borrow from: references/academic-figures/scientific-schematic.md"
+        "\"template_composition_plan\"",
+        "\"primary_structure_template\": \"references/technical-diagrams/system-architecture.md\"",
+        "\"style_templates_to_borrow_from\": [",
+        "references/academic-figures/scientific-schematic.md"
       ],
+      "promptBodyInjectionAbsent": true,
       "promptExcludes": [
-        "Matched prompt body to preserve semantically",
         "概念产品研发拆解",
         "产品/家具/装置",
         "工业设计提案板",
@@ -454,7 +453,65 @@
     }
   },
   {
-    "name": "builder-legacy-template-id-debug",
+    "name": "builder-scientific-schematic-routing-brief",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "ToF激光雷达测距基本物理原理，单一核心机制示意图，顶级学术期刊风格，严谨正确，高端，强调发射脉冲、目标反射、接收器、时间差Δt、距离公式d=cΔt/2，干净白底，矢量科学插图"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/academic-figures/scientific-schematic.md",
+      "compositionPrimary": "references/academic-figures/scientific-schematic.md",
+      "primaryTarget": "references/academic-figures/scientific-schematic.md",
+      "family": "academic-figure",
+      "preferredOutputRatio": "16:9",
+      "slotClarificationNeeded": false,
+      "routingBriefVisualTaskType": "scientific_schematic",
+      "routingBriefOutputPurpose": "academic_figure",
+      "selectionQuery": "academic scientific schematic single physical principle diagram clean vector white background labeled formula",
+      "templateCategoryIncludes": [
+        "references/academic-figures/scientific-schematic.md"
+      ],
+      "promptIncludes": [
+        "发射脉冲",
+        "d=cΔt/2",
+        "\"primary_structure_template\": \"references/academic-figures/scientific-schematic.md\""
+      ],
+      "promptBodyInjectionAbsent": true,
+      "promptExcludes": [
+        "infographic-subtype"
+      ]
+    }
+  },
+  {
+    "name": "builder-mechanism-diagram-routing-brief",
+    "runner": "build-prompt",
+    "args": [
+      "--query",
+      "画一张酶催化反应机理图，显示底物进入活性位点、过渡态、产物释放，论文风白底矢量标注"
+    ],
+    "expect": {
+      "status": "ready",
+      "selectedTarget": "references/academic-figures/mechanism-diagram.md",
+      "compositionPrimary": "references/academic-figures/mechanism-diagram.md",
+      "primaryTarget": "references/academic-figures/mechanism-diagram.md",
+      "family": "academic-figure",
+      "preferredOutputRatio": "16:9",
+      "slotClarificationNeeded": false,
+      "routingBriefVisualTaskType": "mechanism_diagram",
+      "selectionQuery": "academic mechanism diagram reaction pathway causal process clean vector white background",
+      "templateCategoryIncludes": [
+        "references/academic-figures/mechanism-diagram.md"
+      ],
+      "promptBodyInjectionAbsent": true,
+      "promptExcludes": [
+        "infographic-subtype"
+      ]
+    }
+  },
+  {
+    "name": "builder-template-id-selector-debug",
     "runner": "build-prompt",
     "args": [
       "--template-id",

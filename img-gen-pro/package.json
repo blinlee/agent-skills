@@ -10,6 +10,7 @@
   },
   "scripts": {
     "check-mode": "node scripts/check-mode.js",
+    "analyze-routing": "node scripts/analyze-routing-intent.mjs",
     "build-prompt": "node scripts/build-prompt.mjs",
     "compose": "node scripts/compose-templates.mjs",
     "generate": "node scripts/generate.js",

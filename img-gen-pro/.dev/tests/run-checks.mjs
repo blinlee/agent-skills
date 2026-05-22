@@ -60,9 +60,30 @@ function assertSelection(result, expected) {
 
 function assertBuildPrompt(result, expected) {
   if (expected.status) expectEqual(result.status, expected.status, 'status');
+  if (result.status === 'ready') {
+    try {
+      JSON.parse(result.prompt);
+    } catch (error) {
+      fail(`promptJson: ready prompt must be strict JSON (${error instanceof Error ? error.message : String(error)})`);
+    }
+    expectEqual(result.renderContract?.finalHandoffType || null, 'json-prompt-string', 'renderContract.finalHandoffType');
+    expectEqual(result.renderContract?.promptFormat || null, 'json', 'renderContract.promptFormat');
+    expectEqual(result.renderContract?.hostReadyInput?.format || null, 'json', 'renderContract.hostReadyInput.format');
+    if (String(result.prompt || '').includes('Template composition plan:')) {
+      fail('promptJson: found retired natural-language composition addon');
+    }
+    if (String(result.prompt || '').includes('{argument')) {
+      fail('promptJson: found unresolved template argument placeholder');
+    }
+  }
   if (expected.selectedTemplateId) expectEqual(result.selectedTemplateId, expected.selectedTemplateId, 'selectedTemplateId');
   if (expected.selectedTarget) expectEqual(result.selectedTarget, expected.selectedTarget, 'selectedTarget');
   if (expected.preferredOutputRatio) expectEqual(result.preferredOutputRatio, expected.preferredOutputRatio, 'preferredOutputRatio');
+  if (expected.family) expectEqual(result.family, expected.family, 'family');
+  if (expected.selectionQuery) expectEqual(result.selectionQuery, expected.selectionQuery, 'selectionQuery');
+  if ('slotClarificationNeeded' in expected) expectEqual(Boolean(result.slotClarifications?.needed), expected.slotClarificationNeeded, 'slotClarificationNeeded');
+  if (expected.routingBriefVisualTaskType) expectEqual(result.routingBrief?.visualTaskType || null, expected.routingBriefVisualTaskType, 'routingBriefVisualTaskType');
+  if (expected.routingBriefOutputPurpose) expectEqual(result.routingBrief?.outputPurpose || null, expected.routingBriefOutputPurpose, 'routingBriefOutputPurpose');
   if (expected.primaryTarget) expectEqual(result.primaryTarget || null, expected.primaryTarget, 'primaryTarget');
   if (expected.templateCategoryIncludes) {
     const categories = (result.templateCategorySummary || []).map((item) => item.target);
@@ -86,6 +107,12 @@ function assertBuildPrompt(result, expected) {
     for (const fragment of expected.promptExcludes) {
       if (String(result.prompt || '').includes(fragment)) fail(`promptExcludes: found forbidden ${JSON.stringify(fragment)}`);
     }
+  }
+  if (expected.promptBodyInjectionAbsent) {
+    const retiredMarker = ['Matched prompt', 'body'].join(' ');
+    if (String(result.prompt || '').includes(retiredMarker)) fail('promptBodyInjectionAbsent: found retired prompt body marker in prompt');
+    const sectionNames = (result.promptSourceTrace?.sections || []).map((section) => section.name);
+    if (sectionNames.includes('matched-prompt-body')) fail('promptBodyInjectionAbsent: found retired prompt body trace section');
   }
   if ('textInspectionRequired' in expected) {
     expectEqual(Boolean(result.textInspection?.textInspectionRequired), expected.textInspectionRequired, 'textInspectionRequired');

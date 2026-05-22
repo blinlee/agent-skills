@@ -18,6 +18,7 @@ import {
   inferFamilyFromTarget,
 } from './prompt-compose-utils.mjs';
 import { composeTemplatesForQuery } from './compose-templates.mjs';
+import { loadRoutingBrief } from './routing-brief.mjs';
 
 const execFile = promisify(execFileCb);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,15 +33,17 @@ function printHelp() {
 Options:
   --query <text>                    User request
   --queryfile <path>                Load request text from a file
-  --template-id <id>                Use legacy selector/template hub directly
+  --template-id <id>                Use selector/template hub directly
   --target <path>                   Use an explicit canonical template target directly
   --pick <n>                        Explicit canonical target index for --template-id
-  --legacy-selector                 Force legacy selector path for compatibility/debugging
+  --selector-debug                  Force selector path for debugging
   --reference-image <path>          Local reference-image path for traceability
   --reference-image-summary <text>  Visual summary produced by the multimodal controller after inspecting the image
   --reference-user-intent <text>    Requested changes or extra intent in reference-image mode
   --reference-keep <text>           Explicit keep note in reference-image mode
   --reference-change <text>         Explicit change note in reference-image mode
+  --routing-brief <json>            Precomputed routing brief JSON
+  --routing-brief-file <path>       Load routing brief JSON from a file
   --json                            Print structured JSON output
   -h, --help                        Show help`);
 }
@@ -52,12 +55,14 @@ function parseArgs(argv) {
     templateId: null,
     target: null,
     pick: null,
-    legacySelector: false,
+    selectorDebug: false,
     referenceImage: null,
     referenceImageSummary: null,
     referenceUserIntent: '',
     referenceKeep: '',
     referenceChange: '',
+    routingBrief: null,
+    routingBriefFile: null,
     json: false,
     help: false,
   };
@@ -70,13 +75,14 @@ function parseArgs(argv) {
     else if (arg === '--template-id') cfg.templateId = argv[++i] || null;
     else if (arg === '--target') cfg.target = argv[++i] || null;
     else if (arg === '--pick') cfg.pick = Number(argv[++i] || 0) || null;
-    else if (arg === '--legacy-selector') cfg.legacySelector = true;
-    else if (arg === '--use-composer') cfg.legacySelector = false;
+    else if (arg === '--selector-debug') cfg.selectorDebug = true;
     else if (arg === '--reference-image') cfg.referenceImage = argv[++i] || null;
     else if (arg === '--reference-image-summary') cfg.referenceImageSummary = argv[++i] || null;
     else if (arg === '--reference-user-intent') cfg.referenceUserIntent = argv[++i] || '';
     else if (arg === '--reference-keep') cfg.referenceKeep = argv[++i] || '';
     else if (arg === '--reference-change') cfg.referenceChange = argv[++i] || '';
+    else if (arg === '--routing-brief') cfg.routingBrief = argv[++i] || null;
+    else if (arg === '--routing-brief-file') cfg.routingBriefFile = argv[++i] || null;
     else throw new Error(`Unknown option: ${arg}`);
   }
   return cfg;
@@ -113,13 +119,13 @@ function composerConfidence(composition) {
   return Math.max(primary.score || 0, primary.roleScores?.primary || 0) + Math.min(12, evidenceHits * 2);
 }
 
-async function buildComposerResolution(cfg, selectionQuery) {
-  if (cfg.legacySelector || cfg.target || cfg.templateId || !selectionQuery) return null;
-  const composition = await composeTemplatesForQuery(selectionQuery);
+async function buildComposerResolution(cfg, selectionQuery, routingBrief) {
+  if (cfg.selectorDebug || cfg.target || cfg.templateId || !selectionQuery) return null;
+  const composition = await composeTemplatesForQuery(selectionQuery, routingBrief);
   const primaryTarget = composition.compositionPlan?.primary?.target || null;
   const confidence = composerConfidence(composition);
   if (!primaryTarget || confidence < 18 || !(await targetExists(primaryTarget))) {
-    return { composition, resolution: null, fallbackReason: !primaryTarget ? 'no-primary' : confidence < 18 ? 'low-confidence' : 'missing-primary-target' };
+    return { composition, resolution: null, skipReason: !primaryTarget ? 'no-primary' : confidence < 18 ? 'low-confidence' : 'missing-primary-target' };
   }
   const brief = await runJsonScript('template-brief.mjs', ['--target', primaryTarget, '--query', selectionQuery, '--json']);
   return {
@@ -132,7 +138,7 @@ async function buildComposerResolution(cfg, selectionQuery) {
   };
 }
 
-async function resolveLegacySelection(cfg, effectiveRequest) {
+async function resolveSelectorSelection(cfg, effectiveRequest) {
   let resolvedTemplateId = cfg.templateId;
   let selection = null;
   if (!resolvedTemplateId) {
@@ -296,7 +302,6 @@ function buildPromptSourceTrace({
       { name: 'applicability-anchors', source: selectedTarget, items: effectiveBrief?.applicability || [], originalItems: originalBrief?.applicability || [] },
       { name: 'use-this-structure-when', source: selectedTarget, items: effectiveBrief?.useWhen || [], originalItems: originalBrief?.useWhen || [] },
       { name: 'matched-prompt-direction', source: primarySelection ? 'prompt-intelligence' : null, items: primarySelection?.promptIntelligence?.selectedVariants?.[0]?.notes ? [primarySelection.promptIntelligence.selectedVariants[0].notes] : [] },
-      { name: 'matched-prompt-body', source: primarySelection ? 'prompt-intelligence' : null, items: primarySelection?.promptIntelligence?.selectedVariants?.[0]?.prompt ? [primarySelection.promptIntelligence.selectedVariants[0].prompt] : [] },
       { name: 'prompt-fragments', source: 'prompt-fragments', items: (fragments || []).map((item) => item.title) },
       { name: 'principles', source: 'prompt-principles', items: (familyPrinciples || []).map((item) => item.title) },
       { name: 'text-inspection', source: 'text-qa-gate', items: textInspection?.textInspectionRequired ? (textInspection.inspectionZones || []).map((item) => item.label) : [] },
@@ -307,23 +312,18 @@ function buildPromptSourceTrace({
   };
 }
 
-function buildCompositionPromptAddon(composition) {
-  if (!composition?.compositionPlan?.primary) return '';
-  const plan = composition.compositionPlan;
-  const lines = [
-    'Template composition plan:',
-    `- Primary structure template: ${plan.primary.target}`,
-  ];
-  if (plan.supporting?.length) lines.push(`- Supporting templates to borrow from: ${plan.supporting.map((item) => item.target).join(', ')}`);
-  if (plan.style?.length) lines.push(`- Style templates to borrow from: ${plan.style.map((item) => item.target).join(', ')}`);
-  if (plan.constraints?.length) lines.push(`- Constraint signals: ${plan.constraints.join(', ')}`);
-  lines.push('- Use the primary template for the visual skeleton; borrow only compatible structure/style/constraints from supporting templates. Do not merge incompatible product/UI/report metaphors.');
-  return lines.join('\n');
-}
-
 function appendCompositionPrompt(prompt, composition) {
-  const addon = buildCompositionPromptAddon(composition);
-  return addon ? `${prompt}\n\n${addon}\n` : prompt;
+  const plan = composition?.compositionPlan;
+  if (!plan?.primary?.target) return prompt;
+  const parsed = JSON.parse(prompt);
+  parsed.template_composition_plan = {
+    primary_structure_template: plan.primary.target,
+    supporting_templates_to_borrow_from: (plan.supporting || []).map((item) => item.target),
+    style_templates_to_borrow_from: (plan.style || []).map((item) => item.target),
+    constraint_signals: plan.constraints || [],
+    composition_rule: 'Use the primary template for the visual skeleton; borrow only compatible structure, style, and constraints from supporting templates. Do not merge incompatible product, UI, or report metaphors.',
+  };
+  return `${JSON.stringify(parsed, null, 2)}\n`;
 }
 
 function printHuman(result) {
@@ -372,26 +372,28 @@ async function main() {
     ? buildReferenceRebuild(cfg)
     : null;
   const effectiveRequest = referenceRebuild?.rebuiltRequest || directQuery;
-  const selectionQuery = referenceRebuild?.selectionQuery || effectiveRequest;
+  const routingBrief = await loadRoutingBrief(cfg.routingBrief, cfg.routingBriefFile, referenceRebuild?.selectionQuery || effectiveRequest);
+  const selectionQuery = routingBrief.routingQuery || referenceRebuild?.selectionQuery || effectiveRequest;
 
   const explicitTargetResolved = await resolveExplicitTarget(cfg, selectionQuery);
-  const composerResolved = explicitTargetResolved ? null : await buildComposerResolution(cfg, selectionQuery);
+  const composerResolved = explicitTargetResolved ? null : await buildComposerResolution(cfg, selectionQuery, routingBrief);
   let resolved = explicitTargetResolved || composerResolved?.resolution || null;
   const templateComposition = resolved && composerResolved?.resolution ? composerResolved.composition : null;
-  const composerFallbackReason = composerResolved?.fallbackReason || null;
-  if (!resolved) resolved = await resolveLegacySelection(cfg, selectionQuery);
+  const composerSkipReason = composerResolved?.skipReason || null;
+  if (!resolved) resolved = await resolveSelectorSelection(cfg, selectionQuery);
   if (shouldBlockOnClarification(resolved.selection) && !resolved.brief) {
     const early = {
       status: 'needs-direction-clarify',
       effectiveRequest,
       selectionQuery,
+      routingBrief,
       referenceRebuild,
       selection: resolved.selection,
       selectedTemplateId: resolved.resolvedTemplateId,
       selectedTarget: resolved.selection.candidates?.[0]?.rankedTargets?.[0]?.target || null,
       primaryTarget: null,
       templateComposition,
-      composerFallbackReason,
+      composerSkipReason,
       prompt: null,
     };
     if (cfg.json) {
@@ -433,11 +435,11 @@ async function main() {
   const profile = profileForTemplate(engineProfileId, selectedTarget, overlapMap);
   const familyMeta = (principles.families || []).find((item) => item.task_family === profile.primaryTaskFamily) || null;
   const family = profile.primaryTaskFamily || inferFamilyFromTarget(selectedTarget);
-  const ratio = detectRatio(selectionQuery, family, familyMeta?.default_aspect_ratios || []);
-  const platform = detectPlatform(selectionQuery);
-  const textInspection = buildTextInspection(selectionQuery, family);
+  const ratio = detectRatio(effectiveRequest, family, familyMeta?.default_aspect_ratios || []);
+  const platform = detectPlatform(effectiveRequest);
+  const textInspection = buildTextInspection(effectiveRequest, family);
   const slotClarifications = buildSlotClarifications({
-    query: selectionQuery,
+    query: effectiveRequest,
     family,
     clarifyRules,
     brief: effectiveBrief,
@@ -457,12 +459,13 @@ async function main() {
       status: 'needs-slot-clarify',
       effectiveRequest,
       selectionQuery,
+      routingBrief,
       referenceRebuild,
       selectedTemplateId,
       selectedTarget,
       primaryTarget,
       templateComposition,
-      composerFallbackReason,
+      composerSkipReason,
       templateCategorySummary,
       templateCategoryUserSummary,
       family,
@@ -519,12 +522,13 @@ async function main() {
     status: 'ready',
     effectiveRequest,
     selectionQuery,
+    routingBrief,
     referenceRebuild,
     selectedTemplateId,
     selectedTarget,
     primaryTarget,
     templateComposition,
-    composerFallbackReason,
+    composerSkipReason,
     templateCategorySummary,
     templateCategoryUserSummary,
     family,

@@ -8,6 +8,7 @@ import {
   extractAsciiTokens,
   containsPhrase,
 } from './prompt-bridge-utils.mjs';
+import { buildRoutingBrief } from './routing-brief.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(__dirname);
@@ -217,13 +218,15 @@ function printHuman(result) {
   }
 }
 
-export async function composeTemplatesForQuery(query) {
+export async function composeTemplatesForQuery(query, routingBrief = null) {
   const profiles = await loadProfiles();
-  const queryTokens = tokenizeForComposer(query);
-  const intent = inferIntent(query, queryTokens);
-  const scored = (profiles.profiles || []).map((profile) => scoreProfile(query, queryTokens, profile));
+  const brief = routingBrief || buildRoutingBrief(query);
+  const matchingQuery = brief.routingQuery || query;
+  const queryTokens = tokenizeForComposer(matchingQuery);
+  const intent = inferIntent(matchingQuery, queryTokens);
+  const scored = (profiles.profiles || []).map((profile) => scoreProfile(matchingQuery, queryTokens, profile));
   const compositionPlan = buildCompositionPlan(scored);
-  return { query, intent, compositionPlan, source: profilesFile };
+  return { query, matchingQuery, routingBrief: brief, intent, compositionPlan, source: profilesFile };
 }
 
 async function main() {

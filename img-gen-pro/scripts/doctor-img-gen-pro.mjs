@@ -91,17 +91,17 @@ async function main() {
   }
 
   const skillMd = await readFile(path.join(root, 'SKILL.md'), 'utf8');
-  if (/build-prompt\.mjs\s+只走\s+\*\*Template Composer\*\*/u.test(skillMd) || /不再作为 build-prompt 兼容入口/u.test(skillMd)) {
-    warn('SKILL.md still advertises composer-only behavior; ensure docs match actual fallback implementation');
+  if (/composer-first\s*\+\s*.+selector|不再作为 build-prompt 兼容入口/u.test(skillMd)) {
+    warn('SKILL.md still contains retired selector wording; align docs with routing-brief-first behavior');
   } else {
-    ok('SKILL.md no longer overstates composer-only behavior');
+    ok('SKILL.md describes current routing-brief-first behavior');
   }
 
   const readme = await readFile(path.join(root, 'README.md'), 'utf8');
-  if (/There is no legacy selector compatibility path inside `build-prompt\.mjs`\./.test(readme)) {
-    warn('README.md still says build-prompt has no legacy selector compatibility path');
+  if (/composer-first\s*\+\s*.+selector/i.test(readme)) {
+    warn('README.md still contains retired selector wording');
   } else {
-    ok('README.md does not overstate composer-only behavior');
+    ok('README.md avoids retired selector wording');
   }
 
   const gitignore = await readFile(path.join(root, '.gitignore'), 'utf8');

@@ -16,7 +16,9 @@ coverage/
 .idea/
 
 # Local docs / notes not intended for the public repo surface
-docs/
+docs/*
+!docs/skill-creator-pro/
+!docs/skill-creator-pro/**
 
 # Dry-run / local test artifacts.
 .dev/tmp/

@@ -4,13 +4,13 @@ This directory manages the local source-of-truth skill repos and mirrors them in
 
 ## Source-of-truth repos
 
-- `invest-analysis-pro` -> `/home/ubuntu/.openclaw/skills/invest-analysis-pro`
-- `img-gen-pro` -> `/home/ubuntu/.openclaw/skills/img-gen-pro`
-- `LLM-WIKI` -> `/home/ubuntu/.openclaw/.workspace/project/LLM-WIKI`
+- `invest-analysis-pro` -> `/Users/blinlee/.openclaw/skills/invest-analysis-pro`
+- `img-gen-pro` -> `/Users/blinlee/.openclaw/skills/img-gen-pro`
+- `LLM-WIKI` -> `/Users/blinlee/.openclaw/.workspace/project/LLM-WIKI`
 
 ## Aggregate publish repo
 
-- `/home/ubuntu/.openclaw/.workspace/project/invest-analysis-pro`
+- `/Users/blinlee/.openclaw/.workspace/project/agent-skills`
 
 The aggregate repo is the publish mirror that pushes to:
 
@@ -24,7 +24,7 @@ Do not treat the aggregate repo as the primary editing surface for the three ski
 Sync one skill into the aggregate repo:
 
 ```bash
-python scripts/skill-sync/sync_skill.py /home/ubuntu/.openclaw/.workspace/project/invest-analysis-pro <skill-name>
+python scripts/skill-sync/sync_skill.py /Users/blinlee/.openclaw/.workspace/project/agent-skills <skill-name>
 ```
 
 Sync all three skills:

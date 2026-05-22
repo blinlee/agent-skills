@@ -15,6 +15,7 @@ import {
   scoreTemplateTarget,
 } from './prompt-bridge-utils.mjs';
 import { loadPromptEngine, rankFragments } from './prompt-compose-utils.mjs';
+import { buildRoutingBrief } from './routing-brief.mjs';
 
 function getRouting(promptEngine) {
   return promptEngine?.routing || {};
@@ -365,14 +366,27 @@ function shouldForcePairClarification(query, pairConfig, rankedById, topTemplate
   return hits.some(Boolean);
 }
 
-function maybeBuildClarification(query, ranked, promptEngine) {
+function routingBriefSettlesPair(routingBrief, pairConfig) {
+  const templates = new Set(pairConfig?.templates || []);
+  if (routingBrief?.visualTaskType === 'ui_mockup' && routingBrief?.outputPurpose === 'live_commerce_screen') {
+    return templates.has('ui-screenshot-system');
+  }
+  if (['commerce_visual', 'concept_product_visual'].includes(routingBrief?.visualTaskType)) {
+    return templates.has('product-commerce-visual');
+  }
+  return false;
+}
+
+function maybeBuildClarification(query, ranked, promptEngine, routingBrief = null, rawQuery = query) {
   const [top, runnerUp] = ranked;
   if (!top) return null;
 
-  const language = isChineseQuery(query) ? 'zh' : 'en';
+  const language = isChineseQuery(rawQuery) ? 'zh' : 'en';
   const rankedById = new Map(ranked.map((item) => [item.templateId, item]));
+  if (routingBriefSettlesPair(routingBrief, { templates: [top.templateId] })) return null;
 
   for (const [key, pairConfig] of Object.entries(getPairwiseClarifiers(promptEngine))) {
+    if (routingBriefSettlesPair(routingBrief, pairConfig)) continue;
     if (!shouldForcePairClarification(query, pairConfig, rankedById, top.templateId)) continue;
     const clarification = buildPairClarification(pairConfig, language, rankedById);
     if (!clarification) continue;
@@ -450,15 +464,19 @@ async function main() {
   }
 
   const query = await readQuery(cfg.query, cfg.queryFile);
+  const routingBrief = buildRoutingBrief(query);
+  const matchingQuery = routingBrief.routingQuery || query;
   const { retrievalIndex, promptIntelligenceIndex, promptCorpusIndex } = await readIndexes();
   const promptEngine = await loadPromptEngine();
   const templateDocs = await loadTemplateDocs(retrievalIndex);
   const promptMaps = buildPromptMaps(promptIntelligenceIndex, promptCorpusIndex);
-  const ranked = rankTemplates(query, retrievalIndex, templateDocs, promptMaps, promptEngine, Math.max(1, cfg.top || 3));
-  const clarification = maybeBuildClarification(query, ranked, promptEngine);
+  const ranked = rankTemplates(matchingQuery, retrievalIndex, templateDocs, promptMaps, promptEngine, Math.max(1, cfg.top || 3));
+  const clarification = maybeBuildClarification(matchingQuery, ranked, promptEngine, routingBrief, query);
 
   const output = {
     query,
+    matchingQuery,
+    routingBrief,
     selectionRule: `${retrievalIndex.source?.rule || 'category -> style -> scene -> exampleCases'} -> promptVariants -> promptCorpus`,
     schemaBoundary: retrievalIndex.schemaBoundary,
     promptSources: {

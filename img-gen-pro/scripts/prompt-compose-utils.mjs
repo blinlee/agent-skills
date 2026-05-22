@@ -63,11 +63,12 @@ export function profileForTemplate(templateId, target, overlapMap) {
 
 export function inferFamilyFromTarget(target = '') {
   const value = normalizeText(target);
-  if (/technical-diagrams|system-architecture|flowchart|sequence-diagram|state-machine|er-diagram|mind-map|network-topology/.test(value)) return 'infographic';
+  if (/academic-figures|scientific-schematic|publication-chart|method-pipeline-overview/.test(value)) return 'academic-figure';
+  if (/technical-diagrams|system-architecture|flowchart|sequence-diagram|state-machine|er-diagram|mind-map|network-topology/.test(value)) return 'technical-diagram';
   if (/editing-workflows\/multi-reference-composition|text-on-objects/.test(value)) return 'portrait-photo';
   if (/ui-mockups|dashboard|landing-page|social-interface|live-commerce/.test(value)) return 'ui-mockup';
   if (/personalized-beauty-report/.test(value)) return 'ecommerce-conversion';
-  if (/infographics|scientific|diagram|report-page|visual-report|academic-figures/.test(value)) return 'infographic';
+  if (/infographics|scientific|diagram|report-page|visual-report/.test(value)) return 'infographic';
   if (/poster|campaign|typography/.test(value)) return 'poster-layout';
   if (/ecommerce|product-visuals|brand-identity|touchpoint/.test(value)) return 'ecommerce-conversion';
   if (/character-sheet|collectible|fashion-lookbook/.test(value)) return 'character-sheet';
@@ -99,7 +100,12 @@ export function rankFragments(query, templateId, promptFragmentsIndex, limit = 3
 }
 
 export function principlesForFamily(family, principlesData) {
-  return (principlesData.principles || []).filter((item) => (item.applies_to || []).includes(family));
+  const familyAliases = {
+    'academic-figure': ['infographic'],
+    'technical-diagram': ['infographic'],
+  };
+  const families = new Set([family, ...(familyAliases[family] || [])]);
+  return (principlesData.principles || []).filter((item) => (item.applies_to || []).some((appliesTo) => families.has(appliesTo)));
 }
 
 export function detectPlatform(request) {
@@ -136,6 +142,12 @@ export function detectRatio(request, family, defaultRatios = []) {
   if (family === 'infographic') {
     if (/系统架构|架构图|微服务|api gateway|消息队列|postgresql|redis|sequence|state machine|er 图|拓扑|flowchart/.test(text)) return '16:9';
   }
+  if (family === 'technical-diagram') {
+    if (/系统架构|架构图|微服务|api gateway|消息队列|postgresql|redis|sequence|state machine|er 图|拓扑|flowchart|network|topology/.test(text)) return '16:9';
+  }
+  if (family === 'academic-figure') {
+    if (/论文|期刊|paper|publication|figure|原理图|机制图|实验装置|scientific|schematic|mechanism/.test(text)) return '16:9';
+  }
   if (/竖版|竖屏/.test(text)) return ['social-post', 'ui-mockup'].includes(family) ? '9:16' : '3:4';
   if (/横版/.test(text)) return '16:9';
   if (/方图|正方形/.test(text)) return '1:1';
@@ -143,6 +155,8 @@ export function detectRatio(request, family, defaultRatios = []) {
     'social-post': '9:16',
     'ui-mockup': '16:9',
     infographic: '3:4',
+    'technical-diagram': '16:9',
+    'academic-figure': '16:9',
     'poster-layout': '3:4',
     'ecommerce-conversion': '4:5',
     'character-sheet': '16:9',
@@ -166,7 +180,7 @@ export function inferTextProfile(request, family) {
     '商品卡', '卖点', '徽章', '标签', '字幕', '台词', 'callout', 'headline',
   ];
   const denseTextCues = ['小字', '高密度', '信息图', '评论区', '弹幕', '商品卡', 'dashboard', '告警列表'];
-  const textHeavyFamilies = new Set(['infographic', 'ui-mockup', 'ecommerce-conversion', 'character-sheet', 'social-post']);
+  const textHeavyFamilies = new Set(['infographic', 'academic-figure', 'technical-diagram', 'ui-mockup', 'ecommerce-conversion', 'character-sheet', 'social-post']);
 
   const matchedTextCues = textCues.filter((cue) => text.includes(cue) || textLower.includes(cue));
   const matchedCriticalCues = criticalCues.filter((cue) => text.includes(cue) || textLower.includes(cue));
@@ -179,7 +193,7 @@ export function inferTextProfile(request, family) {
   const riskNotes = [];
   if (criticalTextPresent) riskNotes.push('critical user-visible text is part of the task');
   if (matchedDenseCues.length) riskNotes.push('small or dense text zones are likely present and need explicit inspection');
-  if (['infographic', 'ui-mockup', 'character-sheet', 'social-post'].includes(family)) {
+  if (['infographic', 'academic-figure', 'technical-diagram', 'ui-mockup', 'character-sheet', 'social-post'].includes(family)) {
     riskNotes.push('the image depends on readable labels / UI copy, not just atmosphere');
   }
   if (family === 'ecommerce-conversion') {
@@ -207,11 +221,13 @@ export function buildInspectionZones(request, family, textProfile) {
   if (/cta|立即购买|button|按钮|抢购|call to action/.test(text)) push('cta', 'CTA / 按钮区', 'call-to-action text must survive real viewing');
   if (/商品卡|product card|offer block/.test(text)) push('product-card', '商品卡 / Offer 区', 'commerce card text and hierarchy must read clearly');
   if (/评论区|弹幕|comment/.test(text)) push('social-overlay', '评论区 / 弹幕区', 'dense overlay text must not collapse into mush');
-  if (/label|labels|标注|callout|legend|图例/.test(text) || family === 'infographic') push('labels', '标签 / 标注区', 'labels anchor the explanatory structure');
+  if (/label|labels|标注|callout|legend|图例/.test(text) || ['infographic', 'academic-figure', 'technical-diagram'].includes(family)) push('labels', '标签 / 标注区', 'labels anchor the explanatory structure');
   if (/nav|navigation|导航|kpi|dashboard/.test(text) || family === 'ui-mockup') push('ui-copy', '导航 / KPI / 模块标题区', 'screen text should feel interface-readable');
   if (!zones.length) {
     if (family === 'ecommerce-conversion') push('commerce-copy', '标题 / 价格 / CTA 区', 'default commerce text-bearing risk');
     else if (family === 'ui-mockup') push('ui-copy', '界面文字区', 'default UI text-bearing risk');
+    else if (family === 'technical-diagram') push('labels', '节点 / 连线 / 关系标注区', 'default technical diagram text-bearing risk');
+    else if (family === 'academic-figure') push('labels', '标注 / 公式 / 图例区', 'default academic figure text-bearing risk');
     else if (family === 'infographic') push('labels', '标注 / 说明区', 'default infographic text-bearing risk');
     else push('general-text', '关键文字区', 'text-bearing request requires explicit check');
   }
@@ -372,6 +388,7 @@ export function buildSlotClarifications({ query, family, clarifyRules, allowDefa
   const questions = [];
   const defaultsApplied = [];
   for (const rule of rules) {
+    if (rule.id === 'ratio' && ratio) continue;
     const shouldConsider = !rule.whenAny?.length || hasAny(query, rule.whenAny);
     const alreadySpecified = rule.requireAny?.length ? hasAny(query, rule.requireAny) : false;
     if (!shouldConsider || alreadySpecified) continue;
@@ -428,6 +445,22 @@ export function taskSpecificRequirements(request, family, platform, ratio) {
       'Organize the board into clearly separated sections, labels, callouts, and supporting explanatory blocks.',
       'If the topic is conceptual, make the comparison understandable at a glance.',
       `Compose for ${ratio} and keep the board self-contained.`,
+    ];
+  }
+  if (family === 'technical-diagram') {
+    return [
+      'Render the image as a precise technical diagram with clear nodes, edges, labels, and directional relationships.',
+      'Preserve the requested entities and relationships as the structure of the diagram, not as decorative captions.',
+      'Use diagram grammar appropriate to the request, such as architecture blocks, ER entities, sequence lanes, flow steps, or topology nodes.',
+      `Compose for ${ratio} with readable labels and unambiguous connectors.`,
+    ];
+  }
+  if (family === 'academic-figure') {
+    return [
+      'Render the image as a publication-grade scientific figure with a clean explanatory structure.',
+      'Preserve the requested scientific content, labels, formulae, arrows, and mechanism boundaries as first-order requirements.',
+      'Use precise schematic hierarchy instead of decorative infographic filler.',
+      `Compose for ${ratio} with labels and equations large enough to inspect.`,
     ];
   }
   if (family === 'poster-layout') {
@@ -541,6 +574,88 @@ export function buildReferenceRebuild({
   };
 }
 
+const ARGUMENT_PLACEHOLDER_RE = /\{argument\s+name=(?:"([^"]+)"|'([^']+)'|([^}\s]+))\s+default=(?:"([^"]*)"|'([^']*)'|([^}\s]*))\}/g;
+
+function resolveTemplateArgumentPlaceholders(value) {
+  if (Array.isArray(value)) return value.map((item) => resolveTemplateArgumentPlaceholders(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, resolveTemplateArgumentPlaceholders(item)]),
+    );
+  }
+  if (typeof value !== 'string') return value;
+  return value.replace(ARGUMENT_PLACEHOLDER_RE, (_match, dqName, sqName, bareName, dqDefault, sqDefault, bareDefault) => {
+    const fallbackName = dqName || sqName || bareName || '';
+    return dqDefault ?? sqDefault ?? bareDefault ?? fallbackName;
+  });
+}
+
+function requestWantsCleanAcademicSurface(request, family) {
+  const text = String(request || '');
+  return ['academic-figure', 'technical-diagram', 'infographic'].includes(family)
+    && /白底|white background|论文|学术|顶级期刊|Nature|Science|CHI|publication|paper|矢量|vector/i.test(text)
+    && !/暗色|dark|black background|黑底/i.test(text);
+}
+
+function filterConflictingStyleStrings(items) {
+  const patterns = [
+    /暗色|deep slate|黑底|dark background/i,
+    /README|blog|头图/i,
+    /baoyu-diagram/i,
+    /工程感/i,
+  ];
+  return (items || []).filter((item) => !patterns.some((pattern) => pattern.test(String(item || ''))));
+}
+
+function applyCleanAcademicSurfaceOverrides(promptObject, request, family) {
+  if (!requestWantsCleanAcademicSurface(request, family)) return promptObject;
+
+  if (typeof promptObject.type === 'string') {
+    promptObject.type = promptObject.type
+      .replace(/（暗色工程感）/g, '（学术白底矢量版）')
+      .replace(/暗色工程感/g, '学术白底矢量');
+  }
+  promptObject.goal = 'Generate a publication-grade clean vector diagram for the requested content, suitable for an academic paper figure.';
+
+  if (promptObject.canvas && typeof promptObject.canvas === 'object') {
+    promptObject.canvas.background = 'clean white #FFFFFF with optional very subtle light-gray alignment guides only if they improve readability';
+    promptObject.canvas.outer_padding = promptObject.canvas.outer_padding || '60px';
+  }
+
+  if (promptObject.title_strip && typeof promptObject.title_strip === 'object') {
+    promptObject.title_strip.subtitle = 'publication-style technical figure';
+    promptObject.title_strip.position = 'top-left or omitted if a journal-style figure should rely on labels instead of a banner';
+  }
+
+  if (promptObject.node_style && typeof promptObject.node_style === 'object') {
+    promptObject.node_style.fill = 'white or very light role-tinted fill with high readability on a white background';
+    promptObject.node_style.label = 'high-contrast dark neutral text, readable at normal figure size';
+  }
+
+  if (promptObject.legend && typeof promptObject.legend === 'object') {
+    promptObject.legend.style = 'minimal white-background figure legend with thin gray border and readable dark text';
+  }
+
+  if (promptObject.constraints && typeof promptObject.constraints === 'object') {
+    promptObject.constraints.must_keep = [
+      ...filterConflictingStyleStrings(promptObject.constraints.must_keep),
+      'clean white academic figure surface',
+      'vector-style diagram grammar with readable labels',
+    ];
+    promptObject.constraints.avoid = [
+      ...filterConflictingStyleStrings(promptObject.constraints.avoid),
+      'dark README/blog engineering-dashboard styling when the request asks for a white academic paper figure',
+    ];
+  }
+
+  promptObject.style_overrides = {
+    reason: 'user requested a white-background academic/vector figure; incompatible dark engineering template defaults were replaced inside the JSON object',
+    surface: 'clean white academic vector figure',
+  };
+
+  return promptObject;
+}
+
 export function composePromptDraft({
   effectiveRequest,
   brief,
@@ -552,63 +667,67 @@ export function composePromptDraft({
   fragments,
   principles,
 }) {
-  const lines = [];
-  lines.push(`Create a ${ratio} image for this request: ${effectiveRequest}`);
-  if (platform !== 'unspecified') lines.push(`Use ${platform} platform / layout grammar only when it strengthens the requested output.`);
-  if (brief?.title) lines.push(`Target outcome shape: ${brief.title}.`);
-
-  const applicability = (brief?.applicability || []).slice(0, 3);
-  if (applicability.length) {
-    lines.push('Applicability anchors:');
-    applicability.forEach((item) => lines.push(`- ${item}`));
+  let canonical = null;
+  if (brief?.firstJsonTemplate) {
+    try {
+      canonical = JSON.parse(brief.firstJsonTemplate);
+    } catch {
+      canonical = null;
+    }
   }
-
-  const useWhen = (brief?.useWhen || []).slice(0, 4);
-  if (useWhen.length) {
-    lines.push('Use this structure when:');
-    useWhen.forEach((item) => lines.push(`- ${item}`));
-  }
-
   const variant = primarySelection?.promptIntelligence?.selectedVariants?.[0] || null;
-  if (variant?.notes) lines.push(`Matched prompt direction: ${variant.label} — ${variant.notes}`);
-  if (variant?.prompt) {
-    lines.push('Matched prompt body to preserve semantically:');
-    lines.push(variant.prompt);
-  }
-
-  if (fragments.length) {
-    lines.push('Borrow these concrete structural cues from prompt exemplars:');
-    fragments.slice(0, 3).forEach((entry) => {
-      lines.push(`- ${entry.title}: ${entry.summary}`);
-      (entry.structuralHints || []).slice(0, 5).forEach((hint) => lines.push(`  - ${hint}`));
-    });
-  }
-
-  const principleSummary = (principles || []).slice(0, 6);
-  if (principleSummary.length) {
-    lines.push('High-signal prompt principles from prompt methodology:');
-    principleSummary.forEach((item) => lines.push(`- ${item.title}: ${item.summary}`));
-  }
-
   const requirements = taskSpecificRequirements(effectiveRequest, family, platform, ratio);
-  if (requirements.length) {
-    lines.push('Task requirements:');
-    requirements.forEach((item) => lines.push(`- ${item}`));
-  }
-
   const textRequirements = textRenderingRequirements(effectiveRequest, family, textInspection);
-  if (textRequirements.length) {
-    lines.push('Text rendering requirements:');
-    textRequirements.forEach((item) => lines.push(`- ${item}`));
-  }
-
   const antiPatterns = unique((principles || []).flatMap((item) => item.anti_patterns || []).concat(brief?.avoid || [])).slice(0, 12);
-  if (antiPatterns.length) {
-    lines.push('Avoid:');
-    antiPatterns.forEach((item) => lines.push(`- ${item}`));
-  }
+  const canonicalPrompt = canonical && typeof canonical === 'object' && !Array.isArray(canonical)
+    ? resolveTemplateArgumentPlaceholders(canonical)
+    : null;
+  const promptObject = canonicalPrompt
+    ? { ...canonicalPrompt }
+    : {
+      type: brief?.title || family || 'image_generation_task',
+      goal: 'Generate the requested image using the selected canonical template structure.',
+    };
+  applyCleanAcademicSurfaceOverrides(promptObject, effectiveRequest, family);
 
-  return `${lines.join('\n')}\n`;
+  promptObject.user_request = effectiveRequest;
+  promptObject.output = {
+    aspect_ratio: ratio,
+    platform: platform === 'unspecified' ? null : platform,
+    format_contract: 'This prompt is a strict JSON object serialized as the image prompt string.',
+  };
+  promptObject.selected_template = {
+    target: brief?.target || null,
+    title: brief?.title || null,
+    family,
+    canonical_surface_type: canonical ? 'json-first' : 'json-generated-from-structured-template',
+    applicability: (brief?.applicability || []).slice(0, 3),
+    use_when: (brief?.useWhen || []).slice(0, 4),
+  };
+  if (variant?.notes) {
+    promptObject.matched_prompt_direction = {
+      label: variant.label,
+      notes: variant.notes,
+    };
+  }
+  promptObject.prompt_exemplars = (fragments || []).slice(0, 3).map((entry) => ({
+    title: entry.title,
+    summary: entry.summary,
+    structural_hints: (entry.structuralHints || []).slice(0, 5),
+  }));
+  promptObject.prompt_principles = (principles || []).slice(0, 6).map((item) => ({
+    title: item.title,
+    summary: item.summary,
+  }));
+  promptObject.task_requirements = requirements;
+  promptObject.text_rendering_requirements = textRequirements;
+  promptObject.text_inspection = {
+    required: Boolean(textInspection?.textInspectionRequired),
+    zones: textInspection?.inspectionZones || [],
+    delivery_rule: textInspection?.deliveryRule || null,
+  };
+  promptObject.avoid = antiPatterns;
+  return `${JSON.stringify(promptObject, null, 2)}\n`;
 }
 
 export function buildRenderContract({ brief, promptDraft, ratio, platform, family }) {
@@ -618,19 +737,21 @@ export function buildRenderContract({ brief, promptDraft, ratio, platform, famil
     ratio,
     platform,
     canonicalSurfaceType: canonicalJson ? 'json-first' : 'structured-natural-language',
-    finalHandoffType: 'normalized-text',
+    finalHandoffType: 'json-prompt-string',
+    promptFormat: 'json',
     canonicalJsonTemplate: canonicalJson,
-    normalizedTextPrompt: promptDraft,
+    jsonPrompt: promptDraft,
     hostReadyInput: {
       type: 'prompt-string',
+      format: 'json',
       value: promptDraft,
     },
     notes: [
       canonicalJson
-        ? 'The selected canonical template is JSON-first, but the current builder renders a normalized prompt string for model handoff.'
-        : 'The selected canonical template is structured natural language and is handed off as a normalized prompt string.',
-      'Mode A scripts consume prompt text via --prompt or --promptfile.',
-      'Mode B host-native image tools should receive the normalized prompt string unless a future adapter explicitly maps to structured tool args.',
+        ? 'The selected canonical template is JSON-first; the final image prompt is the rendered JSON object serialized as a prompt string.'
+        : 'The selected canonical template has no JSON block; the final image prompt is a generated strict JSON object serialized as a prompt string.',
+      'Mode A scripts consume prompt text via --prompt or --promptfile; the prompt text itself must remain valid JSON.',
+      'Mode B host-native image tools should receive the JSON prompt string directly.',
     ],
   };
 }

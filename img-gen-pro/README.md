@@ -93,6 +93,12 @@ npm run check-mode -- --json
 npm run build-prompt -- --query "Landing page hero visual for an AI video app" --json
 ```
 
+Or inspect the routing brief that separates template-matching intent from content payload:
+
+```bash
+npm run analyze-routing -- --query "ToF lidar ranging principle diagram with formula labels" --json
+```
+
 Or inspect composition without full build:
 
 ```bash
@@ -123,6 +129,7 @@ If you do not want to use npm scripts, the direct entrypoints are:
 
 ```bash
 node scripts/check-mode.js --json
+node scripts/analyze-routing-intent.mjs --query "..." --json
 node scripts/build-prompt.mjs --query "..." --json
 node scripts/compose-templates.mjs --query "..." --json
 node scripts/generate.js --prompt "..."

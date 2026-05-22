@@ -93,6 +93,12 @@ npm run check-mode -- --json
 npm run build-prompt -- --query "AI 视频应用落地页主视觉" --json
 ```
 
+如果想先看 routing brief，确认哪些信息参与模板匹配、哪些信息保留为内容负载：
+
+```bash
+npm run analyze-routing -- --query "ToF 激光雷达测距原理图，包含公式标注" --json
+```
+
 如果只想看模板组合结果：
 
 ```bash
@@ -123,6 +129,7 @@ npm run doctor
 
 ```bash
 node scripts/check-mode.js --json
+node scripts/analyze-routing-intent.mjs --query "..." --json
 node scripts/build-prompt.mjs --query "..." --json
 node scripts/compose-templates.mjs --query "..." --json
 node scripts/generate.js --prompt "..."

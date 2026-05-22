@@ -2,9 +2,9 @@
   "version": 1,
   "status": "composer-seed-profiles",
   "notes": [
-    "Canonical template profiles drive the new Template Composer path.",
-    "Profiles are intentionally role/intent based; they do not replace legacy template hubs yet.",
-    "Start with high-risk/high-frequency canonical templates and expand by audit evidence."
+    "Canonical template profiles drive template routing from visual intent.",
+    "Profiles are role/intent based; domain content should fill prompts after routing instead of dominating template selection.",
+    "Expand profiles by regression evidence rather than narrow keyword patches."
   ],
   "profiles": [
     {
@@ -65,6 +65,11 @@
         "redis",
         "architecture diagram",
         "system architecture",
+        "technical system architecture",
+        "component boundary",
+        "data flow",
+        "component",
+        "boundary",
         "多传感器",
         "SLAM",
         "sensor fusion",
@@ -90,6 +95,7 @@
     {
       "target": "references/academic-figures/scientific-schematic.md",
       "roles": [
+        "primary",
         "supporting",
         "style"
       ],
@@ -99,16 +105,21 @@
         "scientific-illustration"
       ],
       "content": [
-        "mechanism",
+        "physical-principle",
+        "scientific-principle",
         "concept",
         "method",
         "system",
-        "experiment"
+        "experiment",
+        "optical-setup",
+        "formula"
       ],
       "structure": [
         "schematic",
-        "pipeline",
+        "principle-diagram",
         "labeled-diagram",
+        "experimental-apparatus",
+        "single-mechanism",
         "overview-figure"
       ],
       "style": [
@@ -135,11 +146,80 @@
         "publication",
         "schematic",
         "scientific figure",
+        "scientific schematic",
+        "physical principle",
+        "single physical principle",
+        "principle diagram",
+        "原理图",
+        "物理原理",
+        "基本原理",
+        "实验装置",
+        "公式",
         "white background",
         "白底",
         "矢量"
       ],
       "negativeFor": []
+    },
+    {
+      "target": "references/academic-figures/mechanism-diagram.md",
+      "roles": [
+        "primary",
+        "supporting"
+      ],
+      "purpose": [
+        "paper-figure",
+        "research-explanation",
+        "scientific-mechanism"
+      ],
+      "content": [
+        "mechanism",
+        "reaction",
+        "pathway",
+        "catalysis",
+        "biology-pathway",
+        "chemistry-pathway",
+        "material-evolution",
+        "failure-path"
+      ],
+      "structure": [
+        "mechanism-diagram",
+        "reaction-pathway",
+        "causal-chain",
+        "multi-stage-process"
+      ],
+      "style": [
+        "academic",
+        "publication",
+        "clean-vector",
+        "white-background"
+      ],
+      "constraints": [
+        "short-labels",
+        "publication-quality",
+        "no-fictional-data"
+      ],
+      "positiveTerms": [
+        "机理",
+        "机制",
+        "反应路径",
+        "转化",
+        "演化",
+        "因果",
+        "通路",
+        "失效路径",
+        "催化",
+        "酶",
+        "reaction pathway",
+        "mechanism diagram",
+        "causal process",
+        "catalysis"
+      ],
+      "negativeFor": [
+        "product-rnd-board",
+        "ui-screenshot",
+        "commerce-card"
+      ]
     },
     {
       "target": "references/academic-figures/publication-chart.md",
@@ -225,12 +305,7 @@
         "bento",
         "infographic",
         "explainer",
-        "知识卡片",
-        "板块",
-        "风险提示",
-        "市场快照",
-        "研报",
-        "策略"
+        "知识卡片"
       ],
       "negativeFor": []
     },
@@ -283,6 +358,9 @@
         "沪深",
         "创业板",
         "科创",
+        "visual report",
+        "research report page",
+        "securities dashboard",
         "financial report",
         "market snapshot"
       ],

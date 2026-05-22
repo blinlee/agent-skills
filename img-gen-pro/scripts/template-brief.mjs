@@ -310,16 +310,18 @@ async function main() {
   result.query = query;
   result.rankedTargets = rankedTargets;
   result.promptIntelligence = rankedIntelligence;
-  result.primaryTemplateId = templateRecord?.id || rankedIntelligence[0]?.id || null;
+  result.primaryTemplateId = templateRecord?.id || null;
   result.promptSources = {
     promptIntelligence: promptIntelligenceIndex.source,
     promptCorpus: promptCorpusIndex.source,
   };
-  const engineProfile = profileForTemplate(result.primaryTemplateId, resolvedTarget, promptEngine.overlapMap);
+  const engineProfileId = result.primaryTemplateId || resolvedTarget;
+  const fragmentTemplateId = result.primaryTemplateId || rankedIntelligence[0]?.id || resolvedTarget;
+  const engineProfile = profileForTemplate(engineProfileId, resolvedTarget, promptEngine.overlapMap);
   const engineFamilyMeta = (promptEngine.principles.families || []).find((item) => item.task_family === engineProfile.primaryTaskFamily) || null;
   result.promptEngine = {
     profile: engineProfile,
-    fragments: rankFragments(query || '', result.primaryTemplateId, promptEngine.promptFragments, 3),
+    fragments: rankFragments(query || '', fragmentTemplateId, promptEngine.promptFragments, 3),
     principles: principlesForFamily(engineProfile.primaryTaskFamily, promptEngine.principles),
   };
   result.platform = detectPlatform(query || '');

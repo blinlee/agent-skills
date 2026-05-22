@@ -9,3 +9,6 @@ tmp/
 !.env.example
 
 docs/
+!img-gen-pro/docs/
+!img-gen-pro/docs/skill-creator-pro/
+!img-gen-pro/docs/skill-creator-pro/**
