@@ -1,13 +1,21 @@
 import { createHash } from 'node:crypto'
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { ensureKnowledgeRootLayout } from '../paths'
+import { updateWikiIndex } from '../wiki/index-log'
 
 export type TopicProposalInput = {
   name: string
   confidence: number
   rationale?: string
   aliases?: string[]
+  sources?: TopicProposalSource[]
+}
+
+export type TopicProposalSource = {
+  slug: string
+  title: string
+  artifactId: string
 }
 
 export type AcceptTaxonomyProposalInput = {
@@ -48,6 +56,7 @@ export type TaxonomyProposalReviewSummary = {
   aliases: string[]
   parentCandidates: Array<{ slug: string; name: string; confidence: number; rationale: string }>
   bridgeSuggestions: Array<{ slug: string; name: string; confidence: number; rationale: string }>
+  sources: TopicProposalSource[]
   reviewRequired: boolean
   canonicalized: boolean
   reviewer: string | null
@@ -76,6 +85,7 @@ export type RejectTaxonomyProposalInput = {
 }
 
 export type TopicProposalStatus = 'proposed' | 'accepted' | 'edited' | 'rejected' | 'superseded'
+export type TopicEvidenceProposalStatus = 'pending' | 'accepted' | 'rejected'
 
 export type MaterializedProposal = {
   name: string
@@ -85,6 +95,7 @@ export type MaterializedProposal = {
   aliases: string[]
   parentCandidates: Array<{ slug: string; name: string; confidence: number; rationale: string }>
   bridgeSuggestions: Array<{ slug: string; name: string; confidence: number; rationale: string }>
+  sources: TopicProposalSource[]
   status: TopicProposalStatus
   canonicalized: boolean
   reviewRequired: boolean
@@ -94,6 +105,19 @@ export type MaterializedProposal = {
   updatedAt: string
 }
 
+export type TopicEvidenceProposal = {
+  topicSlug: string
+  topicName: string
+  source: TopicProposalSource
+  rationale: string
+  confidence: number
+  status: TopicEvidenceProposalStatus
+  reviewRequired: boolean
+  reviewer: string | null
+  reviewedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
 
 export async function listTaxonomyProposals(root: string): Promise<ListTaxonomyProposalsResult> {
   const paths = await ensureKnowledgeRootLayout(root)
@@ -143,6 +167,7 @@ export async function rejectTaxonomyProposal(
   }
 
   const now = new Date().toISOString()
+  const rejectionReason = input.reason?.trim() ?? ''
   const rejectedProposal: MaterializedProposal = {
     ...proposal,
     status: 'rejected',
@@ -151,11 +176,9 @@ export async function rejectTaxonomyProposal(
     reviewer: input.reviewer.trim(),
     reviewedAt: now,
     updatedAt: now,
-    rationale: input.reason?.trim()
-      ? `${proposal.rationale}
-
-Rejected: ${input.reason.trim()}`
-      : proposal.rationale,
+    rationale: proposal.status === 'rejected' || !rejectionReason
+      ? proposal.rationale
+      : `${proposal.rationale}\n\nRejected: ${rejectionReason}`,
   }
 
   await writeJsonFile(proposalPath, rejectedProposal)
@@ -183,10 +206,12 @@ export async function applyTaxonomyEffects(
     const existingProposal = await readJsonFile<MaterializedProposal | null>(proposalPath, null)
     if (existingProposal?.status === 'accepted') {
       files.push(proposalPath)
+      const evidenceFiles = await persistAcceptedTopicEvidenceProposals(taxonomyRoot, existingProposal, proposal)
+      files.push(...evidenceFiles)
       continue
     }
 
-    await writeJsonFile(proposalPath, proposal)
+    await writeJsonFile(proposalPath, existingProposal ? mergeProposalEvidence(existingProposal, proposal) : proposal)
     files.push(proposalPath)
   }
 
@@ -215,6 +240,17 @@ export async function acceptTaxonomyProposal(
     throw new Error('Taxonomy proposal acceptance requires a non-empty human reviewer.')
   }
 
+  const conceptPagePath = conceptPagePathFor(paths.root, proposal.slug)
+  if (proposal.status === 'accepted') {
+    return {
+      files: [paths.topicRegistry, paths.taxonomyAliases, proposalPath, conceptPagePath, paths.wikiIndex],
+    }
+  }
+
+  if (proposal.status === 'rejected') {
+    throw new Error(`Taxonomy proposal is rejected and cannot be accepted without a new proposal: ${input.slug}`)
+  }
+
   const registry = await readJsonFile<TaxonomyRegistryState>(paths.topicRegistry, { topics: [] })
   const aliases = await readJsonFile<TaxonomyAliasesState>(paths.taxonomyAliases, { aliases: {} })
   const acceptedProposal: MaterializedProposal = {
@@ -222,6 +258,7 @@ export async function acceptTaxonomyProposal(
     status: 'accepted',
     canonicalized: true,
     reviewRequired: false,
+    sources: dedupeSources(proposal.sources ?? []),
     reviewer: input.reviewer.trim(),
     reviewedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -229,13 +266,17 @@ export async function acceptTaxonomyProposal(
 
   upsertTopicRegistryEntry(registry, acceptedProposal)
   mergeAliases(aliases, acceptedProposal)
+  await writeAcceptedConceptPage(paths.root, acceptedProposal)
+  const indexPath = await updateWikiIndex(paths.root, {
+    addEntries: [`- [[concepts/${acceptedProposal.slug}|${acceptedProposal.name}]]`],
+  })
 
   await writeJsonFile(paths.topicRegistry, registry)
   await writeJsonFile(paths.taxonomyAliases, aliases)
   await writeJsonFile(proposalPath, acceptedProposal)
 
   return {
-    files: [paths.topicRegistry, paths.taxonomyAliases, proposalPath],
+    files: [paths.topicRegistry, paths.taxonomyAliases, proposalPath, conceptPagePath, indexPath],
   }
 }
 
@@ -246,6 +287,11 @@ function summarizeProposalForReview(
   filePath: string,
   proposal: MaterializedProposal,
 ): TaxonomyProposalReviewSummary {
+  const conceptPath = path.join(path.dirname(path.dirname(topicRegistryPath)), 'wiki', 'concepts', `${proposal.slug}.md`)
+  const effect = proposal.status === 'accepted'
+    ? `Topic "${proposal.name}" (${proposal.slug}) is already accepted; re-running accept is idempotent and will not rewrite the accepted concept page.`
+    : `Accepting will add or update canonical topic "${proposal.name}" (${proposal.slug}), merge ${proposal.aliases.length} alias(es), and materialize one accepted concept page.`
+
   return {
     slug: proposal.slug,
     name: proposal.name,
@@ -255,14 +301,15 @@ function summarizeProposalForReview(
     aliases: proposal.aliases,
     parentCandidates: proposal.parentCandidates,
     bridgeSuggestions: proposal.bridgeSuggestions,
+    sources: proposal.sources ?? [],
     reviewRequired: proposal.reviewRequired,
     canonicalized: proposal.canonicalized,
     reviewer: proposal.reviewer,
     reviewedAt: proposal.reviewedAt,
     proposedOperation: {
       action: 'canonicalize-topic',
-      effect: `Accepting will add or update canonical topic "${proposal.name}" (${proposal.slug}) and merge ${proposal.aliases.length} alias(es).`,
-      writes: [topicRegistryPath, aliasesPath, filePath],
+      effect,
+      writes: [topicRegistryPath, aliasesPath, filePath, conceptPath],
     },
     filePath,
   }
@@ -281,6 +328,7 @@ function materializeProposal(input: TopicProposalInput): MaterializedProposal {
     aliases: normalizedAliases,
     parentCandidates: buildParentCandidates(input.name, slug),
     bridgeSuggestions: [] as Array<{ slug: string; name: string; confidence: number; rationale: string }>,
+    sources: dedupeSources(input.sources ?? []),
     status: 'proposed',
     canonicalized: false,
     reviewRequired: true,
@@ -289,6 +337,125 @@ function materializeProposal(input: TopicProposalInput): MaterializedProposal {
     createdAt: now,
     updatedAt: now,
   }
+}
+
+function mergeProposalEvidence(existing: MaterializedProposal, next: MaterializedProposal): MaterializedProposal {
+  return {
+    ...existing,
+    confidence: Number(Math.max(existing.confidence, next.confidence).toFixed(2)),
+    aliases: [...new Set([...existing.aliases, ...next.aliases])],
+    parentCandidates: mergeCandidateLists(existing.parentCandidates, next.parentCandidates),
+    sources: dedupeSources([...(existing.sources ?? []), ...next.sources]),
+    updatedAt: next.updatedAt,
+  }
+}
+
+async function persistAcceptedTopicEvidenceProposals(
+  taxonomyRoot: string,
+  acceptedProposal: MaterializedProposal,
+  nextProposal: MaterializedProposal,
+): Promise<string[]> {
+  const files: string[] = []
+  const acceptedSources = new Set((acceptedProposal.sources ?? []).map(sourceIdentity))
+
+  for (const source of nextProposal.sources) {
+    if (acceptedSources.has(sourceIdentity(source))) {
+      continue
+    }
+
+    const evidenceProposal = materializeEvidenceProposal(acceptedProposal, nextProposal, source)
+    const evidencePath = path.join(
+      taxonomyRoot,
+      'evidence-proposals',
+      acceptedProposal.slug,
+      `${buildEvidenceProposalSlug(source)}.json`,
+    )
+    const existingEvidence = await readJsonFile<TopicEvidenceProposal | null>(evidencePath, null)
+
+    if (existingEvidence && existingEvidence.status !== 'pending') {
+      files.push(evidencePath)
+      continue
+    }
+
+    await writeJsonFile(evidencePath, existingEvidence
+      ? mergeEvidenceProposal(existingEvidence, evidenceProposal)
+      : evidenceProposal)
+    files.push(evidencePath)
+  }
+
+  return files
+}
+
+function materializeEvidenceProposal(
+  acceptedProposal: MaterializedProposal,
+  nextProposal: MaterializedProposal,
+  source: TopicProposalSource,
+): TopicEvidenceProposal {
+  const now = new Date().toISOString()
+
+  return {
+    topicSlug: acceptedProposal.slug,
+    topicName: acceptedProposal.name,
+    source,
+    rationale: nextProposal.rationale,
+    confidence: nextProposal.confidence,
+    status: 'pending',
+    reviewRequired: true,
+    reviewer: null,
+    reviewedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+function mergeEvidenceProposal(existing: TopicEvidenceProposal, next: TopicEvidenceProposal): TopicEvidenceProposal {
+  return {
+    ...existing,
+    rationale: existing.rationale === next.rationale
+      ? existing.rationale
+      : `${existing.rationale}\n\nAdditional rationale: ${next.rationale}`,
+    confidence: Number(Math.max(existing.confidence, next.confidence).toFixed(2)),
+    updatedAt: next.updatedAt,
+  }
+}
+
+function sourceIdentity(source: TopicProposalSource): string {
+  return `${source.slug}\0${source.artifactId}`
+}
+
+function buildEvidenceProposalSlug(source: TopicProposalSource): string {
+  const readable = slugify(source.slug || source.title || 'source')
+  const hash = createHash('sha1').update(`${source.slug}\n${source.artifactId}\n${source.title}`).digest('hex').slice(0, 10)
+  return `${readable || 'source'}-${hash}`
+}
+
+function mergeCandidateLists(
+  left: Array<{ slug: string; name: string; confidence: number; rationale: string }>,
+  right: Array<{ slug: string; name: string; confidence: number; rationale: string }>,
+): Array<{ slug: string; name: string; confidence: number; rationale: string }> {
+  const bySlug = new Map<string, { slug: string; name: string; confidence: number; rationale: string }>()
+  for (const candidate of [...left, ...right]) {
+    const existing = bySlug.get(candidate.slug)
+    if (!existing || candidate.confidence > existing.confidence) {
+      bySlug.set(candidate.slug, candidate)
+    }
+  }
+  return [...bySlug.values()]
+}
+
+function dedupeSources(sources: TopicProposalSource[]): TopicProposalSource[] {
+  const bySlug = new Map<string, TopicProposalSource>()
+  for (const source of sources) {
+    if (!source.slug.trim()) {
+      continue
+    }
+    bySlug.set(source.slug, {
+      slug: source.slug,
+      title: source.title,
+      artifactId: source.artifactId,
+    })
+  }
+  return [...bySlug.values()]
 }
 
 function upsertTopicRegistryEntry(registry: TaxonomyRegistryState, proposal: MaterializedProposal): void {
@@ -358,6 +525,61 @@ function attachBridgeSuggestions(proposals: MaterializedProposal[]): void {
         rationale: `Co-proposed with "${proposal.name}" in the same taxonomy side-effect batch.`,
       }))
   }
+}
+
+async function writeAcceptedConceptPage(knowledgeRoot: string, proposal: MaterializedProposal): Promise<string> {
+  const conceptPath = conceptPagePathFor(knowledgeRoot, proposal.slug)
+  await mkdir(path.dirname(conceptPath), { recursive: true })
+
+  try {
+    await access(conceptPath)
+    return conceptPath
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error
+    }
+  }
+
+  await writeFile(conceptPath, formatAcceptedConceptPage(proposal), 'utf8')
+  return conceptPath
+}
+
+function conceptPagePathFor(knowledgeRoot: string, slug: string): string {
+  return path.join(path.resolve(knowledgeRoot), 'wiki', 'concepts', `${slug}.md`)
+}
+
+function formatAcceptedConceptPage(proposal: MaterializedProposal): string {
+  const now = new Date().toISOString()
+  const sourceLinks = proposal.sources.length > 0
+    ? proposal.sources.map((source) => `- [[sources/${source.slug}|${source.title}]]`).join('\n')
+    : '- None recorded'
+
+  return [
+    '---',
+    `title: ${JSON.stringify(proposal.name)}`,
+    `created: ${JSON.stringify(proposal.createdAt)}`,
+    `updated: ${JSON.stringify(now)}`,
+    'type: "concept"',
+    `tags: ${JSON.stringify([proposal.slug])}`,
+    `sources: ${JSON.stringify(proposal.sources.map((source) => source.artifactId).filter(Boolean))}`,
+    'confidence: "medium"',
+    'contested: false',
+    '---',
+    `# ${proposal.name}`,
+    '',
+    `- Canonical slug: ${proposal.slug}`,
+    `- Review status: accepted by ${proposal.reviewer ?? 'unknown reviewer'} at ${proposal.reviewedAt ?? now}`,
+    `- Confidence: ${proposal.confidence}`,
+    '',
+    '## Scope note',
+    proposal.rationale,
+    '',
+    '## Aliases',
+    ...(proposal.aliases.length > 0 ? proposal.aliases.map((alias) => `- ${alias}`) : ['- None recorded']),
+    '',
+    '## Source evidence',
+    sourceLinks,
+  ].join('\n').trimEnd() + '\n'
 }
 
 async function readJsonFile<T>(targetPath: string, fallback: T): Promise<T> {

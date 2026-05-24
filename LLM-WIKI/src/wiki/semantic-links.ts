@@ -244,17 +244,41 @@ function formatSourceLink(target: SourceLinkTarget): string {
 }
 
 function extractTitle(content: string): string | null {
-  const frontmatterTitle = content.match(/^---\n[\s\S]*?^title:\s*(.+)$/m)?.[1]
+  const frontmatterTitle = extractFrontmatterTitle(content)
   if (frontmatterTitle) {
-    try {
-      const parsed = JSON.parse(frontmatterTitle.trim()) as unknown
-      if (typeof parsed === 'string' && parsed.trim()) return parsed.trim()
-    } catch {
-      return frontmatterTitle.trim().replace(/^["']|["']$/g, '')
-    }
+    return frontmatterTitle
   }
 
   return content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null
+}
+
+function extractFrontmatterTitle(content: string): string | null {
+  if (!content.startsWith('---\n')) {
+    return null
+  }
+
+  const closingIndex = content.indexOf('\n---\n', 4)
+  if (closingIndex === -1) {
+    return null
+  }
+
+  for (const line of content.slice(4, closingIndex).split('\n')) {
+    const match = line.match(/^title:\s*(.+?)\s*$/)
+    if (!match) {
+      continue
+    }
+    const rawValue = match[1].trim()
+    try {
+      const parsed = JSON.parse(rawValue) as unknown
+      if (typeof parsed === 'string' && parsed.trim()) {
+        return parsed.trim()
+      }
+    } catch {
+      return rawValue.replace(/^["']|["']$/g, '')
+    }
+  }
+
+  return null
 }
 
 function titleFromSlug(slug: string): string {

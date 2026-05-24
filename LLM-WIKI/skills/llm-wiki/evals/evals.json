@@ -45,6 +45,32 @@
         "Mentions raw-source-drift if present instead of editing raw",
         "Reports broken links, low-confidence/contested pages, and scale warnings separately"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "I dropped a decoded PDF about an unfamiliar technical field into the atlas raw/inbox. Run the standard LLM-WIKI flow and tell me where it should go.",
+      "expected_output": "The agent decodes only if needed, runs intake/route as a candidate generation step, reads enough of the source to understand the domain, audits the CLI route proposal against the classification principles, and returns a pending human decision instead of accepting the route automatically.",
+      "files": [],
+      "expectations": [
+        "Treats route-inbox output as a proposal rather than semantic truth",
+        "Reads source evidence beyond filename, frontmatter, or route score",
+        "Produces source understanding, proposal audit, boundary review, and recommended human decision",
+        "Allows create-profile, park, reject/convert, bridge, or override when no existing wiki strongly fits",
+        "Does not run route-accept, profile-accept, intake-park, intake-reject, or other review-gated commands before explicit approval"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "The CLI recommends putting a finance paper into my AI agents wiki because it matched words like system and evaluation. Review that classification.",
+      "expected_output": "The agent identifies the CLI recommendation as a candidate only, reads the material or supplied excerpts, applies wiki boundary and never-force-weak-matches principles, explains why the AI wiki is a weak or polluted fit, and recommends override/new-profile/park with an approval-gated command.",
+      "files": [],
+      "expectations": [
+        "Separates source domain understanding from CLI candidate scoring",
+        "Explicitly applies wiki boundary and pollution-risk reasoning",
+        "Explains why the proposed existing wiki should not be silently broadened",
+        "Returns the command only as pending approval",
+        "Preserves the human review gate"
+      ]
     }
   ]
 }

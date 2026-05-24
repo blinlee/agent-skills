@@ -48,8 +48,8 @@ describe('url ingest quality', () => {
 
     expect(result.status).toBe('needs_review')
     expect(result.taxonomyFiles.length).toBeGreaterThan(0)
-    expect(entityFiles).toEqual(['openclaw.md'])
-    expect(conceptFiles).toEqual(['routing.md'])
+    expect(entityFiles).toEqual([])
+    expect(conceptFiles).toEqual([])
     expect(entityFiles).not.toEqual(expect.arrayContaining(['url-sample.md', 'url-sample-url-sample.md', 'openclaw-concept.md']))
   })
 })

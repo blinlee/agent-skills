@@ -19,16 +19,6 @@ describe('wiki index', () => {
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
-    await rewriteIfPresent(
-      path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'),
-      (content) => content.replace('[[compiler-notes|Compiler Notes]]', '[[sources/compiler-notes|Compiler Notes]]'),
-    )
-    await rewriteIfPresent(
-      path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'),
-      (content) => content
-        .replace('[[openclaw|OpenClaw]]', '[[entities/openclaw|OpenClaw]]')
-        .replace('[[compiler-notes|Compiler Notes]]', '[[sources/compiler-notes|Compiler Notes]]'),
-    )
 
     const result = await runBuildIndexCommand({ knowledgeRoot })
     const pages = JSON.parse(await readFile(result.files.pages, 'utf8')) as { pages: Array<{ target: string; headings: string[]; outgoingLinks: string[] }> }
@@ -39,10 +29,8 @@ describe('wiki index', () => {
     expect(result.chunkCount).toBeGreaterThan(0)
     expect(pages.pages.map((page) => page.target)).toContain('sources/compiler-notes')
     expect(chunks.chunks.some((chunk) => chunk.pageTarget === 'sources/compiler-notes' && /Compiler Notes/.test(chunk.text))).toBe(true)
-    expect(links.links).toEqual(expect.arrayContaining([
-      expect.objectContaining({ from: 'entities/openclaw', to: 'sources/compiler-notes', status: 'resolved' }),
-    ]))
-    expect(links.backlinks['sources/compiler-notes']).toContain('entities/openclaw')
+    expect(links.links.some((link) => link.from === 'entities/openclaw')).toBe(false)
+    expect(links.backlinks['sources/compiler-notes'] ?? []).not.toContain('entities/openclaw')
   })
 
   it('exposes index through the JSON CLI argv surface', async () => {
@@ -119,8 +107,3 @@ describe('wiki index', () => {
   })
 
 })
-
-async function rewriteIfPresent(filePath: string, rewrite: (content: string) => string): Promise<void> {
-  const content = await readFile(filePath, 'utf8')
-  await writeFile(filePath, rewrite(content), 'utf8')
-}

@@ -1,4 +1,4 @@
-import { access, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
+import { access, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -165,18 +165,31 @@ describe('governance side effects', () => {
       reviewer: 'human-reviewer',
     })
 
+    const conceptPath = path.join(tempRoot, 'wiki', 'concepts', 'compiler-design.md')
+    const curatedConceptBody = '# Compiler Design\n\nHuman-curated scope note that must survive repeated accepts.\n'
+    await writeFile(conceptPath, curatedConceptBody, 'utf8')
+
+    await acceptTaxonomyProposal(tempRoot, {
+      slug: 'compiler-design',
+      reviewer: 'second-reviewer',
+    })
+
     await applyTaxonomyEffects(tempRoot, {
       topicProposals: [{
         name: 'compiler design',
         confidence: 0.91,
         rationale: 'Later model-only reclassification must not overwrite human acceptance.',
         aliases: ['compiler architecture', 'compilers'],
+        sources: [{ slug: 'later-source', title: 'Later Source', artifactId: 'artifact-later' }],
       }],
     })
 
     registry = JSON.parse(await readFile(path.join(tempRoot, 'taxonomy', 'topic-registry.json'), 'utf8'))
     aliases = JSON.parse(await readFile(path.join(tempRoot, 'taxonomy', 'aliases.json'), 'utf8'))
     const proposal = JSON.parse(await readFile(path.join(tempRoot, 'taxonomy', 'proposals', 'compiler-design.json'), 'utf8'))
+    const conceptBody = await readFile(conceptPath, 'utf8')
+    const evidenceFiles = await readdir(path.join(tempRoot, 'taxonomy', 'evidence-proposals', 'compiler-design'))
+    const evidenceProposal = JSON.parse(await readFile(path.join(tempRoot, 'taxonomy', 'evidence-proposals', 'compiler-design', evidenceFiles[0]), 'utf8'))
 
     expect(registry.topics).toHaveLength(1)
     expect(registry.topics[0]).toEqual(expect.objectContaining({
@@ -196,6 +209,16 @@ describe('governance side effects', () => {
       reviewer: 'human-reviewer',
     }))
     expect(proposal.reviewedAt).toEqual(expect.any(String))
+    expect(conceptBody).toBe(curatedConceptBody)
+    expect(evidenceFiles).toHaveLength(1)
+    expect(evidenceProposal).toEqual(expect.objectContaining({
+      topicSlug: 'compiler-design',
+      topicName: 'compiler design',
+      source: expect.objectContaining({ slug: 'later-source', artifactId: 'artifact-later' }),
+      status: 'pending',
+      reviewRequired: true,
+      reviewer: null,
+    }))
   })
   it('lists taxonomy proposals as human-readable proposed operations and rejects without canonicalizing', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-governance-'))

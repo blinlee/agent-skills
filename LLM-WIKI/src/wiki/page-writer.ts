@@ -133,8 +133,8 @@ async function removeStalePages(
   await Promise.all(stalePageFiles.map((filePath) => rm(path.join(knowledgeRoot, filePath), { force: true })))
 }
 
-// Task 10 writes shared entity/concept pages by slug across sources, so stale cleanup
-// must only auto-delete outputs that are unambiguously owned by one source compile.
+// Some legacy roots contain source-owned semantic pages from older compilers, so
+// stale cleanup only deletes outputs unambiguously owned by one source compile.
 function isSourceOwnedPageFile(filePath: string): boolean {
   const normalizedPath = path.normalize(filePath)
   const relativeToWiki = normalizedPath.startsWith(`wiki${path.sep}`)

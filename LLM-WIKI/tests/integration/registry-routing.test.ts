@@ -81,6 +81,55 @@ describe('multi-wiki registry routing', () => {
     await expect(readFile(path.join(aiRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8')).resolves.toContain('Compiler Notes')
   })
 
+  it('accepts a routed markdown source with frontmatter title without confusing body title-like text', async () => {
+    const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
+    const perceptionRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-perception-'))
+    const sourceRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-source-'))
+    tempRoots.push(registryRoot, perceptionRoot, sourceRoot)
+
+    await runRegistryInitCommand({ registryRoot })
+    await runInitCommand({ knowledgeRoot: perceptionRoot })
+    await runRegistryAddCommand({
+      registryRoot,
+      knowledgeRoot: perceptionRoot,
+      id: 'perception',
+      title: 'Embodied 3D Perception',
+      scope: ['multimodal perception', '3d scene understanding', 'lidar-camera calibration', 'sensor fusion'],
+    })
+
+    const source = path.join(sourceRoot, 'uni3d-moe.md')
+    await writeFile(source, [
+      '---',
+      'title: \"Uni3D-MoE\"',
+      'source_label: \"tmp/uni3d-moe.pdf\"',
+      '---',
+      '',
+      'Abstract',
+      '',
+      'Uni3D-MoE studies multimodal 3D scene understanding for embodied perception.',
+      '',
+      'Metadata block follows.',
+      '',
+      'title: this body line should not be parsed as frontmatter',
+      '',
+      '# Uni3D-MoE',
+      '',
+      'Further details on LiDAR-camera calibration and sensor fusion.',
+      '',
+    ].join('\n'), 'utf8')
+
+    const route = await runRouteCommand({ registryRoot, source })
+    const accepted = await runRouteAcceptCommand({
+      registryRoot,
+      proposalId: route.proposal.id,
+      wikiId: 'perception',
+      reviewer: 'tester',
+    })
+
+    expect(['completed', 'needs_review', 'partial']).toContain(accepted.decision.ingestResult.status)
+    await expect(readFile(path.join(perceptionRoot, 'wiki', 'sources', 'uni3d-moe.md'), 'utf8')).resolves.toContain('Uni3D-MoE')
+  })
+
   it('queries registered wikis and merges cited per-wiki answers', async () => {
     const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
     const aiRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-ai-'))
@@ -293,6 +342,110 @@ describe('multi-wiki registry routing', () => {
 
     const review = await runProfileReviewCommand({ registryRoot })
     expect(review.guidance.join('\n')).toContain('profile changes as proposals')
+  })
+
+  it('does not route sources from generic AI vocabulary without profile-level evidence', async () => {
+    const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
+    tempRoots.push(registryRoot)
+
+    await runRegistryAddCommand({
+      registryRoot,
+      id: 'ai-agent-engineering',
+      title: 'AI Agent Engineering',
+      scopeCore: ['LLM agents', 'multi-agent systems', 'agent engineering', 'agent evaluation'],
+      scopeAdjacent: ['LLM application development'],
+    })
+    await runRegistryAddCommand({
+      registryRoot,
+      id: 'ai-finance',
+      title: 'AI Finance',
+      scopeCore: ['financial time-series forecasting', 'financial foundation models', 'quantitative finance modeling'],
+      scopeAdjacent: ['agentic factor research'],
+    })
+    const source = path.join(registryRoot, 'raw', 'inbox', 'vision-language-models.md')
+    await writeFile(
+      source,
+      '# Transferable Vision-Language Models\n\nA foundation model learns visual representations from natural language supervision. The paper discusses model evaluation, image-text data, benchmark transfer, and representation learning. It is not about markets, trading, coding assistants, or teams of autonomous agents as the primary retrieval intent.',
+      'utf8',
+    )
+
+    const routed = await runRouteInboxCommand({ registryRoot })
+    const proposal = routed.results[0].proposal
+
+    expect(proposal.decisionType).toBe('create_new_wiki')
+    expect(proposal.recommendedWikiId).toBeNull()
+    expect(proposal.bridgeSuggestions).toEqual([])
+    expect(proposal.candidates.every((candidate) => candidate.matchQuality !== 'strong')).toBe(true)
+    expect(proposal.routingAssessment).toMatchObject({
+      ownershipDecision: 'new_profile',
+      relationshipHint: 'generic_overlap',
+      novelty: 'high',
+    })
+  })
+
+  it('does not turn fragmented tokens from multiword scope phrases into a strong route', async () => {
+    const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
+    tempRoots.push(registryRoot)
+
+    await runRegistryAddCommand({
+      registryRoot,
+      id: 'embodied-3d-perception',
+      title: 'Embodied 3D Perception',
+      scopeCore: ['3D scene understanding', 'multimodal perception', 'robot perception'],
+    })
+    const source = path.join(registryRoot, 'raw', 'inbox', 'vision-language-models.md')
+    await writeFile(
+      source,
+      '# Vision-Language Models\n\nThe paper reports multimodal language model training for image recognition, scene understanding, and visual transfer. It mentions perception benchmarks but is not about depth reconstruction, robotics sensing, or embodied spatial navigation as a knowledge-boundary fit.',
+      'utf8',
+    )
+
+    const routed = await runRouteInboxCommand({ registryRoot })
+    const proposal = routed.results[0].proposal
+
+    expect(proposal.decisionType).toBe('create_new_wiki')
+    expect(proposal.recommendedWikiId).toBeNull()
+    expect(proposal.candidates[0]).toMatchObject({
+      wikiId: 'embodied-3d-perception',
+      matchQuality: 'moderate',
+    })
+    expect(proposal.routingAssessment.relationshipHint).not.toBe('same_scheme')
+  })
+
+  it('marks focused adjacent evidence as a possible child profile instead of direct ownership', async () => {
+    const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
+    tempRoots.push(registryRoot)
+
+    await runRegistryAddCommand({
+      registryRoot,
+      id: 'embodied-3d-perception',
+      title: 'Embodied 3D Perception',
+      scopeCore: ['embodied perception', 'robot perception', 'multimodal perception', 'sensor fusion'],
+    })
+    const source = path.join(registryRoot, 'raw', 'inbox', 'robotic-control.md')
+    await writeFile(
+      source,
+      '# Vision-Language-Action Models for Robotic Control\n\nThis paper studies robotic control policies that adapt vision-language models to output robot actions. The abstract emphasizes robot manipulation, multimodal signals, embodied evaluation, and sensor observations, but its primary retrieval intent is robot foundation models rather than perception-only methods.',
+      'utf8',
+    )
+
+    const routed = await runRouteInboxCommand({ registryRoot })
+    const proposal = routed.results[0].proposal
+
+    expect(proposal.decisionType).toBe('create_new_wiki')
+    expect(proposal.recommendedWikiId).toBeNull()
+    expect(proposal.candidates[0]).toMatchObject({
+      wikiId: 'embodied-3d-perception',
+      matchQuality: 'moderate',
+      relationshipHint: 'possible_child_profile',
+    })
+    expect(proposal.candidates[0].focusedMatches).toEqual(expect.arrayContaining(['robot']))
+    expect(proposal.routingAssessment).toMatchObject({
+      ownershipDecision: 'new_profile',
+      relationshipHint: 'possible_child_profile',
+      nearestWikiId: 'embodied-3d-perception',
+      novelty: 'medium',
+    })
   })
 
   it('can draft and park profile decisions without polluting the atlas', async () => {

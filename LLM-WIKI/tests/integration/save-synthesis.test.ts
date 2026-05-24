@@ -30,7 +30,7 @@ async function markSuggestionReviewed(filePath: string): Promise<void> {
 }
 
 describe('save-synthesis', () => {
-  it('promotes an ingest-generated synthesis suggestion into a durable wiki synthesis page when explicitly confirmed', async () => {
+  it('does not create ingest-generated synthesis suggestions from unapproved semantic candidates', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
@@ -40,33 +40,7 @@ describe('save-synthesis', () => {
     })
 
     const ingestSuggestionPath = ingestResult.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'merge-candidates')))
-    expect(ingestSuggestionPath).toBeTruthy()
-
-    const ingestSuggestion = JSON.parse(await readFile(ingestSuggestionPath!, 'utf8')) as {
-      id: string
-      title: string
-      markdown: string
-    }
-
-    expect(ingestSuggestion.markdown).toContain('# OpenClaw × Compilation')
-
-    const promoted = await runSaveSynthesisCommand({
-      knowledgeRoot,
-      suggestionId: ingestSuggestion.id,
-      confirm: true,
-    })
-
-    expect(promoted.promoted).toBe(true)
-    await expect(access(promoted.pagePath)).resolves.toBeUndefined()
-
-    const pageContent = await readFile(promoted.pagePath, 'utf8')
-    expect(pageContent).toContain('- Promotion source:')
-    expect(pageContent).toContain('## Why this exists')
-    expect(pageContent).toContain('OpenClaw × Compilation')
-
-    const sourcePage = await readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8')
-    expect(sourcePage).toContain('## Related syntheses')
-    expect(sourcePage).toContain(`[[syntheses/${path.basename(promoted.pagePath, '.md')}|OpenClaw × Compilation]]`)
+    expect(ingestSuggestionPath).toBeUndefined()
   })
 
   it('promotes a reviewed synthesis suggestion into a durable wiki synthesis page', async () => {

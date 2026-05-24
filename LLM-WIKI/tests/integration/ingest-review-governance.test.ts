@@ -37,8 +37,8 @@ describe('ingest review governance', () => {
     const lowConfidenceReview = ingestResult.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'low-confidence')))
     expect(lowConfidenceReview).toBeTruthy()
 
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'compiler-notes.md'))).rejects.toMatchObject({
       code: 'ENOENT',
     })
@@ -56,6 +56,12 @@ describe('ingest review governance', () => {
       relatedPages: expect.arrayContaining(['sources/compiler-notes']),
       evidence: expect.arrayContaining([expect.stringMatching(/Rust Analyzer/)]),
       confidence: expect.any(Number),
+      candidate: expect.objectContaining({
+        kind: 'entity',
+        slug: 'rust-analyzer',
+        title: 'Rust Analyzer',
+        source: 'heuristic',
+      }),
       suggestedActions: expect.arrayContaining([expect.stringMatching(/review/i)]),
     }))
   })
@@ -66,15 +72,19 @@ describe('ingest review governance', () => {
     tempRoots.push(knowledgeRoot)
     tempSources.push(sourcePath)
 
-    await writeFile(sourcePath, await readFile(path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'), 'utf8'), 'utf8')
+    await writeFile(
+      sourcePath,
+      '# Compiler Notes\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic. Rust Analyzer observes the pipeline.\n',
+      'utf8',
+    )
 
     const firstIngest = await runIngestCommand({
       knowledgeRoot,
       input: sourcePath,
     })
 
-    const firstMergeCandidate = firstIngest.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'merge-candidates')))
-    expect(firstMergeCandidate).toBeTruthy()
+    const firstReviewArtifact = firstIngest.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'low-confidence')))
+    expect(firstReviewArtifact).toBeTruthy()
 
     await writeFile(sourcePath, '# Scratch note\n\nplaceholder\n', 'utf8')
 
@@ -88,7 +98,9 @@ describe('ingest review governance', () => {
     const mergeCandidateFiles = await readdir(path.join(knowledgeRoot, 'review', 'merge-candidates'))
     const queueFiles = await readdir(path.join(knowledgeRoot, 'review', 'queue'))
 
-    expect(mergeCandidateFiles).not.toContain(path.basename(firstMergeCandidate!))
-    expect(queueFiles).not.toContain(path.basename(firstMergeCandidate!))
+    expect(mergeCandidateFiles).toEqual([])
+    if (queueFiles.includes(path.basename(firstReviewArtifact!))) {
+      await expect(readFile(path.join(knowledgeRoot, 'review', 'queue', path.basename(firstReviewArtifact!)), 'utf8')).resolves.not.toContain('Rust Analyzer')
+    }
   })
 })

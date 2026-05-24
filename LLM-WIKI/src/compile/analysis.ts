@@ -25,7 +25,7 @@ export type RelationHint = {
 }
 
 export type ReviewTrigger = {
-  kind: 'low-confidence' | 'ambiguous-classification' | 'sparse-artifact'
+  kind: 'semantic-candidate' | 'low-confidence' | 'ambiguous-classification' | 'sparse-artifact'
   severity: 'low' | 'medium'
   reason: string
 }

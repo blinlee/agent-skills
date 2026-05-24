@@ -255,12 +255,8 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
         relatedPages: buildReviewRelatedPages(generation),
         evidence: effect.evidence ?? [effect.reason],
         confidence: effect.confidence,
+        candidate: effect.candidate,
         suggestedActions: effect.suggestedActions ?? buildDefaultReviewSuggestedActions(effect.kind),
-      })),
-      ...generation.synthesisSuggestions.map((suggestion, index) => buildIngestSynthesisReviewArtifact({
-        artifactId: parsedArtifact.id,
-        suggestionIndex: index + 1,
-        suggestion,
       })),
     ]
 
@@ -282,16 +278,13 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
           name: effect.title,
           confidence: effect.confidence,
           rationale: effect.rationale,
+          sources: [effect.source],
         })),
       })
       taxonomyFiles.push(...taxonomyResult.files)
     }
 
-    const finalStatus = resolveFinalStatus(
-      generation.reviewEffects.length > 0 || generation.taxonomyEffects.length > 0,
-      generation.entityPages.length,
-      generation.conceptPages.length,
-    )
+    const finalStatus = resolveFinalStatus(generation.reviewEffects.length > 0 || generation.taxonomyEffects.length > 0)
     const outputManifest = {
       ...writeResult.outputManifest,
       reviewFiles: currentReviewManifest,
@@ -343,49 +336,6 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
   }
 }
 
-function buildIngestSynthesisReviewArtifact(input: {
-  artifactId: string
-  suggestionIndex: number
-  suggestion: {
-    title: string
-    slug: string
-    body: string
-    rationale: string
-    relatedPageSlugs: string[]
-  }
-}) {
-  const now = new Date().toISOString()
-
-  return {
-    id: `${input.artifactId}-synthesis-${input.suggestionIndex}`,
-    artifactId: input.artifactId,
-    type: 'merge-candidate',
-    issueSummary: `Review synthesis suggestion: ${input.suggestion.title}`,
-    severity: 'info',
-    reason: input.suggestion.rationale,
-    status: 'suggested',
-    question: `Promote ingest-generated synthesis suggestion “${input.suggestion.title}”.`,
-    title: input.suggestion.title,
-    slug: input.suggestion.slug,
-    answer: compactText(input.suggestion.body),
-    citations: [],
-    relatedPages: qualifySynthesisRelatedPages(input.suggestion.relatedPageSlugs),
-    markdown: ensureTrailingNewline(input.suggestion.body),
-    createdAt: now,
-    updatedAt: now,
-    source: 'ingest',
-  }
-}
-
-function qualifySynthesisRelatedPages(relatedPageSlugs: string[]): string[] {
-  const [sourceSlug, entitySlug, conceptSlug] = relatedPageSlugs
-  return [
-    sourceSlug ? `sources/${sourceSlug}` : null,
-    entitySlug ? `entities/${entitySlug}` : null,
-    conceptSlug ? `concepts/${conceptSlug}` : null,
-  ].filter((target): target is string => Boolean(target))
-}
-
 function buildReviewRelatedPages(generation: Awaited<ReturnType<typeof generateKnowledgeChanges>>): string[] {
   return [
     `sources/${generation.sourcePage.slug}`,
@@ -397,6 +347,10 @@ function buildReviewRelatedPages(generation: Awaited<ReturnType<typeof generateK
 function buildDefaultReviewSuggestedActions(kind: string): string[] {
   if (kind === 'low-confidence') {
     return ['Review the low-confidence candidate and approve, merge, rename, or reject it.']
+  }
+
+  if (kind === 'semantic-candidate') {
+    return ['Review the candidate and approve, merge, rename, or reject it before creating durable wiki semantics.']
   }
 
   if (kind === 'ambiguous-classification') {
@@ -601,14 +555,6 @@ function isSourceOwnedIndexEntry(entry: string): boolean {
   return /^[-*]\s+\[\[sources\/[^|\]]+\|[^\]]+\]\]$/.test(entry.trim())
 }
 
-function compactText(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
-}
-
-function ensureTrailingNewline(value: string): string {
-  return value.endsWith('\n') ? value : `${value}\n`
-}
-
 async function parseSource(input: {
   sourceKind: SourceKind
   input: string
@@ -732,11 +678,7 @@ function isSourceSlugOwnedByOtherEntry(slug: string, otherEntries: DedupEntry[])
   return otherEntries.some((entry) => entry.lastOutputManifest?.pageFiles.includes(sourcePagePath))
 }
 
-function resolveFinalStatus(hasReviewTriggers: boolean, entityCount: number, conceptCount: number): JobStatus {
-  if (hasReviewTriggers && entityCount === 0 && conceptCount === 0) {
-    return 'partial'
-  }
-
+function resolveFinalStatus(hasReviewTriggers: boolean): JobStatus {
   if (hasReviewTriggers) {
     return 'needs_review'
   }

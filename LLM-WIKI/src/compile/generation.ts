@@ -29,6 +29,11 @@ export type TaxonomyEffect = {
   title: string
   confidence: number
   rationale: string
+  source: {
+    slug: string
+    title: string
+    artifactId: string
+  }
 }
 
 export type ReviewEffect = ReviewTrigger & {
@@ -36,6 +41,14 @@ export type ReviewEffect = ReviewTrigger & {
   evidence?: string[]
   confidence?: number
   suggestedActions?: string[]
+  candidate?: {
+    kind: 'entity' | 'concept'
+    slug: string
+    title: string
+    confidence: number
+    source: AnalysisCandidate['source']
+    evidence: string[]
+  }
 }
 
 export type KnowledgeGenerationResult = {
@@ -50,7 +63,7 @@ export type KnowledgeGenerationResult = {
   reviewEffects: ReviewEffect[]
 }
 
-const MIN_DURABLE_HEURISTIC_CONFIDENCE = 0.7
+const MIN_REVIEW_CONFIDENCE = 0.7
 
 export type KnowledgeGenerationOptions = {
   sourceSlug?: string
@@ -61,79 +74,23 @@ export async function generateKnowledgeChanges(
   options: KnowledgeGenerationOptions = {},
 ): Promise<KnowledgeGenerationResult> {
   const sourceSlug = options.sourceSlug ?? buildStableArtifactSlug(analysis)
-  const topicSlugs = analysis.topics.map((topic) => topic.slug)
   const entityCandidates = removeSourceTitleHeuristics(analysis.candidateEntities, sourceSlug)
   const conceptCandidates = removeSourceTitleHeuristics(analysis.candidateConcepts, sourceSlug)
-  const { durable: durableEntityCandidates, gated: gatedEntityCandidates } = partitionDurableCandidates(entityCandidates)
-  const { durable: durableConceptCandidates, gated: gatedConceptCandidates } = partitionDurableCandidates(conceptCandidates)
-  const entitySlugs = durableEntityCandidates.map((candidate) => candidate.slug)
-  const conceptSlugs = durableConceptCandidates.map((candidate) => candidate.slug)
 
   const sourcePage: KnowledgePagePayload = {
     slug: sourceSlug,
     title: analysis.artifact.title,
     artifactId: analysis.artifactId,
-    topics: topicSlugs,
-    backlinks: [...entitySlugs, ...conceptSlugs],
-    body: buildSourcePageBody(analysis, durableEntityCandidates, durableConceptCandidates),
+    topics: [],
+    backlinks: [],
+    body: buildSourcePageBody(analysis),
   }
 
-  const entityPages = durableEntityCandidates.map((candidate) => ({
-    slug: candidate.slug,
-    title: candidate.title,
-    artifactId: analysis.artifactId,
-    topics: topicSlugs,
-    backlinks: [sourceSlug, ...conceptSlugs],
-    body: [
-      `# ${candidate.title}`,
-      '',
-      `- Source artifact: ${analysis.artifactId}`,
-      `- Confidence: ${candidate.confidence}`,
-      '',
-      '## Evidence',
-      ...candidate.evidence.map((evidence) => `- ${evidence}`),
-      '',
-      '## Related concepts',
-      ...(durableConceptCandidates.length > 0 ? durableConceptCandidates.map((concept) => `- [[concepts/${concept.slug}|${concept.title}]]`) : ['- None detected']),
-      '',
-      '## Source backlink',
-      `- [[sources/${sourceSlug}|${analysis.artifact.title}]]`,
-    ].join('\n'),
-  }))
+  const entityPages: KnowledgePagePayload[] = []
+  const conceptPages: KnowledgePagePayload[] = []
 
-  const conceptPages = durableConceptCandidates.map((candidate) => ({
-    slug: candidate.slug,
-    title: candidate.title,
-    artifactId: analysis.artifactId,
-    topics: topicSlugs,
-    backlinks: [sourceSlug, ...entitySlugs],
-    body: [
-      `# ${candidate.title}`,
-      '',
-      `- Source artifact: ${analysis.artifactId}`,
-      `- Confidence: ${candidate.confidence}`,
-      '',
-      '## Definition seed',
-      `${candidate.title} is a candidate concept extracted from ${analysis.artifact.title}.`,
-      '',
-      '## Evidence',
-      ...candidate.evidence.map((evidence) => `- ${evidence}`),
-      '',
-      '## Related entities',
-      ...(durableEntityCandidates.length > 0 ? durableEntityCandidates.map((entity) => `- [[entities/${entity.slug}|${entity.title}]]`) : ['- None detected']),
-      '',
-      '## Source backlink',
-      `- [[sources/${sourceSlug}|${analysis.artifact.title}]]`,
-    ].join('\n'),
-  }))
-
-  const synthesisSuggestions = buildSynthesisSuggestions(
-    analysis,
-    sourceSlug,
-    durableEntityCandidates,
-    durableConceptCandidates,
-  )
-  const indexMutations = buildIndexMutations(sourcePage, entityPages, conceptPages, synthesisSuggestions)
+  const synthesisSuggestions: SynthesisSuggestionPayload[] = []
+  const indexMutations = buildIndexMutations(sourcePage, entityPages, conceptPages)
   const logMutations = [{
     target: 'wiki/log.md',
     op: 'append' as const,
@@ -148,32 +105,12 @@ export async function generateKnowledgeChanges(
     synthesisSuggestions,
     indexMutations,
     logMutations,
-    taxonomyEffects: buildTaxonomyEffects(analysis.topics),
-    reviewEffects: buildReviewEffects(analysis, gatedEntityCandidates, gatedConceptCandidates),
+    taxonomyEffects: buildTaxonomyEffects(analysis.topics, sourcePage),
+    reviewEffects: buildReviewEffects(analysis, entityCandidates, conceptCandidates),
   }
 }
 
-function buildSourcePageBody(
-  analysis: ArtifactAnalysis,
-  durableEntityCandidates: AnalysisCandidate[],
-  durableConceptCandidates: AnalysisCandidate[],
-): string {
-  const entityLinks = durableEntityCandidates.length > 0
-    ? durableEntityCandidates.map((candidate) => `- [[entities/${candidate.slug}|${candidate.title}]]`).join('\n')
-    : '- None detected'
-
-  const conceptLinks = durableConceptCandidates.length > 0
-    ? durableConceptCandidates.map((candidate) => `- [[concepts/${candidate.slug}|${candidate.title}]]`).join('\n')
-    : '- None detected'
-
-  const topicLinks = analysis.topics.length > 0
-    ? analysis.topics.map((topic) => `- ${topic.title} (${topic.confidence})`).join('\n')
-    : '- None proposed'
-
-  const relationHints = analysis.relationHints.length > 0
-    ? analysis.relationHints.map((hint) => `- ${formatRelationHint(hint, durableEntityCandidates, durableConceptCandidates)}`).join('\n')
-    : '- None'
-
+function buildSourcePageBody(analysis: ArtifactAnalysis): string {
   return [
     `# ${analysis.artifact.title}`,
     '',
@@ -185,20 +122,10 @@ function buildSourcePageBody(
     '## Summary',
     analysis.sourceSummary,
     '',
-    '## Topics',
-    topicLinks,
-    '',
-    '## Entities',
-    entityLinks,
-    '',
-    '## Concepts',
-    conceptLinks,
-    '',
-    '## Relation hints',
-    relationHints,
-    '',
     '## Evidence preservation',
     'Source of truth: raw captured source material. This page is a derived index/summary and must not replace the raw evidence.',
+    '',
+    'Semantic candidates are stored in review and taxonomy proposal files until approved. Unapproved candidates are intentionally not linked from this page.',
     '',
     '### Verbatim evidence samples',
     ...selectVerbatimEvidenceSamples(analysis.artifact.content).map((line) => `- ${line}`),
@@ -236,61 +163,10 @@ function selectCaveatSignals(content: string): string[] {
   return caveats.length > 0 ? caveats : ['- None detected; review raw source before treating summary as complete.']
 }
 
-function formatRelationHint(
-  hint: ArtifactAnalysis['relationHints'][number],
-  durableEntityCandidates: AnalysisCandidate[],
-  durableConceptCandidates: AnalysisCandidate[],
-): string {
-  const fromEntity = durableEntityCandidates.find((candidate) => candidate.slug === hint.fromSlug)
-  const toConcept = durableConceptCandidates.find((candidate) => candidate.slug === hint.toSlug)
-  const from = fromEntity
-    ? `[[entities/${fromEntity.slug}|${fromEntity.title}]]`
-    : hint.fromSlug
-  const to = toConcept
-    ? `[[concepts/${toConcept.slug}|${toConcept.title}]]`
-    : hint.toSlug
-
-  return `${from} ${hint.kind} ${to} (${hint.confidence}) — ${hint.evidence}`
-}
-
-function buildSynthesisSuggestions(
-  analysis: ArtifactAnalysis,
-  sourceSlug: string,
-  durableEntityCandidates: AnalysisCandidate[],
-  durableConceptCandidates: AnalysisCandidate[],
-): SynthesisSuggestionPayload[] {
-  if (durableEntityCandidates.length === 0 || durableConceptCandidates.length === 0) {
-    return []
-  }
-
-  const leadEntity = durableEntityCandidates[0]
-  const leadConcept = durableConceptCandidates[0]
-  const slug = `${sourceSlug}-synthesis`
-
-  return [{
-    slug,
-    title: `${leadEntity.title} × ${leadConcept.title}`,
-    rationale: 'The source ties at least one entity to at least one concept with usable confidence.',
-    relatedPageSlugs: [sourceSlug, leadEntity.slug, leadConcept.slug],
-    body: [
-      `# ${leadEntity.title} × ${leadConcept.title}`,
-      '',
-      `This synthesis suggestion was generated from [[sources/${sourceSlug}|${analysis.artifact.title}]].`,
-      '',
-      `- Entity seed: [[entities/${leadEntity.slug}|${leadEntity.title}]]`,
-      `- Concept seed: [[concepts/${leadConcept.slug}|${leadConcept.title}]]`,
-      '',
-      '## Why this exists',
-      analysis.sourceSummary,
-    ].join('\n'),
-  }]
-}
-
 function buildIndexMutations(
   sourcePage: KnowledgePagePayload,
   entityPages: KnowledgePagePayload[],
   conceptPages: KnowledgePagePayload[],
-  synthesisSuggestions: SynthesisSuggestionPayload[],
 ): FileMutationInstruction[] {
   return [
     {
@@ -311,67 +187,68 @@ function buildIndexMutations(
   ]
 }
 
-function buildTaxonomyEffects(topics: TopicProposal[]): TaxonomyEffect[] {
+function buildTaxonomyEffects(
+  topics: TopicProposal[],
+  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title' | 'artifactId'>,
+): TaxonomyEffect[] {
   return topics.map((topic) => ({
     action: 'propose-topic',
     slug: topic.slug,
     title: topic.title,
     confidence: topic.confidence,
     rationale: topic.rationale,
+    source: {
+      slug: sourcePage.slug,
+      title: sourcePage.title,
+      artifactId: sourcePage.artifactId ?? '',
+    },
   }))
 }
 
 function buildReviewEffects(
   analysis: ArtifactAnalysis,
-  gatedEntityCandidates: AnalysisCandidate[],
-  gatedConceptCandidates: AnalysisCandidate[],
+  entityCandidates: AnalysisCandidate[],
+  conceptCandidates: AnalysisCandidate[],
 ): ReviewEffect[] {
   return [
     ...analysis.reviewTriggers.map((trigger) => ({
       ...trigger,
       artifactId: analysis.artifactId,
     })),
-    ...gatedEntityCandidates.map((candidate) => buildLowConfidenceGatingEffect(analysis.artifactId, 'entity', candidate)),
-    ...gatedConceptCandidates.map((candidate) => buildLowConfidenceGatingEffect(analysis.artifactId, 'concept', candidate)),
+    ...entityCandidates.map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'entity', candidate)),
+    ...conceptCandidates.map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'concept', candidate)),
   ]
 }
 
-function buildLowConfidenceGatingEffect(
+function buildCandidateReviewEffect(
   artifactId: string,
   candidateType: 'entity' | 'concept',
   candidate: AnalysisCandidate,
 ): ReviewEffect {
+  const lowConfidence = candidate.source === 'heuristic' && candidate.confidence < MIN_REVIEW_CONFIDENCE
+
   return {
     artifactId,
-    kind: 'low-confidence',
+    kind: lowConfidence ? 'low-confidence' : 'semantic-candidate',
     severity: 'low',
-    reason: `Low-confidence heuristic ${candidateType} "${candidate.title}" (${candidate.confidence.toFixed(2)}) was gated from durable wiki writes pending review.`,
+    reason: lowConfidence
+      ? `Low-confidence heuristic ${candidateType} "${candidate.title}" (${candidate.confidence.toFixed(2)}) was gated from durable wiki writes pending review.`
+      : `Candidate ${candidateType} "${candidate.title}" (${candidate.confidence.toFixed(2)}) requires review before becoming durable wiki semantics.`,
     evidence: candidate.evidence,
     confidence: candidate.confidence,
+    candidate: {
+      kind: candidateType,
+      slug: candidate.slug,
+      title: candidate.title,
+      confidence: candidate.confidence,
+      source: candidate.source,
+      evidence: candidate.evidence,
+    },
     suggestedActions: [
       `Review whether "${candidate.title}" should become a durable ${candidateType} page.`,
       'Approve, rename/merge, or reject the candidate before hardening it into the wiki.',
     ],
   }
-}
-
-function partitionDurableCandidates(candidates: AnalysisCandidate[]): {
-  durable: AnalysisCandidate[]
-  gated: AnalysisCandidate[]
-} {
-  return candidates.reduce<{ durable: AnalysisCandidate[]; gated: AnalysisCandidate[] }>((accumulator, candidate) => {
-    if (isDurableKnowledgeCandidate(candidate)) {
-      accumulator.durable.push(candidate)
-    } else {
-      accumulator.gated.push(candidate)
-    }
-
-    return accumulator
-  }, { durable: [], gated: [] })
-}
-
-function isDurableKnowledgeCandidate(candidate: AnalysisCandidate): boolean {
-  return candidate.source === 'marker' || candidate.confidence >= MIN_DURABLE_HEURISTIC_CONFIDENCE
 }
 
 function removeSourceTitleHeuristics(candidates: AnalysisCandidate[], sourceSlug: string): AnalysisCandidate[] {

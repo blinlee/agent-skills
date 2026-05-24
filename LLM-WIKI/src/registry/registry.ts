@@ -75,7 +75,15 @@ export type RouteCandidate = {
   title: string
   knowledgeRoot: string
   score: number
+  matchQuality: 'none' | 'weak' | 'moderate' | 'strong'
+  relationshipHint: 'same_scheme' | 'possible_child_profile' | 'adjacent_family' | 'generic_overlap' | 'unrelated'
   matchedTerms: string[]
+  focusedMatches: string[]
+  coreMatches: string[]
+  aliasMatches: string[]
+  phraseMatches: string[]
+  adjacentMatches: string[]
+  genericMatches: string[]
   negativeMatches: string[]
   rationale: string
 }
@@ -120,6 +128,14 @@ export type RouteProposal = {
     newWikiRequiredMissing: string[]
     requiredSatisfiedCount: number
     requiredThreshold: number
+  }
+  routingAssessment: {
+    ownershipDecision: 'strong_existing' | 'new_profile' | 'park' | 'reject'
+    relationshipHint: RouteCandidate['relationshipHint'] | 'source_map' | 'unsupported_source'
+    nearestWikiId: string | null
+    novelty: 'low' | 'medium' | 'high'
+    rationale: string
+    reviewFocus: string[]
   }
   humanReviewRequired: true
   intakeItemId?: string | null
@@ -611,7 +627,7 @@ export async function runRoute(input: RouteInput): Promise<RouteResult> {
   const state = await readRegistryState(paths)
 
   const source = await summarizeSource(input.source)
-  const candidates = rankWikis(source.searchText, state.wikis)
+  const candidates = rankWikis(source.searchText, state.wikis, focusedRouteText(source))
   const classification = await classifyRouteProposal(paths, source, candidates, state.wikis, await findIntakeItemBySource(paths, input.source))
   const now = new Date().toISOString()
   const proposalId = `route-${now.slice(0, 10).replace(/-/g, '')}-${randomUUID()}`
@@ -652,6 +668,7 @@ export async function runRoute(input: RouteInput): Promise<RouteResult> {
     classificationPackageId: classificationPackage.id,
     classificationPackage,
     classificationPolicy: classification.classificationPolicy,
+    routingAssessment: classification.routingAssessment,
     humanReviewRequired: true,
     intakeItemId: classification.intakeItemId,
     acceptedWikiId: null,
@@ -778,7 +795,7 @@ export async function runProfileSuggest(input: ProfileSuggestInput): Promise<Pro
 
   const source = await summarizeSource(sourcePath)
   const state = await readRegistryState(paths)
-  const candidates = rankWikis(source.searchText, state.wikis)
+  const candidates = rankWikis(source.searchText, state.wikis, focusedRouteText(source))
   const criteria = evaluateNewWikiCriteria(source, candidates)
   const proposedId = normalizeWikiId(input.id ?? suggestWikiId(source.title, source.searchText))
   const now = new Date().toISOString()
@@ -1472,12 +1489,13 @@ async function classifyRouteProposal(
   | 'rejectReason'
   | 'bridgeSuggestions'
   | 'classificationPolicy'
+  | 'routingAssessment'
 > & { intakeItemId: string | null }> {
   const top = candidates[0]
   const second = candidates[1]
   const criteria = evaluateNewWikiCriteria(source, candidates)
-  const strongMatch = Boolean(top && top.score >= 2)
-  const weakMatch = Boolean(top && top.score > 0 && top.score < 2)
+  const strongMatch = Boolean(top && isStrongRouteCandidate(top))
+  const weakMatch = Boolean(top && top.score > 0 && !isStrongRouteCandidate(top))
   const bridgeSuggestions = buildBridgeSuggestions(candidates)
 
   if (source.kind === 'unknown') {
@@ -1493,6 +1511,14 @@ async function classifyRouteProposal(
       rejectReason: 'Unsupported or unreadable source; convert first or reject.',
       bridgeSuggestions: [],
       classificationPolicy: buildClassificationPolicy(criteria),
+      routingAssessment: {
+        ownershipDecision: 'reject',
+        relationshipHint: 'unsupported_source',
+        nearestWikiId: null,
+        novelty: 'high',
+        rationale: 'The source cannot be routed until it is converted or made readable.',
+        reviewFocus: ['Convert the source to Markdown or reject it before semantic classification.'],
+      },
       intakeItemId: intakeItem?.id ?? null,
     }
   }
@@ -1519,6 +1545,14 @@ async function classifyRouteProposal(
       rejectReason: null,
       bridgeSuggestions: [],
       classificationPolicy: buildClassificationPolicy(criteria),
+      routingAssessment: {
+        ownershipDecision: 'park',
+        relationshipHint: 'source_map',
+        nearestWikiId: top?.wikiId ?? null,
+        novelty: 'low',
+        rationale: 'The source looks like navigation or an index rather than primary knowledge evidence.',
+        reviewFocus: ['Decide whether to use this as navigation context, split referenced sources, or reject it.'],
+      },
       intakeItemId: intakeItem?.id ?? null,
     }
   }
@@ -1527,7 +1561,7 @@ async function classifyRouteProposal(
     return {
       decisionType: bridgeSuggestions.length > 0 ? 'bridge_existing_wikis' : 'route_existing',
       recommendedWikiId: top!.wikiId,
-      confidence: top!.score >= 4 ? 'high' : 'medium',
+      confidence: top!.score >= ROUTE_HIGH_CONFIDENCE_SCORE ? 'high' : 'medium',
       evidence: [
         `Best existing wiki: ${top!.wikiId} with score ${top!.score}.`,
         `Matched terms: ${top!.matchedTerms.join(', ') || 'none'}.`,
@@ -1544,6 +1578,7 @@ async function classifyRouteProposal(
       rejectReason: null,
       bridgeSuggestions,
       classificationPolicy: buildClassificationPolicy(criteria),
+      routingAssessment: buildRoutingAssessment('strong_existing', top!, criteria),
       intakeItemId: intakeItem?.id ?? null,
     }
   }
@@ -1566,6 +1601,7 @@ async function classifyRouteProposal(
       rejectReason: null,
       bridgeSuggestions,
       classificationPolicy: buildClassificationPolicy(criteria),
+      routingAssessment: buildRoutingAssessment('park', top!, criteria),
       intakeItemId: intakeItem?.id ?? null,
     }
   }
@@ -1597,6 +1633,7 @@ async function classifyRouteProposal(
     rejectReason: null,
     bridgeSuggestions,
     classificationPolicy: buildClassificationPolicy(criteria),
+    routingAssessment: buildRoutingAssessment('new_profile', top ?? null, criteria),
     intakeItemId: intakeItem?.id ?? null,
   }
 }
@@ -1657,12 +1694,13 @@ async function createProfileProposalForSource(paths: RegistryPaths, input: {
 
 function evaluateNewWikiCriteria(source: SourceSummary, candidates: RouteCandidate[]): ProfileProposal['newWikiCriteria'] {
   const topScore = candidates[0]?.score ?? 0
+  const hasStrongFit = candidates[0] ? isStrongRouteCandidate(candidates[0]) : false
   const tokens = [...new Set(tokenize(source.searchText))]
   const satisfied = [
-    topScore < 1 ? 'No existing wiki has a strong semantic/profile fit.' : null,
+    !hasStrongFit ? 'No existing wiki has a strong semantic/profile fit.' : null,
     tokens.length >= 8 ? 'Source exposes enough distinct terminology to draft a boundary.' : null,
     source.excerpt.length >= 160 ? 'Source has enough content to evaluate retrieval intent and scope.' : null,
-    topScore === 0 ? 'Forcing this into an existing wiki would create taxonomy pollution risk.' : null,
+    !hasStrongFit && topScore < ROUTE_STRONG_MATCH_SCORE ? 'Forcing this into an existing wiki would create taxonomy pollution risk.' : null,
     source.kind !== 'unknown' ? 'Source format is ingestible after human route/profile confirmation.' : null,
   ].filter((value): value is string => Boolean(value))
   const all = [
@@ -1687,6 +1725,64 @@ function buildClassificationPolicy(criteria: ProfileProposal['newWikiCriteria'])
     requiredSatisfiedCount: criteria.satisfied.length,
     requiredThreshold: criteria.requiredThreshold,
   }
+}
+
+function buildRoutingAssessment(
+  ownershipDecision: RouteProposal['routingAssessment']['ownershipDecision'],
+  top: RouteCandidate | null,
+  criteria: ProfileProposal['newWikiCriteria'],
+): RouteProposal['routingAssessment'] {
+  const relationshipHint = top?.relationshipHint ?? 'unrelated'
+  const novelty = ownershipDecision === 'strong_existing'
+    ? 'low'
+    : relationshipHint === 'possible_child_profile'
+      ? 'medium'
+      : relationshipHint === 'same_scheme' || relationshipHint === 'adjacent_family'
+        ? 'low'
+        : 'high'
+  const reviewFocus = [
+    top ? `Nearest wiki candidate: ${top.wikiId} (${top.matchQuality}, ${top.relationshipHint}, score ${top.score}).` : 'No existing wiki candidate is available.',
+    top && top.focusedMatches.length > 0
+      ? `Focused title/abstract matches: ${top.focusedMatches.join(', ')}.`
+      : 'No focused title/abstract profile evidence; inspect whether full-document matches are only citations, tables, or background discussion.',
+    criteria.satisfied.length > 0
+      ? `New-profile criteria satisfied: ${criteria.satisfied.length}/${criteria.requiredThreshold}.`
+      : 'No new-profile criteria were satisfied.',
+  ]
+  const rationale = top
+    ? routingAssessmentRationale(ownershipDecision, top)
+    : 'No registered wiki is available, so the source requires a profile proposal or parking.'
+
+  return {
+    ownershipDecision,
+    relationshipHint,
+    nearestWikiId: top?.wikiId ?? null,
+    novelty,
+    rationale,
+    reviewFocus,
+  }
+}
+
+function routingAssessmentRationale(
+  ownershipDecision: RouteProposal['routingAssessment']['ownershipDecision'],
+  top: RouteCandidate,
+): string {
+  if (ownershipDecision === 'strong_existing') {
+    return `Route can be proposed to ${top.wikiId} because profile-level evidence matched strongly.`
+  }
+  if (ownershipDecision === 'park') {
+    return `The nearest wiki is ${top.wikiId}, but the evidence is too weak to force ownership and too thin to draft a durable profile automatically.`
+  }
+  if (top.relationshipHint === 'possible_child_profile') {
+    return `The source appears related to ${top.wikiId}, but focused evidence suggests a potentially distinct child or sibling profile rather than direct ownership.`
+  }
+  if (top.relationshipHint === 'adjacent_family') {
+    return `The source is adjacent to ${top.wikiId}, but existing profile evidence is not strong enough for direct ownership.`
+  }
+  if (top.relationshipHint === 'generic_overlap') {
+    return `The nearest signal for ${top.wikiId} comes mostly from broad or full-document token overlap; use this only as a review hint.`
+  }
+  return 'The source does not appear owned by an existing wiki profile.'
 }
 
 async function buildClassificationPackage(paths: RegistryPaths, input: {
@@ -1718,9 +1814,9 @@ async function buildClassificationPackage(paths: RegistryPaths, input: {
     .slice(0, 4)
     .map((candidate) => ({
       wikiId: candidate.wikiId,
-      relation: (candidate.score >= 2 && topScore - candidate.score <= 1 ? 'co-relevant' : candidate.score >= 2 ? 'bridge' : 'possible-secondary') as ClassificationPackage['secondaryWikis'][number]['relation'],
+      relation: (isStrongRouteCandidate(candidate) && topScore - candidate.score <= 1 ? 'co-relevant' : isStrongRouteCandidate(candidate) ? 'bridge' : 'possible-secondary') as ClassificationPackage['secondaryWikis'][number]['relation'],
       confidence: scoreToConfidence(candidate.score),
-      rationale: candidate.score >= 2
+      rationale: isStrongRouteCandidate(candidate)
         ? `Also matched strongly (${candidate.score}); treat as secondary/bridge context, not silent duplicate ownership.`
         : `Weak secondary signal (${candidate.score}); show only as context unless human confirms.`,
     }))
@@ -1983,8 +2079,8 @@ function buildClassificationOperations(
 }
 
 function scoreToConfidence(score: number): 'low' | 'medium' | 'high' {
-  if (score >= 4) return 'high'
-  if (score >= 2) return 'medium'
+  if (score >= ROUTE_HIGH_CONFIDENCE_SCORE) return 'high'
+  if (score >= ROUTE_STRONG_MATCH_SCORE) return 'medium'
   return 'low'
 }
 
@@ -2299,8 +2395,54 @@ function profilePositiveTerms(wiki: WikiRegistryEntry): string[] {
   ].flatMap(tokenize))]
 }
 
+const ROUTE_STRONG_MATCH_SCORE = 5
+const ROUTE_CHILD_PROFILE_SCORE = 4
+const ROUTE_HIGH_CONFIDENCE_SCORE = 8
+
+const ROUTE_GENERIC_TERMS = new Set([
+  'ai',
+  'agent',
+  'agents',
+  'artificial',
+  'benchmark',
+  'benchmarks',
+  'data',
+  'dataset',
+  'deep',
+  'evaluation',
+  'foundation',
+  'framework',
+  'intelligence',
+  'language',
+  'learning',
+  'llm',
+  'machine',
+  'method',
+  'methods',
+  'model',
+  'modeling',
+  'models',
+  'multi',
+  'network',
+  'networks',
+  'neural',
+  'paper',
+  'performance',
+  'quantitative',
+  'research',
+  'series',
+  'system',
+  'systems',
+  'task',
+  'tasks',
+  'time',
+  'training',
+  'visual',
+  'vision',
+])
+
 function buildBridgeSuggestions(candidates: RouteCandidate[]): RouteProposal['bridgeSuggestions'] {
-  const strong = candidates.filter((candidate) => candidate.score >= 2)
+  const strong = candidates.filter((candidate) => isStrongRouteCandidate(candidate))
   if (strong.length < 2) {
     return []
   }
@@ -2449,30 +2591,225 @@ function inferRegistrySourceRole(filePath: string, content: string): SourceRole 
   return navigationLines.length / lines.length >= 0.5 ? 'source-map' : 'ordinary'
 }
 
-function rankWikis(searchText: string, wikis: WikiRegistryEntry[]): RouteCandidate[] {
-  const sourceTokens = new Set(tokenize(searchText))
+function rankWikis(searchText: string, wikis: WikiRegistryEntry[], focusText = searchText): RouteCandidate[] {
+  const sourceTokens = routeTokenSet(searchText)
+  const normalizedSearchText = normalizePhraseText(searchText)
+  const focusedTokens = routeTokenSet(focusText)
+  const normalizedFocusText = normalizePhraseText(focusText)
 
   return wikis
     .map((wiki) => {
       const normalizedWiki = normalizeWikiProfile(wiki)
-      const positiveTerms = profilePositiveTerms(normalizedWiki)
+      const evidence = collectRouteEvidence(normalizedWiki, sourceTokens, normalizedSearchText)
+      const focusedEvidence = collectRouteEvidence(normalizedWiki, focusedTokens, normalizedFocusText)
       const negativeTerms = [...new Set(normalizedWiki.outOfScope.flatMap(tokenize))]
-      const matchedTerms = positiveTerms.filter((term) => sourceTokens.has(term))
-      const negativeMatches = negativeTerms.filter((term) => sourceTokens.has(term))
-      const score = Math.max(0, matchedTerms.length + matchedTerms.filter((term) => normalizedWiki.scopeCore.flatMap(tokenize).includes(term)).length * 0.5 - negativeMatches.length)
+      const negativePhraseMatches = normalizedWiki.outOfScope
+        .map(normalizePhraseText)
+        .filter((phrase) => phrase && phraseMatchesSource(normalizedSearchText, phrase))
+      const negativeMatches = [...new Set([
+        ...negativePhraseMatches,
+        ...negativeTerms.filter((term) => sourceTokens.has(term)),
+      ])]
+      const negativeScore = negativePhraseMatches.length * 4
+        + negativeTerms.filter((term) => sourceTokens.has(term)).reduce((sum, term) => sum + (isGenericRouteTerm(term) ? 0.5 : 2), 0)
+      const score = Math.max(0, evidence.score - negativeScore)
+      const matchedTerms = [...new Set([
+        ...evidence.phraseMatches,
+        ...evidence.aliasMatches,
+        ...evidence.coreMatches,
+        ...evidence.adjacentMatches,
+        ...evidence.genericMatches,
+      ])]
       return {
         wikiId: normalizedWiki.id,
         title: normalizedWiki.title,
         knowledgeRoot: normalizedWiki.knowledgeRoot,
         score: Number(score.toFixed(2)),
+        matchQuality: routeMatchQuality(score, evidence),
+        relationshipHint: routeRelationshipHint(score, evidence, focusedEvidence),
         matchedTerms,
+        focusedMatches: routeFocusedMatches(focusedEvidence),
+        coreMatches: evidence.coreMatches,
+        aliasMatches: evidence.aliasMatches,
+        phraseMatches: evidence.phraseMatches,
+        adjacentMatches: evidence.adjacentMatches,
+        genericMatches: evidence.genericMatches,
         negativeMatches,
         rationale: matchedTerms.length > 0
-          ? `Matched registry scope terms: ${matchedTerms.join(', ')}${negativeMatches.length > 0 ? `; out-of-scope terms reduced score: ${negativeMatches.join(', ')}` : ''}.`
+          ? `Matched weighted registry evidence: ${matchedTerms.join(', ')}${negativeMatches.length > 0 ? `; out-of-scope evidence reduced score: ${negativeMatches.join(', ')}` : ''}.`
           : 'No explicit scope terms matched; included as a fallback candidate for human review.',
       }
     })
     .sort((left, right) => right.score - left.score || left.wikiId.localeCompare(right.wikiId))
+}
+
+type RouteEvidence = {
+  score: number
+  coreMatches: string[]
+  aliasMatches: string[]
+  phraseMatches: string[]
+  adjacentMatches: string[]
+  genericMatches: string[]
+}
+
+function collectRouteEvidence(wiki: WikiRegistryEntry, sourceTokens: Set<string>, normalizedSearchText: string): RouteEvidence {
+  const corePhrases = wiki.scopeCore
+  const adjacentPhrases = wiki.scopeAdjacent
+  const aliasPhrases = [
+    wiki.id,
+    wiki.title,
+    ...wiki.aliases,
+    ...wiki.conceptAliases.flatMap((group) => [group.canonical, ...group.aliases]),
+    ...wiki.exampleAccept,
+  ]
+  const corePhraseMatches = matchedProfilePhrases(corePhrases, normalizedSearchText)
+  const adjacentPhraseMatches = matchedProfilePhrases(adjacentPhrases, normalizedSearchText)
+  const aliasPhraseMatches = matchedProfilePhrases(aliasPhrases, normalizedSearchText)
+  const coreTokenMatches = matchedProfileTokens(corePhrases, sourceTokens)
+  const adjacentTokenMatches = matchedProfileTokens(adjacentPhrases, sourceTokens)
+  const aliasTokenMatches = matchedProfileTokens(aliasPhrases, sourceTokens)
+
+  const genericMatches = [...new Set([
+    ...coreTokenMatches,
+    ...adjacentTokenMatches,
+    ...aliasTokenMatches,
+  ].filter(isGenericRouteTerm))]
+  const coreMatches = coreTokenMatches.filter((term) => !isGenericRouteTerm(term))
+  const adjacentMatches = adjacentTokenMatches.filter((term) => !isGenericRouteTerm(term))
+  const aliasMatches = aliasTokenMatches.filter((term) => !isGenericRouteTerm(term))
+  const phraseMatches = [...new Set([
+    ...corePhraseMatches,
+    ...aliasPhraseMatches,
+    ...adjacentPhraseMatches,
+  ])]
+  const score =
+    corePhraseMatches.length * 5
+    + aliasPhraseMatches.length * 5
+    + adjacentPhraseMatches.length * 2.5
+    + coreMatches.length * 0.8
+    + aliasMatches.length * 0.7
+    + adjacentMatches.length * 0.3
+    + genericMatches.length * 0.1
+
+  return {
+    score,
+    coreMatches: [...new Set(coreMatches)],
+    aliasMatches: [...new Set(aliasMatches)],
+    phraseMatches,
+    adjacentMatches: [...new Set(adjacentMatches)],
+    genericMatches,
+  }
+}
+
+function matchedProfilePhrases(phrases: string[], normalizedSearchText: string): string[] {
+  return [...new Set(phrases
+    .map(normalizePhraseText)
+    .filter((phrase) => {
+      const tokens = tokenize(phrase)
+      if (tokens.length === 0) {
+        return false
+      }
+      if (tokens.length === 1 && isGenericRouteTerm(tokens[0])) {
+        return false
+      }
+      return phraseMatchesSource(normalizedSearchText, phrase)
+    }))]
+}
+
+function matchedProfileTokens(phrases: string[], sourceTokens: Set<string>): string[] {
+  return [...new Set(phrases.flatMap(tokenize).filter((term) => sourceTokens.has(term)))]
+}
+
+function routeTokenSet(value: string): Set<string> {
+  return new Set(tokenize(value).flatMap(routeTokenVariants))
+}
+
+function routeTokenVariants(token: string): string[] {
+  const variants = [token]
+  if (token.endsWith('ies') && token.length > 4) {
+    variants.push(`${token.slice(0, -3)}y`)
+  }
+  if (token.endsWith('s') && token.length > 4) {
+    variants.push(token.slice(0, -1))
+  }
+  if (token.endsWith('ics') && token.length > 5) {
+    variants.push(token.slice(0, -3))
+  }
+  if (token.endsWith('ic') && token.length > 4) {
+    variants.push(token.slice(0, -2))
+  }
+  return [...new Set(variants)]
+}
+
+function routeMatchQuality(score: number, evidence: RouteEvidence): RouteCandidate['matchQuality'] {
+  if (score <= 0) {
+    return 'none'
+  }
+  if (score >= ROUTE_STRONG_MATCH_SCORE && hasStrongRouteEvidence(evidence)) {
+    return 'strong'
+  }
+  if (score >= 2) {
+    return 'moderate'
+  }
+  return 'weak'
+}
+
+function routeRelationshipHint(score: number, evidence: RouteEvidence, focusedEvidence: RouteEvidence): RouteCandidate['relationshipHint'] {
+  if (score <= 0) {
+    return 'unrelated'
+  }
+  if (score >= ROUTE_STRONG_MATCH_SCORE && hasStrongRouteEvidence(evidence)) {
+    return 'same_scheme'
+  }
+  const focusedNonGenericCount = routeFocusedMatches(focusedEvidence).length
+  if (focusedNonGenericCount >= 1 && score >= ROUTE_CHILD_PROFILE_SCORE) {
+    return 'possible_child_profile'
+  }
+  if (focusedNonGenericCount >= 1 && score >= 2) {
+    return 'adjacent_family'
+  }
+  return 'generic_overlap'
+}
+
+function routeFocusedMatches(evidence: RouteEvidence): string[] {
+  return [...new Set([
+    ...evidence.phraseMatches,
+    ...evidence.aliasMatches,
+    ...evidence.coreMatches,
+    ...evidence.adjacentMatches,
+  ])]
+}
+
+function hasStrongRouteEvidence(evidence: RouteEvidence): boolean {
+  return evidence.phraseMatches.length > 0
+}
+
+function isStrongRouteCandidate(candidate: RouteCandidate): boolean {
+  return candidate.score >= ROUTE_STRONG_MATCH_SCORE
+    && candidate.matchQuality === 'strong'
+    && candidate.phraseMatches.length > 0
+}
+
+function normalizePhraseText(value: string): string {
+  return normalizeWhitespace(value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ')).trim()
+}
+
+function phraseMatchesSource(normalizedSearchText: string, normalizedPhrase: string): boolean {
+  if (!normalizedPhrase) {
+    return false
+  }
+  return normalizedSearchText === normalizedPhrase
+    || normalizedSearchText.startsWith(`${normalizedPhrase} `)
+    || normalizedSearchText.endsWith(` ${normalizedPhrase}`)
+    || normalizedSearchText.includes(` ${normalizedPhrase} `)
+}
+
+function isGenericRouteTerm(term: string): boolean {
+  return ROUTE_GENERIC_TERMS.has(term)
+}
+
+function focusedRouteText(source: SourceSummary): string {
+  return `${source.title}\n${source.excerpt}`
 }
 
 function buildRegistryAnswer(question: string, results: QueryRegistryWikiResult[]): string {

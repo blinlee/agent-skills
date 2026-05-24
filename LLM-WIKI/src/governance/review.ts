@@ -15,6 +15,14 @@ export type ReviewItemRecord = {
   evidence?: string[]
   confidence?: number
   suggestedActions?: string[]
+  candidate?: {
+    kind: 'entity' | 'concept'
+    slug: string
+    title: string
+    confidence: number
+    source: string
+    evidence: string[]
+  }
   createdAt?: string
   updatedAt?: string
 }

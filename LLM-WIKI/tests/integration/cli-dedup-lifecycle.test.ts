@@ -107,8 +107,8 @@ describe('cli dedup and lifecycle', () => {
     const first = await runIngestCommand({ knowledgeRoot, input: sourcePath })
     expect(first.status).toBe('needs_review')
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
 
     await writeFile(
       sourcePath,
@@ -121,8 +121,8 @@ describe('cli dedup and lifecycle', () => {
     expect(second.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
 
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'graph-digest.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
@@ -143,7 +143,7 @@ describe('cli dedup and lifecycle', () => {
     })
     expect(freshAnswer.citations.length).toBeGreaterThan(0)
     expect(freshAnswer.citations.map((citation) => citation.target)).toEqual(
-      expect.arrayContaining(['entities/graphops']),
+      expect.arrayContaining(['sources/graph-digest']),
     )
   })
 
@@ -174,8 +174,8 @@ describe('cli dedup and lifecycle', () => {
     expect(second.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
 
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'graph-digest.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })

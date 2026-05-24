@@ -12,6 +12,7 @@ coverage/
 
 # local docs / notes not intended for the public repo surface
 docs/
+skills/*-workspace/
 
 # local orchestration/runtime state
 .omx/

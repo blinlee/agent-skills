@@ -217,8 +217,13 @@ describe('query, lint, and status', () => {
     })
 
     const indexPath = path.join(knowledgeRoot, 'wiki', 'index.md')
-    await appendFile(indexPath, '- [[concepts/openclaw|OpenClaw Concept]]\n- [[sources/disambiguation-ledger|Disambiguation Ledger]]\n', 'utf8')
+    await appendFile(indexPath, '- [[entities/openclaw|OpenClaw Entity]]\n- [[concepts/openclaw|OpenClaw Concept]]\n- [[sources/disambiguation-ledger|Disambiguation Ledger]]\n', 'utf8')
 
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'),
+      '# OpenClaw Entity\n\n## Summary\nThis entity page shares the same slug as the concept page.\n',
+      'utf8',
+    )
     await writeFile(
       path.join(knowledgeRoot, 'wiki', 'concepts', 'openclaw.md'),
       '# OpenClaw Concept\n\n## Summary\nThis concept page shares the same slug as the entity page.\n',

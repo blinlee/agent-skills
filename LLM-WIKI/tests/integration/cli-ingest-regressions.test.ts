@@ -100,7 +100,7 @@ describe('cli ingest regressions', () => {
     })
   })
 
-  it('preserves shared entity/concept outputs while removing source-owned stale outputs on changed-source recompiles', async () => {
+  it('keeps candidate semantics in proposals while removing source-owned stale outputs on changed-source recompiles', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
     tempRoots.push(knowledgeRoot, inputRoot)
@@ -124,8 +124,8 @@ describe('cli ingest regressions', () => {
     expect(first.status).toBe('needs_review')
     expect(second.status).toBe('needs_review')
 
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'alpha-notes-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'beta-notes-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
@@ -145,25 +145,17 @@ describe('cli ingest regressions', () => {
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-digest.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'alpha-digest-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
 
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'beta-notes-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
 
-    const openClawContent = await readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8')
-    expect(openClawContent).toContain('[[sources/beta-notes|beta notes]]')
-    expect(openClawContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
-
-    const reliabilityContent = await readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'), 'utf8')
-    expect(reliabilityContent).toContain('[[sources/beta-notes|beta notes]]')
-    expect(reliabilityContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
-
     const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
-    expect(indexContent).toContain('[[entities/openclaw|OpenClaw]]')
-    expect(indexContent).toContain('[[concepts/reliability|Reliability]]')
-    expect(indexContent).toContain('[[entities/graphops|GraphOps]]')
-    expect(indexContent).toContain('[[concepts/stability|Stability]]')
+    expect(indexContent).not.toContain('[[entities/openclaw|OpenClaw]]')
+    expect(indexContent).not.toContain('[[concepts/reliability|Reliability]]')
+    expect(indexContent).not.toContain('[[entities/graphops|GraphOps]]')
+    expect(indexContent).not.toContain('[[concepts/stability|Stability]]')
     expect(indexContent).toContain('[[sources/alpha-digest|alpha digest]]')
     expect(indexContent).toContain('[[sources/beta-notes|beta notes]]')
     expect(indexContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
@@ -175,26 +167,21 @@ describe('cli ingest regressions', () => {
     expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest).toMatchObject({
       pageFiles: expect.arrayContaining([
         'wiki/sources/alpha-digest.md',
-        'wiki/entities/graphops.md',
-        'wiki/concepts/stability.md',
       ]),
       indexEntries: expect.arrayContaining([
         '- [[sources/alpha-digest|alpha digest]]',
-        '- [[entities/graphops|GraphOps]]',
-        '- [[concepts/stability|Stability]]',
       ]),
     })
     expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/entities/openclaw.md')
     expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/concepts/reliability.md')
     expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/syntheses/alpha-digest-synthesis.md')
     expect(dedupManifest.entries[path.resolve(sourceBPath)]?.lastOutputManifest?.pageFiles).toEqual(expect.arrayContaining([
-      'wiki/entities/openclaw.md',
-      'wiki/concepts/reliability.md',
+      'wiki/sources/beta-notes.md',
     ]))
     expect(dedupManifest.entries[path.resolve(sourceBPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/syntheses/beta-notes-synthesis.md')
   })
 
-  it('preserves shared derived pages for legacy shared-owner manifests after one owner changes', async () => {
+  it('keeps legacy snapshot handling source-owned after one owner changes', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
     tempRoots.push(knowledgeRoot, inputRoot)
@@ -233,24 +220,16 @@ describe('cli ingest regressions', () => {
 
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-digest.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
-
-    const openClawContent = await readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8')
-    expect(openClawContent).toContain('[[sources/beta-notes|beta notes]]')
-    expect(openClawContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
-
-    const reliabilityContent = await readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'), 'utf8')
-    expect(reliabilityContent).toContain('[[sources/beta-notes|beta notes]]')
-    expect(reliabilityContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
 
     const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
-    expect(indexContent).toContain('[[entities/openclaw|OpenClaw]]')
-    expect(indexContent).toContain('[[concepts/reliability|Reliability]]')
-    expect(indexContent).toContain('[[entities/graphops|GraphOps]]')
-    expect(indexContent).toContain('[[concepts/stability|Stability]]')
+    expect(indexContent).not.toContain('[[entities/openclaw|OpenClaw]]')
+    expect(indexContent).not.toContain('[[concepts/reliability|Reliability]]')
+    expect(indexContent).not.toContain('[[entities/graphops|GraphOps]]')
+    expect(indexContent).not.toContain('[[concepts/stability|Stability]]')
     expect(indexContent).toContain('[[sources/alpha-digest|alpha digest]]')
     expect(indexContent).toContain('[[sources/beta-notes|beta notes]]')
     expect(indexContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
@@ -263,7 +242,7 @@ describe('cli ingest regressions', () => {
       question: 'What is OpenClaw?',
     })
     expect(openClawQuery.citations.map((citation) => citation.target)).toEqual(
-      expect.arrayContaining(['entities/openclaw']),
+      expect.arrayContaining(['sources/beta-notes']),
     )
   })
 
@@ -296,8 +275,8 @@ describe('cli ingest regressions', () => {
     const third = await runIngestCommand({ knowledgeRoot, input: repoRoot })
 
     expect(third.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   it('skips unchanged url inputs and recompiles when fetched content changes', async () => {
@@ -353,8 +332,8 @@ describe('cli ingest regressions', () => {
     const third = await runIngestCommand({ knowledgeRoot, input: url })
 
     expect(third.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 })
 

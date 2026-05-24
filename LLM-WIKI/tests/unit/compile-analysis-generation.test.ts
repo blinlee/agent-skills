@@ -43,7 +43,7 @@ describe('compile pipeline', () => {
     ])
   })
 
-  it('does not create review triggers from strong structured evidence but still links relations', async () => {
+  it('keeps strong structured evidence as proposals without materializing semantic pages', async () => {
     const artifact: NormalizedArtifact = {
       id: 's2',
       sourceKind: 'md',
@@ -73,14 +73,46 @@ describe('compile pipeline', () => {
     ]))
 
     expect(result.sourcePage.slug).toContain('runtime-notes')
-    expect(result.entityPages.length + result.conceptPages.length).toBeGreaterThan(0)
+    expect(result.entityPages).toEqual([])
+    expect(result.conceptPages).toEqual([])
     expect(result.indexMutations.length).toBeGreaterThan(0)
     expect(result.logMutations.length).toBeGreaterThan(0)
     expect(result.taxonomyEffects.every((effect) => effect.action === 'propose-topic')).toBe(true)
-    expect(result.reviewEffects).toEqual([])
+    expect(result.taxonomyEffects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        title: 'Compilation',
+        source: expect.objectContaining({ slug: result.sourcePage.slug, title: result.sourcePage.title }),
+      }),
+    ]))
+    expect(result.reviewEffects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        artifactId: artifact.id,
+        kind: 'semantic-candidate',
+        reason: expect.stringContaining('Candidate entity "OpenClaw"'),
+        candidate: expect.objectContaining({
+          kind: 'entity',
+          slug: 'openclaw',
+          title: 'OpenClaw',
+          source: 'marker',
+          evidence: expect.arrayContaining(['Entity: OpenClaw.']),
+        }),
+      }),
+      expect.objectContaining({
+        artifactId: artifact.id,
+        kind: 'semantic-candidate',
+        reason: expect.stringContaining('Candidate concept "Compilation"'),
+        candidate: expect.objectContaining({
+          kind: 'concept',
+          slug: 'compilation',
+          title: 'Compilation',
+          source: 'marker',
+          evidence: expect.arrayContaining(['Concept: compilation.']),
+        }),
+      }),
+    ]))
   })
 
-  it('renders relation hints as concrete wiki links between generated pages', async () => {
+  it('does not render unapproved relation hints as durable wiki links', async () => {
     const artifact: NormalizedArtifact = {
       id: 'relation-links',
       sourceKind: 'md',
@@ -101,7 +133,9 @@ describe('compile pipeline', () => {
     const analysis = await analyzeArtifact(artifact)
     const result = await generateKnowledgeChanges(analysis)
 
-    expect(result.sourcePage.body).toContain('[[entities/openclaw|OpenClaw]] relates-to [[concepts/compilation|Compilation]]')
+    expect(result.sourcePage.body).not.toContain('[[entities/openclaw|OpenClaw]]')
+    expect(result.sourcePage.body).not.toContain('[[concepts/compilation|Compilation]]')
+    expect(result.sourcePage.body).toContain('Semantic candidates are stored in review and taxonomy proposal files until approved.')
   })
 
 
@@ -131,20 +165,20 @@ describe('compile pipeline', () => {
       expect.objectContaining({ slug: 'compiler-notes', source: 'heuristic', confidence: 0.58 }),
       expect.objectContaining({ slug: 'rust-analyzer', source: 'heuristic', confidence: 0.58 }),
     ]))
-    expect(result.entityPages).toEqual([
-      expect.objectContaining({ slug: 'openclaw', title: 'OpenClaw' }),
-    ])
-    expect(result.entityPages.map((page) => page.slug)).not.toContain('compiler-notes')
-    expect(result.entityPages.map((page) => page.slug)).not.toContain('rust-analyzer')
-    expect(result.conceptPages).toEqual([
-      expect.objectContaining({ slug: 'compilation', title: 'Compilation' }),
-    ])
+    expect(result.entityPages).toEqual([])
+    expect(result.conceptPages).toEqual([])
     expect(result.reviewEffects).toEqual(expect.arrayContaining([
       expect.objectContaining({
         artifactId: artifact.id,
         kind: 'low-confidence',
         severity: 'low',
         reason: expect.stringMatching(/Rust Analyzer/),
+        candidate: expect.objectContaining({
+          kind: 'entity',
+          slug: 'rust-analyzer',
+          title: 'Rust Analyzer',
+          source: 'heuristic',
+        }),
       }),
     ]))
   })
@@ -363,13 +397,23 @@ describe('compile pipeline', () => {
 
     const result = await generateKnowledgeChanges(analysis)
 
-    expect(result.reviewEffects).toEqual([
+    expect(result.reviewEffects).toEqual(expect.arrayContaining([
       {
         artifactId: artifact.id,
         kind: 'low-confidence',
         severity: 'low',
         reason: 'Canonical analysis requested manual review.',
       },
-    ])
+      expect.objectContaining({
+        artifactId: artifact.id,
+        kind: 'semantic-candidate',
+        reason: expect.stringContaining('Candidate entity "OpenClaw"'),
+      }),
+      expect.objectContaining({
+        artifactId: artifact.id,
+        kind: 'semantic-candidate',
+        reason: expect.stringContaining('Candidate concept "Compilation"'),
+      }),
+    ]))
   })
 })
