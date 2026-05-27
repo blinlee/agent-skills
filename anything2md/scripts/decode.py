@@ -15,6 +15,9 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from datetime import datetime, timezone
 from importlib import metadata as importlib_metadata
 from pathlib import Path
@@ -40,6 +43,10 @@ MINERU_EXTENSIONS = {
     ".xls",
     ".xlsx",
 }
+MINERU_DEFAULT_MAX_PAGES_PER_TASK = 200
+MINERU_DEFAULT_CHUNK_CONCURRENCY = 10
+MINERU_DEFAULT_CHUNK_RETRIES = 3
+MINERU_DEFAULT_RETRY_DELAY_SECONDS = 10
 
 
 def iso_now() -> str:
@@ -192,6 +199,48 @@ def source_extension(source: str) -> str:
     if is_uri(source):
         return Path(source.split("?", 1)[0]).suffix.lower()
     return Path(source).suffix.lower()
+
+
+def pdf_page_count(path: Path) -> int | None:
+    try:
+        import fitz
+
+        doc = fitz.open(str(path))
+        try:
+            return int(doc.page_count)
+        finally:
+            doc.close()
+    except Exception:
+        pass
+
+    try:
+        from pypdf import PdfReader
+
+        return len(PdfReader(str(path)).pages)
+    except Exception:
+        pass
+
+    pdfinfo = shutil.which("pdfinfo")
+    if pdfinfo:
+        try:
+            completed = subprocess.run(
+                [pdfinfo, str(path)],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            for line in completed.stdout.splitlines():
+                if line.startswith("Pages:"):
+                    return int(line.split(":", 1)[1].strip())
+        except Exception:
+            pass
+
+    return None
+
+
+def page_chunks(total_pages: int, chunk_size: int) -> list[tuple[int, int]]:
+    return [(start, min(start + chunk_size - 1, total_pages)) for start in range(1, total_pages + 1, chunk_size)]
 
 
 def choose_decoder(args: argparse.Namespace, source: str) -> str:
@@ -388,40 +437,33 @@ def move_mineru_assets(tmp_output_path: Path, asset_root: Path) -> list[str]:
     return asset_files
 
 
-def decode_with_mineru(args: argparse.Namespace, source: str, output_path: Path, knowledge_root: Path | None) -> tuple[str, str, str, dict[str, Any]]:
-    executable = shutil.which("mineru-open-api")
-    if not executable:
-        raise RuntimeError("mineru-open-api executable is not on PATH")
-    if is_uri(source):
-        raise ValueError("MinerU local decoder routing only supports local files; use MarkItDown --allow-uri or MinerU crawl explicitly for URLs")
+def run_mineru_extract(args: argparse.Namespace, executable: str, source: str, tmp_output_path: Path, pages: str | None = None) -> None:
+    command = [
+        executable,
+        "extract",
+        source,
+        "--format",
+        "md",
+        "--model",
+        args.mineru_model,
+        "--output",
+        str(tmp_output_path),
+        "--timeout",
+        str(args.mineru_timeout),
+    ]
+    if args.language:
+        command.extend(["--language", args.language])
+    if pages:
+        command.extend(["--pages", pages])
+    if args.ocr:
+        command.append("--ocr")
+    if not args.formula:
+        command.append("--formula=false")
+    if not args.table:
+        command.append("--table=false")
 
-    asset_root = Path(args.asset_root).expanduser().resolve() if args.asset_root else default_asset_root(output_path, knowledge_root)
-    with TemporaryDirectory(prefix="anything2md-mineru-") as tmp_dir:
-        tmp_output_path = Path(tmp_dir) / output_path.name
-        command = [
-            executable,
-            "extract",
-            source,
-            "--format",
-            "md",
-            "--model",
-            args.mineru_model,
-            "--output",
-            str(tmp_output_path),
-            "--timeout",
-            str(args.mineru_timeout),
-        ]
-        if args.language:
-            command.extend(["--language", args.language])
-        if args.pages:
-            command.extend(["--pages", args.pages])
-        if args.ocr:
-            command.append("--ocr")
-        if not args.formula:
-            command.append("--formula=false")
-        if not args.table:
-            command.append("--table=false")
-
+    last_error = ""
+    for attempt in range(args.mineru_chunk_retries + 1):
         completed = subprocess.run(
             command,
             check=False,
@@ -429,15 +471,98 @@ def decode_with_mineru(args: argparse.Namespace, source: str, output_path: Path,
             stderr=subprocess.PIPE,
             text=True,
         )
-        if completed.returncode != 0:
-            detail = (completed.stderr or completed.stdout).strip()
-            raise RuntimeError(detail or "mineru-open-api extract failed")
-        if not tmp_output_path.exists():
-            raise RuntimeError(f"mineru-open-api did not create expected Markdown output: {tmp_output_path}")
+        if completed.returncode == 0:
+            if not tmp_output_path.exists():
+                raise RuntimeError(f"mineru-open-api did not create expected Markdown output: {tmp_output_path}")
+            return
 
-        asset_files = move_mineru_assets(tmp_output_path, asset_root)
-        markdown = tmp_output_path.read_text(encoding="utf-8")
-        markdown = rewrite_mineru_asset_refs(markdown, output_path, asset_root)
+        last_error = (completed.stderr or completed.stdout).strip() or "mineru-open-api extract failed"
+        if attempt >= args.mineru_chunk_retries:
+            break
+        delay = args.mineru_retry_delay * (2**attempt)
+        time.sleep(delay)
+
+    raise RuntimeError(last_error)
+
+
+def extract_mineru_chunk(
+    args: argparse.Namespace,
+    executable: str,
+    source: str,
+    output_name: str,
+    chunk_dir: Path,
+    start: int,
+    end: int,
+) -> tuple[int, int, Path]:
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    tmp_output_path = chunk_dir / output_name
+    run_mineru_extract(args, executable, source, tmp_output_path, pages=f"{start}-{end}")
+    return start, end, tmp_output_path
+
+
+def decode_with_mineru(args: argparse.Namespace, source: str, output_path: Path, knowledge_root: Path | None) -> tuple[str, str, str, dict[str, Any]]:
+    executable = shutil.which("mineru-open-api")
+    if not executable:
+        raise RuntimeError("mineru-open-api executable is not on PATH")
+    if is_uri(source):
+        raise ValueError("MinerU local decoder routing only supports local files; use MarkItDown --allow-uri or MinerU crawl explicitly for URLs")
+    if args.mineru_max_pages_per_task < 1:
+        raise ValueError("--mineru-max-pages-per-task must be greater than 0")
+    if args.mineru_chunk_concurrency < 1:
+        raise ValueError("--mineru-chunk-concurrency must be greater than 0")
+    if args.mineru_chunk_retries < 0:
+        raise ValueError("--mineru-chunk-retries must be greater than or equal to 0")
+    if args.mineru_retry_delay < 0:
+        raise ValueError("--mineru-retry-delay must be greater than or equal to 0")
+
+    asset_root = Path(args.asset_root).expanduser().resolve() if args.asset_root else default_asset_root(output_path, knowledge_root)
+    source_path = Path(source)
+    total_pages = pdf_page_count(source_path) if source_path.suffix.lower() == ".pdf" and not args.pages else None
+    chunk_ranges: list[tuple[int, int]] = []
+    if total_pages is not None and total_pages > args.mineru_max_pages_per_task:
+        chunk_ranges = page_chunks(total_pages, args.mineru_max_pages_per_task)
+
+    with TemporaryDirectory(prefix="anything2md-mineru-") as tmp_dir:
+        tmp_root = Path(tmp_dir)
+        if chunk_ranges:
+            asset_files: list[str] = []
+            chunk_outputs: dict[tuple[int, int], Path] = {}
+            max_workers = min(args.mineru_chunk_concurrency, len(chunk_ranges))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(
+                        extract_mineru_chunk,
+                        args,
+                        executable,
+                        source,
+                        output_path.name,
+                        tmp_root / f"pages-{start}-{end}",
+                        start,
+                        end,
+                    ): (start, end)
+                    for start, end in chunk_ranges
+                }
+                for future in as_completed(futures):
+                    start, end = futures[future]
+                    try:
+                        completed_start, completed_end, tmp_output_path = future.result()
+                    except Exception as exc:
+                        raise RuntimeError(f"MinerU chunk {start}-{end} failed: {exc}") from exc
+                    chunk_outputs[(completed_start, completed_end)] = tmp_output_path
+
+            markdown_parts: list[str] = []
+            for start, end in chunk_ranges:
+                tmp_output_path = chunk_outputs[(start, end)]
+                asset_files.extend(move_mineru_assets(tmp_output_path, asset_root))
+                chunk_markdown = tmp_output_path.read_text(encoding="utf-8")
+                markdown_parts.append(rewrite_mineru_asset_refs(chunk_markdown, output_path, asset_root).strip())
+            markdown = "\n\n".join(part for part in markdown_parts if part)
+        else:
+            tmp_output_path = tmp_root / output_path.name
+            run_mineru_extract(args, executable, source, tmp_output_path, pages=args.pages)
+            asset_files = move_mineru_assets(tmp_output_path, asset_root)
+            markdown = tmp_output_path.read_text(encoding="utf-8")
+            markdown = rewrite_mineru_asset_refs(markdown, output_path, asset_root)
 
     return (
         markdown,
@@ -446,6 +571,13 @@ def decode_with_mineru(args: argparse.Namespace, source: str, output_path: Path,
         {
             "assetRoot": str(asset_root),
             "assetFiles": asset_files,
+            "pageCount": total_pages,
+            "chunked": bool(chunk_ranges),
+            "chunkRanges": [f"{start}-{end}" for start, end in chunk_ranges],
+            "maxPagesPerTask": args.mineru_max_pages_per_task,
+            "chunkConcurrency": min(args.mineru_chunk_concurrency, len(chunk_ranges)) if chunk_ranges else None,
+            "chunkRetries": args.mineru_chunk_retries if chunk_ranges else None,
+            "retryDelaySeconds": args.mineru_retry_delay if chunk_ranges else None,
         },
     )
 
@@ -505,7 +637,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--decoder", choices=["auto", "mineru", "markitdown"], default="auto", help="Decoder router choice. Auto uses MinerU for high-fidelity document formats and MarkItDown for the rest.")
     parser.add_argument("--backend", choices=["auto", "python", "cli"], default="auto")
     parser.add_argument("--mineru-model", choices=["vlm", "pipeline"], default="vlm", help="MinerU model for routed high-fidelity formats. Default: vlm.")
-    parser.add_argument("--mineru-timeout", type=int, default=900, help="MinerU extraction timeout in seconds.")
+    parser.add_argument("--mineru-timeout", type=int, default=1800, help="MinerU extraction timeout per task in seconds.")
+    parser.add_argument("--mineru-max-pages-per-task", type=int, default=MINERU_DEFAULT_MAX_PAGES_PER_TASK, help="Auto-split PDFs above this many pages for MinerU extraction. Default: 200.")
+    parser.add_argument("--mineru-chunk-concurrency", type=int, default=MINERU_DEFAULT_CHUNK_CONCURRENCY, help="Parallel MinerU chunk jobs for auto-split PDFs. Default: 10.")
+    parser.add_argument("--mineru-chunk-retries", type=int, default=MINERU_DEFAULT_CHUNK_RETRIES, help="Retries per MinerU chunk after failures such as rate limiting. Default: 3.")
+    parser.add_argument("--mineru-retry-delay", type=float, default=MINERU_DEFAULT_RETRY_DELAY_SECONDS, help="Initial retry delay in seconds; later retries use exponential backoff. Default: 10.")
     parser.add_argument("--asset-root", help="Directory for MinerU extracted assets. Defaults to <knowledgeRoot>/anything2md/assets/<output-name> or <output>.assets.")
     parser.add_argument("--allow-uri", action="store_true", help="Allow MarkItDown URI conversion for trusted inputs.")
     parser.add_argument("--use-plugins", action="store_true", help="Enable installed MarkItDown plugins.")
@@ -629,6 +765,9 @@ def main(argv: list[str]) -> int:
             if asset_root:
                 metadata_payload["assetRoot"] = path_label(asset_root, knowledge_root)
             metadata_payload["assetFiles"] = [path_label(path, knowledge_root) for path in asset_files]
+            for key in ("pageCount", "chunked", "chunkRanges", "maxPagesPerTask", "chunkConcurrency", "chunkRetries", "retryDelaySeconds"):
+                if key in decode_extra and decode_extra[key] is not None:
+                    metadata_payload[key] = decode_extra[key]
         if args.include_absolute_paths:
             metadata_payload["sourceAbsolutePath"] = source
             metadata_payload["outputAbsolutePath"] = str(output_path)

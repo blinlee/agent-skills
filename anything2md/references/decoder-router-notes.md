@@ -16,6 +16,8 @@ All other non-Markdown formats stay on MarkItDown unless the operator explicitly
 
 MinerU output assets are moved to the configured asset root, and Markdown references are rewritten to point there. If a knowledge root is supplied, the asset root defaults to `anything2md/assets/<decoded-name>/`.
 
+For PDFs above MinerU's per-task page limit, `decode.py` auto-splits the document into page ranges and submits each range separately. Chunk jobs run with bounded parallelism (`--mineru-chunk-concurrency`, default 10) and retry with exponential backoff when a chunk fails. Chunk Markdown files live only in a temporary directory; the final output is a single merged Markdown file with one metadata sidecar.
+
 ## Supported Surface
 
 The fallback path is designed around Microsoft MarkItDown's local conversion capability. MarkItDown supports many common source formats through built-in converters, including Office documents, PDFs, HTML, CSV/JSON/XML, EPUB, ZIP archives, notebooks, images, audio, RSS/Wikipedia/YouTube-style captures, and plugin-provided formats.
@@ -54,7 +56,7 @@ The internal script covers the practical MarkItDown CLI surface:
 - local file conversion by default
 - trusted URI conversion behind `--allow-uri`
 
-It also preserves MinerU controls for model, timeout, language, pages, OCR, formula recognition, and table recognition.
+It also preserves MinerU controls for model, timeout, language, pages, OCR, formula recognition, table recognition, automatic PDF page chunking, chunk concurrency, and retry/backoff behavior.
 
 ## Profiles
 

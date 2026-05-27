@@ -54,6 +54,7 @@ The script:
 - writes Markdown plus a `.metadata.json` sidecar
 - writes MinerU extracted assets beside the output by default, or under `<knowledgeRoot>/anything2md/assets/<decoded-name>/` when a knowledge root is supplied
 - rewrites Markdown image references to the moved MinerU asset location
+- auto-splits PDF inputs above MinerU's per-task page limit into temporary page chunks, runs those chunks with bounded parallelism, then writes one merged Markdown output without leaving intermediate part files
 - adds provenance frontmatter unless `--no-frontmatter` is passed
 - avoids absolute source paths in frontmatter by default
 - supports `--profile auto` by default, which emits generic frontmatter for normal conversion and archive frontmatter when knowledge-root/archive flags are present
@@ -129,6 +130,7 @@ Remaining risks: <conversion quality or missing dependency concerns>
 ## Gotchas
 
 - MinerU sends document content to the configured MinerU API. Use it only when that privacy boundary is acceptable.
+- MinerU's effective per-task page limit may be lower than its broad document-size limit. The script automatically splits PDFs over 200 pages when no explicit `--pages` range is supplied, runs up to 10 chunks in parallel by default, and supports `--mineru-chunk-concurrency` plus retry/backoff flags when the operator wants to tune throughput against API rate limits.
 - MinerU is not currently the default for HTML. Saved HTML pages can be slow or timeout under MinerU-HTML; use MarkItDown or a dedicated HTML cleaner first.
 - MinerU is a better high-fidelity document decoder, but it is still not a verifier. Formula output, OCR, and table structure need review for critical sources.
 - MarkItDown fallback is broad, not layout-perfect. It is useful for agent-readable extraction, not exact visual reproduction.
