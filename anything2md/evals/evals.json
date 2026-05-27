@@ -1,0 +1,44 @@
+{
+  "skill_name": "anything2md",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Convert a local PDF to Markdown, preserve extracted images/assets, and give me the metadata JSON path.",
+      "expected_output": "Uses the anything2md decoder script, routes the PDF through MinerU precision extraction, writes Markdown plus metadata/assets, and reports conversion risks.",
+      "files": [],
+      "expectations": [
+        "Uses scripts/decode.py",
+        "Selects MinerU for PDF",
+        "Writes Markdown output",
+        "Writes structured metadata JSON",
+        "Reports extracted asset location or clear MinerU failure"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Turn this saved HTML export into Markdown for agent review. Do not use plugins, URI conversion, or cloud parsing.",
+      "expected_output": "Routes HTML to MarkItDown fallback, keeps plugins/URI/cloud features disabled, writes Markdown and metadata, and reports paths.",
+      "files": [],
+      "expectations": [
+        "Selects MarkItDown for HTML",
+        "Does not enable --allow-uri",
+        "Does not enable --use-plugins",
+        "Does not enable --use-docintel or --use-cu",
+        "Writes Markdown plus metadata"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Prepare a DOCX for a portable knowledge archive: convert it to Markdown, archive the original only after successful decode, and keep metadata/assets under the archive root.",
+      "expected_output": "Uses the archive profile, routes DOCX through MinerU, writes decoded Markdown, archives the original under the configured anything2md archive layout after success, and reports metadata/assets.",
+      "files": [],
+      "expectations": [
+        "Uses --profile archive explicitly or relies on --profile auto with --knowledge-root/--archive-root/--archive-original",
+        "Selects MinerU for DOCX",
+        "Uses --knowledge-root, --archive-root, and --archive-original only for archive workflows",
+        "Preserves anything2md archive frontmatter",
+        "Archives the original only after successful decode"
+      ]
+    }
+  ]
+}

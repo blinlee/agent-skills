@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.DS_Store
+.omx/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+anything2md-workspace/
+*.metadata.json
+*.decoded.md
+*.assets/
