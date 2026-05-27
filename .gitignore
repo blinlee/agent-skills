@@ -1,6 +1,8 @@
 .DS_Store
 node_modules/
 dist/
+!llm-wiki/dist/
+!llm-wiki/dist/**
 out/
 tmp/
 *.log
