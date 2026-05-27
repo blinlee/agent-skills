@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseMarkdownSource } from '../../src/parsers/markdown'
-import { parseTextSource } from '../../src/parsers/text'
+import { parseMarkdownSource } from '../../src/parsers/markdown.js'
+import { parseTextSource } from '../../src/parsers/text.js'
 
 describe('text-like parsers', () => {
   it('parses markdown into a normalized artifact', async () => {

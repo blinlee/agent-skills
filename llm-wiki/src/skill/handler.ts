@@ -10,11 +10,11 @@ import {
   type InitCommandResult,
   type IngestInboxCommandResult,
   type StatusCommandResult,
-} from '../cli'
-import type { IngestJobResult } from '../jobs/job-runner'
-import type { LintCommandResult } from '../lint/lint'
-import type { QueryCommandResult } from '../query/query'
-import type { SaveSynthesisCommandResult } from '../query/save-synthesis'
+} from '../cli.js'
+import type { IngestJobResult } from '../jobs/job-runner.js'
+import type { LintCommandResult } from '../lint/lint.js'
+import type { QueryCommandResult } from '../query/query.js'
+import type { SaveSynthesisCommandResult } from '../query/save-synthesis.js'
 
 export type SkillCommand = 'init' | 'ingest' | 'query' | 'lint' | 'status' | 'save-synthesis'
 

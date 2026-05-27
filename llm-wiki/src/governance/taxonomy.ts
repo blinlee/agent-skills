@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { ensureKnowledgeRootLayout } from '../paths'
-import { updateWikiIndex } from '../wiki/index-log'
+import { ensureKnowledgeRootLayout } from '../paths.js'
+import { updateWikiIndex } from '../wiki/index-log.js'
 
 export type TopicProposalInput = {
   name: string

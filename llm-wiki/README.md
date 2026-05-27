@@ -91,6 +91,9 @@ When used as a skill from this repository root, llm-wiki exposes six stable user
 
 These are skill-level workflow contracts over the CLI commands below, not separate TypeScript subcommands.
 
+The runtime CLI uses the checked-in compiled entrypoint at `dist/src/cli.js`. `npm run --silent cli -- ...`
+therefore does not require global `tsx`; install Node dependencies only when developing, rebuilding, or running tests.
+
 The skill resolves the local target root in this order:
 
 1. an explicit path in the request
@@ -183,11 +186,11 @@ The core llm-wiki CLI ingests Markdown/text-like sources. For PDFs, images, Word
 The llm-wiki skill enforces this before ingesting or routing non-Markdown drops:
 
 1. verify `/anything2md` is installed with `python scripts/skill_discovery.py anything2md --json`
-2. convert the source to `<source-file>.decoded.md`
-3. archive or move the original out of the input queue after successful conversion
-4. continue with the normal llm-wiki ingest, route, review, lint, and index workflow
+2. run `python scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
+3. run the returned `shellCommand`, which decodes the source without passing `--knowledge-root`
+4. continue with the normal llm-wiki ingest, route, review, lint, and index workflow using the returned `decodedMarkdown`
 
-Converter metadata, extracted assets, and archived original binaries remain operational artifacts. They should not become ordinary retrieval-facing wiki pages.
+The handoff command stores the original binary, decoded Markdown, converter metadata, and extracted assets under `raw/objects/<sha-prefix>/<sha>/...`. Do not create or use a top-level `<root>/anything2md/` directory inside an llm-wiki root; that layout belongs to standalone anything2md archive mode, not to llm-wiki.
 
 ## Command surface
 
@@ -257,7 +260,7 @@ llm-wiki/
 
 Notes:
 
-- `dist/` is build output and is git-ignored
+- `dist/` is checked-in runtime output for the package CLI; rebuild it with `npm run build` after TypeScript changes
 - `node_modules/` is git-ignored
 - `SKILL.md`, `scripts/`, and `references/` are the root-level skill surface
 - `vendor/`, `.worktrees/`, `.omx/`, local `knowledge-*`, and `review/` are git-ignored local or reference surfaces

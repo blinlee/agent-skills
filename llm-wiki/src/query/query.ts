@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { appendWikiLog } from '../wiki/index-log'
-import { parseWikiPageTarget, type WikiSection, wikiSectionRank } from '../wiki/sections'
+import { appendWikiLog } from '../wiki/index-log.js'
+import { parseWikiPageTarget, type WikiSection, wikiSectionRank } from '../wiki/sections.js'
 
 const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'for', 'to', 'of', 'and', 'in', 'on', 'from', 'with', 'about', 'summarize', 'summary', 'new'])
 const WIKI_LINK_RE = /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g

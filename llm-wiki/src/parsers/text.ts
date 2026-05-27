@@ -4,7 +4,7 @@ import {
   normalizeTextBody,
   type ParserSourceInput,
   type SourceParser,
-} from './base'
+} from './base.js'
 
 export async function parseTextSource(input: ParserSourceInput) {
   return createParsedArtifact({

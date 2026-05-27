@@ -13,7 +13,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "cli": "tsx src/cli.ts",
+    "cli": "node dist/src/cli.js",
+    "cli:dev": "tsx src/cli.ts",
+    "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:plan": "vitest run"

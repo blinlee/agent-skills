@@ -2,7 +2,7 @@ import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { runIngestCommand, runQueryCommand, runSaveSynthesisCommand } from '../../src/cli'
+import { runIngestCommand, runQueryCommand, runSaveSynthesisCommand } from '../../src/cli.js'
 
 const tempRoots: string[] = []
 
@@ -363,7 +363,7 @@ describe('save-synthesis', () => {
       }
     })
 
-    const { runSaveSynthesis } = await import('../../src/query/save-synthesis')
+    const { runSaveSynthesis } = await import('../../src/query/save-synthesis.js')
 
     await expect(
       runSaveSynthesis({

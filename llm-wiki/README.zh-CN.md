@@ -91,6 +91,9 @@ npm test
 
 这些是覆盖 CLI 命令的 skill 级工作流合同，不是独立的 TypeScript 子命令。
 
+运行态 CLI 使用随仓库提交的编译入口 `dist/src/cli.js`。因此 `npm run --silent cli -- ...`
+不需要全局 `tsx`；只有开发、重建或跑测试时才需要安装 Node 依赖。
+
 skill 按以下顺序解析本地目标 root：
 
 1. 用户请求里的显式路径
@@ -183,11 +186,11 @@ npm run --silent cli -- query-registry ~/my-wikis "What do my notes say about Lo
 llm-wiki skill 在摄入或路由非 Markdown 投递物前执行这个流程：
 
 1. 用 `python scripts/skill_discovery.py anything2md --json` 验证 `/anything2md` 已安装
-2. 把来源转换为 `<source-file>.decoded.md`
-3. 转换成功后把原始文件归档或移出输入队列，避免重复处理
-4. 继续正常的 llm-wiki ingest、route、review、lint、index 流程
+2. 运行 `python scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
+3. 执行返回的 `shellCommand`，该命令不会向 anything2md 传 `--knowledge-root`
+4. 使用返回的 `decodedMarkdown` 继续正常的 llm-wiki ingest、route、review、lint、index 流程
 
-转换器元数据、抽取资产和归档原始二进制属于操作态产物，不应成为面向检索的普通 wiki 页面。
+handoff 命令会把原始二进制、解码 Markdown、转换器 metadata 和抽取资产都放在 `raw/objects/<sha-prefix>/<sha>/...` 下。不要在 llm-wiki root 里创建或使用顶层 `<root>/anything2md/` 目录；那是 anything2md 独立归档模式的布局，不属于 llm-wiki。
 
 ## 命令面
 
@@ -258,7 +261,7 @@ llm-wiki/
 
 说明：
 
-- `dist/` 是构建产物，默认 git ignore
+- `dist/` 是随仓库提交的 CLI 运行态产物；修改 TypeScript 后用 `npm run build` 重建
 - `node_modules/` 默认 git ignore
 - `SKILL.md`、`scripts/`、`references/` 是根目录 skill 表面
 - `vendor/`、`.worktrees/`、`.omx/`、本地 `knowledge-*`、`review/` 都是本地态或参考面，默认 git ignore

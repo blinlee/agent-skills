@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { ensureKnowledgeRootLayout } from '../paths'
+import { ensureKnowledgeRootLayout } from '../paths.js'
 
 export type ReviewItemRecord = {
   id: string

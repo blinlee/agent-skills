@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { appendWikiLog, updateWikiIndex } from '../../src/wiki/index-log'
-import { writeKnowledgeChanges } from '../../src/wiki/page-writer'
+import { appendWikiLog, updateWikiIndex } from '../../src/wiki/index-log.js'
+import { writeKnowledgeChanges } from '../../src/wiki/page-writer.js'
 
 const testRoots: string[] = []
 

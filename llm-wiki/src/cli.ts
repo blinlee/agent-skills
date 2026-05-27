@@ -2,7 +2,7 @@
 import { access, readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadConfig } from './config'
+import { loadConfig } from './config.js'
 import {
   acceptTaxonomyProposal,
   listTaxonomyProposals,
@@ -10,13 +10,13 @@ import {
   type AcceptTaxonomyProposalInput,
   type ListTaxonomyProposalsResult,
   type RejectTaxonomyProposalInput,
-} from './governance/taxonomy'
-import { runIngestJob, type IngestJobResult } from './jobs/job-runner'
-import { runBuildIndex, type BuildIndexInput, type BuildIndexResult } from './index/wiki-index'
-import { runLint, type LintCommandInput, type LintCommandResult } from './lint/lint'
-import { defaultKnowledgeLayout, ensureKnowledgeRootLayout, requiredKnowledgeFiles } from './paths'
-import { runQuery, type QueryCommandInput, type QueryCommandResult } from './query/query'
-import { runSaveSynthesis, type SaveSynthesisCommandInput, type SaveSynthesisCommandResult } from './query/save-synthesis'
+} from './governance/taxonomy.js'
+import { runIngestJob, type IngestJobResult } from './jobs/job-runner.js'
+import { runBuildIndex, type BuildIndexInput, type BuildIndexResult } from './index/wiki-index.js'
+import { runLint, type LintCommandInput, type LintCommandResult } from './lint/lint.js'
+import { defaultKnowledgeLayout, ensureKnowledgeRootLayout, requiredKnowledgeFiles } from './paths.js'
+import { runQuery, type QueryCommandInput, type QueryCommandResult } from './query/query.js'
+import { runSaveSynthesis, type SaveSynthesisCommandInput, type SaveSynthesisCommandResult } from './query/save-synthesis.js'
 import {
   runBridgeIndex,
   runBridgeAccept,
@@ -67,8 +67,8 @@ import {
   type RouteInboxResult,
   type RouteInput,
   type RouteResult,
-} from './registry/registry'
-import type { JobStatus } from './types'
+} from './registry/registry.js'
+import type { JobStatus } from './types.js'
 
 type CliCommand = {
   name: () => string

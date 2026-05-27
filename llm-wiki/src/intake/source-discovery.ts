@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs'
 import path from 'node:path'
-import { SOURCE_KINDS, type SourceKind } from '../types'
+import { SOURCE_KINDS, type SourceKind } from '../types.js'
 
 export type DiscoveredSourceKind = SourceKind | 'unknown'
 

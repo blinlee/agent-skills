@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { NormalizedArtifact } from '../types'
+import type { NormalizedArtifact } from '../types.js'
 
 function sha256Hex(value: string | Uint8Array): string {
   return createHash('sha256').update(value).digest('hex')

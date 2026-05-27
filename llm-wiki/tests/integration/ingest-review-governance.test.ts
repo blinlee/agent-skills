@@ -2,7 +2,7 @@ import { access, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promi
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { runIngestCommand } from '../../src/cli'
+import { runIngestCommand } from '../../src/cli.js'
 
 const tempRoots: string[] = []
 const tempSources: string[] = []

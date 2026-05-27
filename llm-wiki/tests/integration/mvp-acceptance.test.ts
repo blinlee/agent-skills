@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises'
 import { afterEach, describe, expect, it } from 'vitest'
-import { runIngestCommand, runQueryCommand, runLintCommand, runStatusCommand } from '../../src/cli'
+import { runIngestCommand, runQueryCommand, runLintCommand, runStatusCommand } from '../../src/cli.js'
 
 const acceptanceRoot = '/tmp/llm-wiki-mvp-acceptance'
 

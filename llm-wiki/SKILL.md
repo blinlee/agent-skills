@@ -54,18 +54,20 @@ For existing roots, inspect these before mutation when useful:
 
 Distinguish the **package root** where `npm run --silent cli -- ...` runs from the **knowledge root** passed to the CLI.
 
+The package CLI runs through the checked-in compiled entrypoint `dist/src/cli.js`; do not require a global `tsx` for normal skill use. Use `npm install` / `npm run build` only for development or when intentionally rebuilding the checked-in runtime output.
+
 ## Task map
 
 - **Create/setup wiki** → `init`, then `status`.
 - **Create/setup atlas registry** → `registry-init <registryRoot>`, then `registry-list <registryRoot>`.
 - **Register an isolated wiki** → `registry-add <registryRoot> [knowledgeRoot] --id <wikiId> --scope <terms>`; omit `knowledgeRoot` to create `wikis/<wikiId>` under the atlas. Prefer concise seed profiles; let later profile proposals refine boundaries.
-- **Route source for a personal atlas** → first inspect atlas `raw/inbox` drops. Markdown/text drops can proceed to `intake-scan <registryRoot>` / `intake-next <registryRoot>`, then `route <registryRoot> <sourcePathOrUrl>` or `route-inbox <registryRoot>`. Non-Markdown document drops must be decoded with `/anything2md` before any intake/route command touches them; only route the decoded Markdown derivative. Run the agent semantic classification review before returning an audited recommendation and asking for approval.
+- **Route source for a personal atlas** → first inspect atlas `raw/inbox` drops. Markdown/text drops can proceed to `intake-scan <registryRoot>` / `intake-next <registryRoot>`, then `route <registryRoot> <sourcePathOrUrl>` or `route-inbox <registryRoot>`. Non-Markdown document drops must be decoded with `/anything2md` before any intake/route command touches them; archive the original under `raw/objects`, route only the decoded Markdown derivative, and run the agent semantic classification review before returning an audited recommendation and asking for approval.
 - **Accept route** → after human approval, run `route-accept <registryRoot> <proposalId> [--wiki <wikiId>] [--reviewer <name>]`, then lint/index the accepted target wiki; close, park, or reject the intake item only when that follow-up decision is approved or clearly part of the approved operation.
 - **Profile boundary work** → `profile-suggest`, `profile-accept`, `profile-reject`, and `profile-review`; profiles evolve through explicit proposals, never silent drift.
 - **Review cross-wiki bridges** → `bridge-list`, then `bridge-accept` or `bridge-reject`; accepted bridges append explicit `llm-wiki://<wikiId>/<section>/<slug>` links to generated wiki pages. Run `bridge-index` after bridge edits.
-- **Decode a non-Markdown document** → verify the installed `/anything2md` skill exists, then invoke it to create a Markdown derivative and metadata sidecar. If `/anything2md` is missing, stop before ingest and report the missing required decoder skill. If the source is in `raw/inbox`, archive the original during decode so it cannot be processed again.
+- **Decode a non-Markdown document** → verify the installed `/anything2md` skill exists, then run `scripts/decoder_handoff.py` to plan llm-wiki-owned output paths. If `/anything2md` is missing, stop before ingest and report the missing required decoder skill. Do not pass `--knowledge-root` to anything2md from llm-wiki; it creates a top-level `anything2md/` operational corpus that does not belong in an llm-wiki root. Archive originals, decoder metadata, assets, and decoded derivatives under `raw/objects`.
 - **Ingest one source into a known target wiki** → if the source is already Markdown/text, run `ingest <root> <sourcePathOrUrl>`, then `lint`. If the source is a non-Markdown document, first decode it with `/anything2md`, then run `ingest <root> <decodedMarkdownPath>` and `lint`.
-- **Ingest dropped files into a known wiki** → if the user says files are in a specific wiki root's `raw/inbox`, ingest Markdown/text drops normally. For non-Markdown document drops, decode each document first, then ingest the decoded Markdown so the later archive/stage/review/taxonomy flow stays the normal llm-wiki flow. For atlas-level unclassified drops, apply the same decode-before-intake rule, then use the intake/route workflow on the decoded Markdown.
+- **Ingest dropped files into a known wiki** → if the user says files are in a specific wiki root's `raw/inbox`, ingest Markdown/text drops normally. For non-Markdown document drops, decode each document first with the llm-wiki decoder handoff, then ingest the decoded Markdown so the later archive/stage/review/taxonomy flow stays the normal llm-wiki flow. For atlas-level unclassified drops, decode first, route the decoded Markdown, and keep the original out of the input queue.
 - **Ask/search one wiki** → `query <root> <question>`; answer from returned citations and say when no evidence matched.
 - **Ask/search an atlas** → `query-registry <registryRoot> <question>`; report which wikis were searched and preserve per-wiki citations.
 - **Promote reusable answer** → run `query`, then `save-synthesis <root> <suggestionId> --confirm` only when the returned answer is worth durable write-back and the user clearly approves promotion.
@@ -172,15 +174,16 @@ For non-Markdown local document sources, `/anything2md` is a required upstream s
 python scripts/skill_discovery.py anything2md --json
 ```
 
-If that check fails, stop and report that `/anything2md` is unavailable; do not create a placeholder Markdown file and do not run llm-wiki ingest, intake, or route commands on the original non-Markdown file. When it exists, invoke `/anything2md` to create a Markdown derivative. Keep the output naming convention as `<source-file>.decoded.md`; for known-target wiki drops, place the decoded Markdown back into `<knowledgeRoot>/raw/inbox/` so the normal llm-wiki flow can ingest it. For atlas-level drops, place the decoded Markdown in the atlas intake location selected for that run and remove/archive the original from the input queue before `intake-scan` or `route-inbox`. Pass the knowledge root or archive root explicitly so the original non-Markdown file leaves the input queue after successful conversion:
+If that check fails, stop and report that `/anything2md` is unavailable; do not create a placeholder Markdown file and do not run llm-wiki ingest, intake, or route commands on the original non-Markdown file. When it exists, plan the decode with the llm-wiki handoff helper. The helper creates a command that archives the original under `raw/objects/<sha-prefix>/<sha>/`, writes decoded Markdown under that same raw object, and keeps decoder metadata/assets under `raw/objects/<sha-prefix>/<sha>/decoder/`. This keeps the root free of tool-specific top-level directories while preserving both the original source and Markdown derivative as raw evidence.
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python <anything2mdSkillRoot>/scripts/decode.py <sourcePath> --output <decodedMarkdownPath> --knowledge-root <resolvedRoot> --archive-original --json
+python scripts/decoder_handoff.py <resolvedRoot> <sourcePath> --anything2md-root <anything2mdSkillRoot>
+# run the returned shellCommand
 npm run --silent cli -- ingest <knowledgeRoot> <decodedMarkdownPath>
 npm run --silent cli -- lint <knowledgeRoot>
 ```
 
-The decode step is preparation, not a separate knowledge workflow. Once the `.md` derivative exists, all later llm-wiki behavior remains the same, including staging/archive, review files, taxonomy proposals, lint, and index updates. Decoder metadata, extracted assets, and archived original binaries belong to `/anything2md`'s own corpus-support layout under `<knowledgeRoot>/anything2md/`; llm-wiki must not index those operational artifacts as ordinary knowledge.
+The decode step is preparation, not a separate knowledge workflow. Once the `.md` derivative exists, all later llm-wiki behavior remains the same, including ingest/route review, staging/archive, review files, taxonomy proposals, lint, and index updates. Decoder metadata, extracted assets, and archived original binaries are raw operational artifacts under `raw/objects`; llm-wiki must not index them as ordinary knowledge pages.
 
 For any mutation (`init`, `registry-add`, `intake-scan`, `route-inbox`, `route-accept`, `intake-complete`, `intake-park`, `intake-reject`, `profile-accept`, `profile-reject`, `taxonomy-accept`, `taxonomy-reject`, `ingest`, `ingest-inbox`, `save-synthesis`, `index`, manual repair):
 

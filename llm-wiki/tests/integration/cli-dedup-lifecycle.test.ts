@@ -2,7 +2,7 @@ import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { runIngestCommand, runLintCommand, runQueryCommand } from '../../src/cli'
+import { runIngestCommand, runLintCommand, runQueryCommand } from '../../src/cli.js'
 
 const tempRoots: string[] = []
 

@@ -24,7 +24,7 @@ import {
   runRouteAcceptCommand,
   runRouteCommand,
   runRouteInboxCommand,
-} from '../../src/cli'
+} from '../../src/cli.js'
 
 const tempRoots: string[] = []
 

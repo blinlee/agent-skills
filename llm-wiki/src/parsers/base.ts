@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { NormalizedArtifact, SourceKind } from '../types'
+import type { NormalizedArtifact, SourceKind } from '../types.js'
 
 export type ParserSourceInput = {
   sourceId: string

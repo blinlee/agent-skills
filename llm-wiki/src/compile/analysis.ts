@@ -1,4 +1,4 @@
-import type { NormalizedArtifact } from '../types'
+import type { NormalizedArtifact } from '../types.js'
 
 export type AnalysisCandidate = {
   slug: string

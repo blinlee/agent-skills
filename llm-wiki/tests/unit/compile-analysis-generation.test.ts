@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { NormalizedArtifact } from '../../src/types'
-import { analyzeArtifact } from '../../src/compile/analysis'
-import type { ArtifactAnalysis } from '../../src/compile/analysis'
-import { generateKnowledgeChanges } from '../../src/compile/generation'
+import type { NormalizedArtifact } from '../../src/types.js'
+import { analyzeArtifact } from '../../src/compile/analysis.js'
+import type { ArtifactAnalysis } from '../../src/compile/analysis.js'
+import { generateKnowledgeChanges } from '../../src/compile/generation.js'
 
 describe('compile pipeline', () => {
   it('parses singular structured markers without relying on heuristic fallback', async () => {

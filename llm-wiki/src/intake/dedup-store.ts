@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { SourceKind } from '../types'
+import type { SourceKind } from '../types.js'
 
 export type OutputPageSnapshot = {
   filePath: string

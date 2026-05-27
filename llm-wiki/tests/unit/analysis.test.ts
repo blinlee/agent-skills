@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeArtifact } from '../../src/compile/analysis'
-import type { NormalizedArtifact } from '../../src/types'
+import { analyzeArtifact } from '../../src/compile/analysis.js'
+import type { NormalizedArtifact } from '../../src/types.js'
 
 describe('artifact analysis knowledge-organization policy', () => {
   it('derives taxonomy candidates from controlled title phrases instead of generic body words', async () => {

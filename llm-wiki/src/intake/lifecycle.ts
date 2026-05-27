@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { SourceKind } from '../types'
-import { moveManagedRawFile, writeManagedRawFile } from './raw-store'
+import type { SourceKind } from '../types.js'
+import { moveManagedRawFile, writeManagedRawFile } from './raw-store.js'
 
 export type IntakeLifecycleState = {
   stagedPath: string | null

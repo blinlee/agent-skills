@@ -1,4 +1,4 @@
-import { createParsedArtifact, type ParsedArtifact } from './base'
+import { createParsedArtifact, type ParsedArtifact } from './base.js'
 
 export type UrlSourceInput = {
   sourceId: string

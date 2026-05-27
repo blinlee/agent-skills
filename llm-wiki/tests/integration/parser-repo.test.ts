@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseRepoSource } from '../../src/parsers/repo'
+import { parseRepoSource } from '../../src/parsers/repo.js'
 
 describe('minimal repo parser', () => {
   it('keeps repo parsing shallow and bounded with canonical artifact fields', async () => {

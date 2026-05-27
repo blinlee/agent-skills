@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { createParsedArtifact, normalizeTextBody, type ParsedArtifact } from './base'
+import { createParsedArtifact, normalizeTextBody, type ParsedArtifact } from './base.js'
 
 export type RepoSourceInput = {
   sourceId: string

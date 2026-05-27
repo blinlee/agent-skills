@@ -2,8 +2,8 @@ import { access, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promi
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { persistReviewItems } from '../../src/governance/review'
-import { acceptTaxonomyProposal, applyTaxonomyEffects, listTaxonomyProposals, rejectTaxonomyProposal } from '../../src/governance/taxonomy'
+import { persistReviewItems } from '../../src/governance/review.js'
+import { acceptTaxonomyProposal, applyTaxonomyEffects, listTaxonomyProposals, rejectTaxonomyProposal } from '../../src/governance/taxonomy.js'
 
 const tempRoots: string[] = []
 

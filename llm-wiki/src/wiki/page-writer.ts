@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { KnowledgePagePayload, SynthesisSuggestionPayload } from '../compile/generation'
-import type { OutputPageSnapshot } from '../intake/dedup-store'
-import { appendWikiLog, updateWikiIndex } from './index-log'
+import type { KnowledgePagePayload, SynthesisSuggestionPayload } from '../compile/generation.js'
+import type { OutputPageSnapshot } from '../intake/dedup-store.js'
+import { appendWikiLog, updateWikiIndex } from './index-log.js'
 
 export type KnowledgeOutputManifest = {
   pageFiles: string[]

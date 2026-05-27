@@ -1,9 +1,9 @@
 import { access, readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { hashRawBody, parseManagedRawFile, readRawManifest } from '../intake/raw-store'
-import { defaultKnowledgeLayout, requiredKnowledgeFiles, resolveKnowledgePaths } from '../paths'
-import { loadIndexedPages, parseWikiLinks, parseIndexedTarget, resolveWikiLink } from '../query/query'
-import { wikiSectionOrder } from '../wiki/sections'
+import { hashRawBody, parseManagedRawFile, readRawManifest } from '../intake/raw-store.js'
+import { defaultKnowledgeLayout, requiredKnowledgeFiles, resolveKnowledgePaths } from '../paths.js'
+import { loadIndexedPages, parseWikiLinks, parseIndexedTarget, resolveWikiLink } from '../query/query.js'
+import { wikiSectionOrder } from '../wiki/sections.js'
 
 export type LintCommandInput = {
   knowledgeRoot: string

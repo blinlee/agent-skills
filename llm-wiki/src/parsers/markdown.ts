@@ -4,7 +4,7 @@ import {
   normalizeTextBody,
   type ParserSourceInput,
   type SourceParser,
-} from './base'
+} from './base.js'
 
 const FIRST_MARKDOWN_HEADING = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/m
 const FRONTMATTER_RE = /^\s*---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/

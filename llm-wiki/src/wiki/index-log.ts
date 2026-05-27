@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { parseWikiPageTarget, wikiSectionHeading, wikiSectionOrder } from './sections'
+import { parseWikiPageTarget, wikiSectionHeading, wikiSectionOrder } from './sections.js'
 
 const INDEX_HEADER = '# Wiki Index'
 const LOG_HEADER = '# Wiki Log'

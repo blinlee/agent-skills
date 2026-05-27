@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { loadIndexedPages, parseWikiLinks, resolveWikiLink } from '../query/query'
+import { loadIndexedPages, parseWikiLinks, resolveWikiLink } from '../query/query.js'
 
 export type BuildIndexInput = {
   knowledgeRoot: string

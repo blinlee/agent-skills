@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { parseUrlSource } from '../../src/parsers/url'
+import { parseUrlSource } from '../../src/parsers/url.js'
 
 describe('url parser', () => {
   it('builds a normalized artifact from cleaned web content', async () => {

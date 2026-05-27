@@ -1,10 +1,11 @@
+import { createHash } from 'node:crypto'
 import { execFile as execFileCallback } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
-import { buildCli } from '../src/cli'
+import { buildCli } from '../src/cli.js'
 
 const execFile = promisify(execFileCallback)
 const pythonBin = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')
@@ -60,8 +61,9 @@ describe('buildCli', () => {
         bin?: Record<string, string>
       }
       const readme = await readFile(path.join(process.cwd(), 'README.md'), 'utf8')
-      expect(packageJson.scripts?.cli).toBeTruthy()
+      expect(packageJson.scripts?.cli).toBe('node dist/src/cli.js')
       expect(packageJson.bin?.['llm-wiki']).toBe('dist/src/cli.js')
+      expect(readme).toContain('compiled entrypoint at `dist/src/cli.js`')
       expect(readme).toContain('npm run --silent cli --')
       expect(readme).not.toContain('npm run cli -- <')
     } finally {
@@ -145,6 +147,53 @@ describe('buildCli', () => {
       const missing = JSON.parse(missingStdout.trim()) as { status: string; matches: unknown[] }
       expect(missing.status).toBe('missing')
       expect(missing.matches).toEqual([])
+    } finally {
+      await rm(workspace, { recursive: true, force: true })
+    }
+  })
+
+  it('plans decoder handoff paths inside raw objects without top-level anything2md state', async () => {
+    const workspace = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-decoder-handoff-'))
+    const root = path.join(workspace, 'atlas')
+    const source = path.join(root, 'raw', 'inbox', 'paper.pdf')
+    const anything2mdRoot = path.join(workspace, 'skills', 'anything2md')
+    const sourceBytes = 'fake pdf bytes'
+    const sourceSha256 = createHash('sha256').update(sourceBytes).digest('hex')
+
+    try {
+      await mkdir(path.dirname(source), { recursive: true })
+      await mkdir(path.join(anything2mdRoot, 'scripts'), { recursive: true })
+      await writeFile(source, sourceBytes, 'utf8')
+      const resolvedRoot = await realpath(root)
+
+      const { stdout } = await execFile(
+        pythonBin,
+        ['scripts/decoder_handoff.py', root, source, '--anything2md-root', anything2mdRoot],
+        { cwd: process.cwd() },
+      )
+      const plan = JSON.parse(stdout.trim()) as {
+        sourceSha256: string
+        objectDirectory: string
+        decodedMarkdown: string
+        metadataOutput: string
+        assetRoot: string
+        archiveRoot: string
+        command: string[]
+      }
+
+      expect(plan.sourceSha256).toBe(sourceSha256)
+      expect(plan.objectDirectory).toBe(path.join(resolvedRoot, 'raw', 'objects', sourceSha256.slice(0, 2), sourceSha256))
+      expect(plan.decodedMarkdown).toBe(path.join(plan.objectDirectory, 'decoded', 'paper.pdf.decoded.md'))
+      expect(plan.metadataOutput).toContain(path.join('raw', 'objects', sourceSha256.slice(0, 2), sourceSha256, 'decoder'))
+      expect(plan.assetRoot).toContain(path.join('raw', 'objects', sourceSha256.slice(0, 2), sourceSha256, 'decoder'))
+      expect(plan.archiveRoot).toBe(path.join(resolvedRoot, 'raw', 'objects'))
+      expect(plan.command).toContain('--archive-root')
+      expect(plan.command).toContain('--metadata-output')
+      expect(plan.command).toContain('--asset-root')
+      expect(plan.command).not.toContain('--knowledge-root')
+      expect(plan.command.join('\n')).not.toContain(`${path.sep}anything2md${path.sep}archive`)
+      expect(plan.command.join('\n')).not.toContain(`${path.sep}anything2md${path.sep}metadata`)
+      expect(plan.command.join('\n')).not.toContain(`${path.sep}anything2md${path.sep}assets`)
     } finally {
       await rm(workspace, { recursive: true, force: true })
     }

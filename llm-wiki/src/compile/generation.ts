@@ -1,4 +1,4 @@
-import type { ArtifactAnalysis, TopicProposal, ReviewTrigger, AnalysisCandidate } from './analysis'
+import type { ArtifactAnalysis, TopicProposal, ReviewTrigger, AnalysisCandidate } from './analysis.js'
 
 export type KnowledgePagePayload = {
   slug: string

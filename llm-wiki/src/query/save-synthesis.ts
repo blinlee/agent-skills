@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { access, link, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { StoredSynthesisSuggestion } from './query'
-import { appendWikiLog, updateWikiIndex } from '../wiki/index-log'
+import type { StoredSynthesisSuggestion } from './query.js'
+import { appendWikiLog, updateWikiIndex } from '../wiki/index-log.js'
 
 export type SaveSynthesisCommandInput = {
   knowledgeRoot: string

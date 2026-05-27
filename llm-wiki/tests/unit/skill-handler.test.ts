@@ -1,10 +1,10 @@
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { InitCommandResult, StatusCommandResult } from '../../src/cli'
-import type { IngestJobResult } from '../../src/jobs/job-runner'
-import type { LintCommandResult } from '../../src/lint/lint'
-import type { QueryCommandResult } from '../../src/query/query'
-import type { SaveSynthesisCommandResult } from '../../src/query/save-synthesis'
+import type { InitCommandResult, StatusCommandResult } from '../../src/cli.js'
+import type { IngestJobResult } from '../../src/jobs/job-runner.js'
+import type { LintCommandResult } from '../../src/lint/lint.js'
+import type { QueryCommandResult } from '../../src/query/query.js'
+import type { SaveSynthesisCommandResult } from '../../src/query/save-synthesis.js'
 
 const cliMocks = vi.hoisted(() => ({
   runInitCommand: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('../../src/cli', () => ({
   runSaveSynthesisCommand: cliMocks.runSaveSynthesisCommand,
 }))
 
-import { handleSkillIntent } from '../../src/skill/handler'
+import { handleSkillIntent } from '../../src/skill/handler.js'
 
 beforeEach(() => {
   vi.clearAllMocks()

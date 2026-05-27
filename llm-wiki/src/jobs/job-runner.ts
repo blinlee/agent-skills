@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { analyzeArtifact } from '../compile/analysis'
-import { generateKnowledgeChanges } from '../compile/generation'
-import { loadConfig } from '../config'
-import { persistReviewItems, removeStaleReviewFiles } from '../governance/review'
-import { applyTaxonomyEffects } from '../governance/taxonomy'
+import { analyzeArtifact } from '../compile/analysis.js'
+import { generateKnowledgeChanges } from '../compile/generation.js'
+import { loadConfig } from '../config.js'
+import { persistReviewItems, removeStaleReviewFiles } from '../governance/review.js'
+import { applyTaxonomyEffects } from '../governance/taxonomy.js'
 import {
   createEmptyLifecycleState,
   retainReviewableIntake,
@@ -14,22 +14,22 @@ import {
   archiveStagedFile,
   rejectIntakeFile,
   type IntakeLifecycleState,
-} from '../intake/lifecycle'
-import { createDedupStore, type DedupDecision, type DedupEntry, type OutputPageSnapshot } from '../intake/dedup-store'
-import { hashFileLike, hashParsedArtifactForDedup, hashSourceMetadata } from '../intake/fingerprint'
-import { classifySource, isSupportedSourceKind, type DiscoveredSourceKind } from '../intake/source-discovery'
-import { createJobStore } from './job-store'
-import { parseMarkdownSource } from '../parsers/markdown'
-import { parseRepoSource } from '../parsers/repo'
-import { parseTextSource } from '../parsers/text'
-import { parseUrlSource, type CleanedUrlContent } from '../parsers/url'
-import type { ParsedArtifact } from '../parsers/base'
-import { ensureKnowledgeRootLayout } from '../paths'
-import type { JobStatus, SourceKind } from '../types'
-import { stripManagedRawFrontmatter } from '../intake/raw-store'
-import { updateWikiIndex } from '../wiki/index-log'
-import { buildKnowledgeOutputManifest, removeWikiPageFile, restoreWikiPageSnapshot, writeKnowledgeChanges } from '../wiki/page-writer'
-import { applySourceSemanticLinks, pruneMissingSourceSemanticLinks } from '../wiki/semantic-links'
+} from '../intake/lifecycle.js'
+import { createDedupStore, type DedupDecision, type DedupEntry, type OutputPageSnapshot } from '../intake/dedup-store.js'
+import { hashFileLike, hashParsedArtifactForDedup, hashSourceMetadata } from '../intake/fingerprint.js'
+import { classifySource, isSupportedSourceKind, type DiscoveredSourceKind } from '../intake/source-discovery.js'
+import { createJobStore } from './job-store.js'
+import { parseMarkdownSource } from '../parsers/markdown.js'
+import { parseRepoSource } from '../parsers/repo.js'
+import { parseTextSource } from '../parsers/text.js'
+import { parseUrlSource, type CleanedUrlContent } from '../parsers/url.js'
+import type { ParsedArtifact } from '../parsers/base.js'
+import { ensureKnowledgeRootLayout } from '../paths.js'
+import type { JobStatus, SourceKind } from '../types.js'
+import { stripManagedRawFrontmatter } from '../intake/raw-store.js'
+import { updateWikiIndex } from '../wiki/index-log.js'
+import { buildKnowledgeOutputManifest, removeWikiPageFile, restoreWikiPageSnapshot, writeKnowledgeChanges } from '../wiki/page-writer.js'
+import { applySourceSemanticLinks, pruneMissingSourceSemanticLinks } from '../wiki/semantic-links.js'
 
 export type RunIngestJobInput = {
   knowledgeRoot: string

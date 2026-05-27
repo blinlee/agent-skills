@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { access, appendFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { runIngestJob, type IngestJobResult } from '../jobs/job-runner'
-import { loadIndexedPages } from '../query/query'
-import { runQuery, type QueryCommandResult } from '../query/query'
-import { ensureKnowledgeRootLayout } from '../paths'
+import { runIngestJob, type IngestJobResult } from '../jobs/job-runner.js'
+import { loadIndexedPages } from '../query/query.js'
+import { runQuery, type QueryCommandResult } from '../query/query.js'
+import { ensureKnowledgeRootLayout } from '../paths.js'
 
 export type RegistryCommandInput = {
   registryRoot: string

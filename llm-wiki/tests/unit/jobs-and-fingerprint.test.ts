@@ -2,10 +2,10 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createDedupStore } from '../../src/intake/dedup-store'
-import { hashContent, hashFileLike, hashSourceMetadata } from '../../src/intake/fingerprint'
-import { classifySource, isLikelyRepoSource } from '../../src/intake/source-discovery'
-import { createJobStore } from '../../src/jobs/job-store'
+import { createDedupStore } from '../../src/intake/dedup-store.js'
+import { hashContent, hashFileLike, hashSourceMetadata } from '../../src/intake/fingerprint.js'
+import { classifySource, isLikelyRepoSource } from '../../src/intake/source-discovery.js'
+import { createJobStore } from '../../src/jobs/job-store.js'
 
 const tempPaths: string[] = []
 

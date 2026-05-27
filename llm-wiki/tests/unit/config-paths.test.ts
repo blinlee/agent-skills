@@ -2,9 +2,9 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { loadConfig } from '../../src/config'
-import { defaultKnowledgeLayout, ensureKnowledgeRootLayout, resolveKnowledgePaths } from '../../src/paths'
-import { SOURCE_KINDS } from '../../src/types'
+import { loadConfig } from '../../src/config.js'
+import { defaultKnowledgeLayout, ensureKnowledgeRootLayout, resolveKnowledgePaths } from '../../src/paths.js'
+import { SOURCE_KINDS } from '../../src/types.js'
 
 describe('resolveKnowledgePaths', () => {
   it('returns all MVP directories for a knowledge root', () => {
