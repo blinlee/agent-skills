@@ -40,10 +40,10 @@ const ORIGINAL_ENV = { ...process.env }
 describe('loadConfig', () => {
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV }
-    delete process.env.LLM_WIKI_KNOWLEDGE_ROOT
-    delete process.env.LLM_WIKI_CACHE_DIR
-    delete process.env.LLM_WIKI_JOB_STORE_PATH
-    delete process.env.LLM_WIKI_URL_FETCH_TIMEOUT_MS
+    delete process.env.llm_wiki_knowledge_root
+    delete process.env.llm_wiki_cache_dir
+    delete process.env.llm_wiki_job_store_path
+    delete process.env.llm_wiki_url_fetch_timeout_ms
   })
 
   afterEach(() => {
@@ -64,10 +64,10 @@ describe('loadConfig', () => {
   })
 
   it('reads outward-facing config values from environment variables', () => {
-    process.env.LLM_WIKI_KNOWLEDGE_ROOT = '/tmp/env-root'
-    process.env.LLM_WIKI_CACHE_DIR = '/tmp/env-cache'
-    process.env.LLM_WIKI_JOB_STORE_PATH = '/tmp/env-root/system/jobs/env-jobs.json'
-    process.env.LLM_WIKI_URL_FETCH_TIMEOUT_MS = '2500'
+    process.env.llm_wiki_knowledge_root = '/tmp/env-root'
+    process.env.llm_wiki_cache_dir = '/tmp/env-cache'
+    process.env.llm_wiki_job_store_path = '/tmp/env-root/system/jobs/env-jobs.json'
+    process.env.llm_wiki_url_fetch_timeout_ms = '2500'
 
     const config = loadConfig()
 
@@ -82,10 +82,10 @@ describe('loadConfig', () => {
   })
 
   it('prefers explicit overrides over environment variables', () => {
-    process.env.LLM_WIKI_KNOWLEDGE_ROOT = '/tmp/env-root'
-    process.env.LLM_WIKI_CACHE_DIR = '/tmp/env-cache'
-    process.env.LLM_WIKI_JOB_STORE_PATH = '/tmp/env-root/system/jobs/env-jobs.json'
-    process.env.LLM_WIKI_URL_FETCH_TIMEOUT_MS = '2500'
+    process.env.llm_wiki_knowledge_root = '/tmp/env-root'
+    process.env.llm_wiki_cache_dir = '/tmp/env-cache'
+    process.env.llm_wiki_job_store_path = '/tmp/env-root/system/jobs/env-jobs.json'
+    process.env.llm_wiki_url_fetch_timeout_ms = '2500'
 
     const config = loadConfig({
       knowledgeRoot: '/tmp/custom-root',

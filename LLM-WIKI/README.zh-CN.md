@@ -1,8 +1,8 @@
-# LLM-WIKI
+# llm-wiki
 
-面向 CLI 的 Markdown 知识库编译器，用来构建**有人审、有证据、兼容 Obsidian** 的 LLM Wiki。
+面向 CLI 的 Markdown 知识库编译器，用来构建**有人审、有证据、兼容 Obsidian** 的 llm-wiki 知识库。
 
-LLM-WIKI 适合这样的人：想把来源材料沉淀成耐久知识层，但又不想把所有内容都粗暴塞进一个没人审核的大杂烩笔记库里。它会把可读输入转成结构化 Markdown Wiki，同时保留原始材料证据、review 面、taxonomy proposal、可查询页面，以及可选的多 wiki registry 管理能力。
+llm-wiki 适合这样的人：想把来源材料沉淀成耐久知识层，但又不想把所有内容都粗暴塞进一个没人审核的大杂烩笔记库里。它会把可读输入转成结构化 Markdown Wiki，同时保留原始材料证据、review 面、taxonomy proposal、可查询页面，以及可选的多 wiki registry 管理能力。
 
 ## 它解决什么问题
 
@@ -11,7 +11,7 @@ LLM-WIKI 适合这样的人：想把来源材料沉淀成耐久知识层，但�
 1. 太松，生成内容逐渐脱离原始证据
 2. 太大，所有主题都被扔进一个被污染的超级仓
 
-LLM-WIKI 反过来做：
+llm-wiki 反过来做：
 
 - 原始材料保留为证据
 - 生成结构保持可审核
@@ -23,7 +23,7 @@ LLM-WIKI 反过来做：
 - **CLI 编译器**：初始化、摄入、查询、lint、建索引、review wiki root
 - **Registry 工作流**：在一个 registry 下管理多个彼此隔离的 wiki
 - **人工审核面**：taxonomy、route、profile creation、bridge decision 都是可审核 proposal
-- **OpenClaw skill 合同层**：位于 `skills/llm-wiki/`
+- **OpenClaw skill 合同层**：位于根目录 `SKILL.md`
 - **TypeScript 实现与测试**：真正的持久核心在这里
 - **`AGENTS.md` 贡献说明**：给 agent-assisted 开发者看的维护指引
 
@@ -44,7 +44,7 @@ registry root 用来管理多个有边界的 wiki，而不是强迫所有内容�
 
 ### Human-governed proposals
 
-LLM-WIKI 默认把模型生成的分类建议、路由建议、profile 建议都视为 **proposal**，而不是自动真理。要由人来审和决定接不接受。
+llm-wiki 默认把模型生成的分类建议、路由建议、profile 建议都视为 **proposal**，而不是自动真理。要由人来审和决定接不接受。
 
 ## 环境要求
 
@@ -75,6 +75,30 @@ npm test
 ```
 
 ## 快速开始
+
+### Agent 工作流触发词
+
+当从本仓库根目录作为 skill 使用时，llm-wiki 暴露六个稳定的用户工作流：
+
+| 触发词 | 用途 |
+| --- | --- |
+| `/llm-wiki setup` | 连接或初始化本地 knowledge root / registry root。若没有已知 root，agent 需要询问路径，并可按用户确认保存为本机默认。 |
+| `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再摄入或路由新材料，并返回需要人工批准的决策。 |
+| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。 |
+| `/llm-wiki review` | 审查待处理的 intake、route、profile、taxonomy、bridge 或 synthesis proposal，再按批准执行接受/拒绝。 |
+| `/llm-wiki maintain` | 运行 `status`、`lint`、`index` 等健康与新鲜度检查。 |
+| `/llm-wiki govern` | 管理 registry 成员、profile 边界、taxonomy、bridge 和 routing policy。 |
+
+这些是覆盖 CLI 命令的 skill 级工作流合同，不是独立的 TypeScript 子命令。
+
+skill 按以下顺序解析本地目标 root：
+
+1. 用户请求里的显式路径
+2. `llm_wiki_root`
+3. `scripts/root_config.py` 管理的本机本地配置
+4. 若仍不存在，则询问用户 root 路径以及是否保存为本机默认
+
+保存的默认值位于 `$llm_wiki_config`、`$XDG_CONFIG_HOME/llm-wiki/config.json` 或系统用户配置目录等本机位置，不会提交到本仓库。
 
 ### 1）初始化一个 knowledge root
 
@@ -152,6 +176,19 @@ npm run --silent cli -- route ~/my-wikis ~/Downloads/article.md
 npm run --silent cli -- query-registry ~/my-wikis "What do my notes say about LoRA?"
 ```
 
+## 非 Markdown 文档
+
+核心 llm-wiki CLI 摄入 Markdown / 类文本来源。PDF、图片、Word、PowerPoint、Excel、EPUB/HTML、ZIP、音频、notebook 或其他文档类格式必须先使用已安装的 `/anything2md` skill 转出 Markdown 派生文件。
+
+llm-wiki skill 在摄入或路由非 Markdown 投递物前执行这个流程：
+
+1. 用 `python scripts/skill_discovery.py anything2md --json` 验证 `/anything2md` 已安装
+2. 把来源转换为 `<source-file>.decoded.md`
+3. 转换成功后把原始文件归档或移出输入队列，避免重复处理
+4. 继续正常的 llm-wiki ingest、route、review、lint、index 流程
+
+转换器元数据、抽取资产和归档原始二进制属于操作态产物，不应成为面向检索的普通 wiki 页面。
+
 ## 命令面
 
 当前 CLI 主要有两组命令：
@@ -205,14 +242,17 @@ npm run --silent cli -- <command> ...args
 ## 仓库结构
 
 ```text
-LLM-WIKI/
+llm-wiki/
 ├── README.md
 ├── README.zh-CN.md
 ├── LICENSE
+├── SKILL.md
 ├── package.json
+├── scripts/
+├── references/
+├── evals/
 ├── src/
 ├── tests/
-├── skills/
 └── dist/
 ```
 
@@ -220,11 +260,12 @@ LLM-WIKI/
 
 - `dist/` 是构建产物，默认 git ignore
 - `node_modules/` 默认 git ignore
+- `SKILL.md`、`scripts/`、`references/` 是根目录 skill 表面
 - `vendor/`、`.worktrees/`、`.omx/`、本地 `knowledge-*`、`review/` 都是本地态或参考面，默认 git ignore
 
 ## 设计立场
 
-LLM-WIKI 对下面几件事是有明确立场的：
+llm-wiki 对下面几件事是有明确立场的：
 
 - 来源证据重要
 - 生成结构应该可检查
@@ -234,9 +275,11 @@ LLM-WIKI 对下面几件事是有明确立场的：
 
 ## OpenClaw skill 边界
 
-仓库里包含一个宿主中立的 skill 合同：`skills/llm-wiki/SKILL.md`。
+仓库里包含一个宿主中立的 skill 合同：`SKILL.md`。
 
 skill 层故意做得很薄，真正持久的逻辑在 TypeScript CLI/core 里。这样这个项目既能作为直接 CLI 项目使用，也能作为 skill backend 使用。
+
+六个 `/llm-wiki ...` 工作流、`/anything2md` 接线、本机 root 默认值和人工批准门都记录在这个 skill 合同里。
 
 `AGENTS.md` 是给 agent-assisted 贡献者看的维护说明，普通 CLI 使用者可以忽略。
 
@@ -253,7 +296,7 @@ npm run --silent cli -- query /tmp/knowledge-demo "What is Compiler Notes?"
 
 ## 它不是什么
 
-LLM-WIKI 不是：
+llm-wiki 不是：
 
 - 托管式 SaaS 产品
 - 模型分类建议的自动批准系统

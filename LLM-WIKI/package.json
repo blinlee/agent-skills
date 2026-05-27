@@ -1,7 +1,7 @@
 {
   "name": "llm-wiki",
   "version": "0.1.0",
-  "description": "CLI-first markdown knowledge-base compiler for building human-governed, Obsidian-compatible LLM wikis.",
+  "description": "CLI-first markdown knowledge-base compiler for building human-governed, Obsidian-compatible llm-wiki knowledge bases.",
   "license": "MIT",
   "private": false,
   "type": "module",

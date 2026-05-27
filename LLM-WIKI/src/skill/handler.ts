@@ -18,6 +18,10 @@ import type { SaveSynthesisCommandResult } from '../query/save-synthesis'
 
 export type SkillCommand = 'init' | 'ingest' | 'query' | 'lint' | 'status' | 'save-synthesis'
 
+/**
+ * Internal typed adapter for tests and programmatic CLI delegation.
+ * The public agent workflow contract is the repository-root SKILL.md.
+ */
 export type HandleSkillIntentInput = {
   intent: string
   knowledgeRoot: string

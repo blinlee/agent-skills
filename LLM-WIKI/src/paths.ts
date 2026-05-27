@@ -159,7 +159,7 @@ function buildDefaultWikiSchema(): string {
     '# Wiki Schema',
     '',
     '## Purpose',
-    'LLM-WIKI compiles normalized raw material into durable, interlinked markdown knowledge assets. It is a compiler-style knowledge base, not a transient chat transcript and not a database-only RAG cache.',
+    'llm-wiki compiles normalized raw material into durable, interlinked markdown knowledge assets. It is a compiler-style knowledge base, not a transient chat transcript and not a database-only RAG cache.',
     '',
     '## Layers',
     '- `raw/inbox/`: short-lived human dropzone for new sources. Intake scan should quickly move entries out so scheduled agents never need to browse historical raw files.',

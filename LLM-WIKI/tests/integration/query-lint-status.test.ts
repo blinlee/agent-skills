@@ -79,7 +79,7 @@ describe('query, lint, and status', () => {
       'wiki/queries',
     ]))
     expect(schema).toContain('# Wiki Schema')
-    expect(schema).toContain('LLM-WIKI compiles normalized raw material')
+    expect(schema).toContain('llm-wiki compiles normalized raw material')
     expect(schema).toContain('[[sources/source-slug|Title]]')
     expect(schema).toContain('Human-in-the-loop classification')
     expect(schema).toContain('High model confidence is not approval')
