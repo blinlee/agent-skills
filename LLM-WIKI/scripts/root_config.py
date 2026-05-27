@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Manage the host-local default llm-wiki root."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import platform
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+def config_path() -> Path:
+    override = os.environ.get("llm_wiki_config")
+    if override:
+        return Path(override).expanduser()
+
+    xdg_config = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config:
+        return Path(xdg_config).expanduser() / "llm-wiki" / "config.json"
+
+    if platform.system().lower() == "windows":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            return Path(appdata) / "llm-wiki" / "config.json"
+
+    return Path.home() / ".config" / "llm-wiki" / "config.json"
+
+
+def read_config(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {"_error": f"invalid_json: {exc}"}
+    if not isinstance(data, dict):
+        return {"_error": "config_root_must_be_object"}
+    return data
+
+
+def write_json(payload: dict[str, Any]) -> None:
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def found_payload(source: str, root: str, path: Path, kind: str, updated_at: str | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "found",
+        "source": source,
+        "root": root,
+        "exists": Path(root).expanduser().exists(),
+        "kind": kind,
+        "configPath": str(path),
+    }
+    if updated_at:
+        payload["updatedAt"] = updated_at
+    return payload
+
+
+def show_default(args: argparse.Namespace) -> int:
+    path = config_path()
+    env_root = os.environ.get("llm_wiki_root")
+    if env_root:
+        root = str(Path(env_root).expanduser().resolve(strict=False))
+        payload = found_payload("env", root, path, os.environ.get("llm_wiki_root_kind", "unknown"))
+        if args.require_existing and not payload["exists"]:
+            payload["status"] = "missing_path"
+            payload["error"] = "resolved_root_does_not_exist"
+            write_json(payload)
+            return 1
+        write_json(payload)
+        return 0
+
+    data = read_config(path)
+    if "_error" in data:
+        write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
+        return 2
+
+    root = data.get("defaultRoot")
+    if not root:
+        write_json({"status": "missing", "configPath": str(path)})
+        return 1 if args.strict else 0
+
+    payload = found_payload("config", str(root), path, data.get("defaultRootKind", "unknown"), data.get("updatedAt"))
+    if args.require_existing and not payload["exists"]:
+        payload["status"] = "missing_path"
+        payload["error"] = "resolved_root_does_not_exist"
+        write_json(payload)
+        return 1
+    write_json(payload)
+    return 0
+
+
+def set_default(args: argparse.Namespace) -> int:
+    path = config_path()
+    root = Path(args.root).expanduser().resolve(strict=False)
+    data = read_config(path)
+    if "_error" in data:
+        write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
+        return 2
+
+    data["defaultRoot"] = str(root)
+    data["defaultRootKind"] = args.kind
+    data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    write_json({"status": "saved", "root": str(root), "kind": args.kind, "configPath": str(path)})
+    return 0
+
+
+def clear_default(_: argparse.Namespace) -> int:
+    path = config_path()
+    data = read_config(path)
+    if "_error" in data:
+        write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
+        return 2
+    data.pop("defaultRoot", None)
+    data.pop("defaultRootKind", None)
+    data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    write_json({"status": "cleared", "configPath": str(path)})
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Manage the host-local default llm-wiki root.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    show_parser = subparsers.add_parser("show", help="Show the resolved default root, if configured.")
+    show_parser.add_argument("--strict", action="store_true", help="Exit non-zero when no default root is configured.")
+    show_parser.add_argument("--require-existing", action="store_true", help="Exit non-zero when the resolved root path does not exist.")
+    show_parser.set_defaults(func=show_default)
+
+    set_parser = subparsers.add_parser("set", help="Save a host-local default root.")
+    set_parser.add_argument("root", help="Knowledge root or registry root to save as the local default.")
+    set_parser.add_argument("--kind", choices=["knowledge", "registry", "unknown"], default="unknown")
+    set_parser.set_defaults(func=set_default)
+
+    clear_parser = subparsers.add_parser("clear", help="Remove the saved host-local default root.")
+    clear_parser.set_defaults(func=clear_default)
+
+    args = parser.parse_args()
+    return int(args.func(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

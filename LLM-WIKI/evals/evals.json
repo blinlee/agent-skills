@@ -1,0 +1,167 @@
+{
+  "skill_name": "llm-wiki",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a new llm-wiki knowledge root at /tmp/llm-wiki-eval, then tell me whether it is ready.",
+      "expected_output": "The agent runs init and status/lint from the package root with --silent, reports the knowledge root, and confirms required directories/files are present.",
+      "files": [],
+      "expectations": [
+        "Uses npm run --silent cli -- init with the requested root",
+        "Runs a validation command such as status or lint after init",
+        "Reports readiness and does not invent files outside the knowledge root"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I dropped a few markdown notes into raw/inbox; ingest them into the wiki and show me what needs review.",
+      "expected_output": "The agent treats raw/inbox as the input queue, runs ingest-inbox or ingest with no source, validates with lint, and reports review/taxonomy files without editing managed raw evidence.",
+      "files": [],
+      "expectations": [
+        "Resolves the knowledge root from an explicit path, llm_wiki_root, or host-local config before running CLI commands; if none exists, asks for the path and whether to save it as the local default",
+        "Chooses ingest-inbox or ingest with no explicit source for raw/inbox",
+        "Does not directly modify raw/staged or raw/archive",
+        "Runs lint after ingest and reports review gates"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Ask this llm-wiki what it knows about OpenClaw, and if the answer is reusable, save it as a durable synthesis.",
+      "expected_output": "The agent runs query, uses citations from the result, only promotes if a synthesis suggestion exists, and validates after save-synthesis.",
+      "files": [],
+      "expectations": [
+        "Runs query before attempting save-synthesis",
+        "Does not fabricate an answer when citations are empty",
+        "Runs save-synthesis with --confirm only for a returned suggestion id",
+        "Runs lint after promotion"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Audit this knowledge root for broken links, raw tampering, low-confidence pages, and scale problems. Do not change anything yet.",
+      "expected_output": "The agent runs lint read-only, interprets raw-source-drift and wiki quality warnings, and reports a concise audit without making repairs.",
+      "files": [],
+      "expectations": [
+        "Runs lint without mutation commands",
+        "Mentions raw-source-drift if present instead of editing raw",
+        "Reports broken links, low-confidence/contested pages, and scale warnings separately"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I dropped a PDF about an unfamiliar technical field into the atlas raw/inbox. Run the standard llm-wiki flow and tell me where it should go.",
+      "expected_output": "The agent first verifies the installed /anything2md skill is available for the non-Markdown source, uses it to create a decoded Markdown derivative, runs intake/route as a candidate generation step, reads enough of the source to understand the domain, audits the CLI route proposal against the classification principles, and returns a pending human decision instead of accepting the route automatically.",
+      "files": [],
+      "expectations": [
+        "Resolves the registry root from an explicit path, llm_wiki_root, or host-local config before inspecting atlas raw/inbox; if none exists, asks for the path and whether to save it as the local default",
+        "Checks that /anything2md is available before decoding non-Markdown input",
+        "Stops and reports the missing required decoder skill if /anything2md is unavailable",
+        "Uses /anything2md rather than any archived legacy decoder entrypoint",
+        "Does not run intake-scan, route-inbox, or route directly on the original PDF",
+        "Treats route-inbox output as a proposal rather than semantic truth",
+        "Reads source evidence beyond filename, frontmatter, or route score",
+        "Produces source understanding, proposal audit, boundary review, and recommended human decision",
+        "Allows create-profile, park, reject/convert, bridge, or override when no existing wiki strongly fits",
+        "Does not run route-accept, profile-accept, intake-park, intake-reject, or other review-gated commands before explicit approval"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "The CLI recommends putting a finance paper into my AI agents wiki because it matched words like system and evaluation. Review that classification.",
+      "expected_output": "The agent identifies the CLI recommendation as a candidate only, reads the material or supplied excerpts, applies wiki boundary and never-force-weak-matches principles, explains why the AI wiki is a weak or polluted fit, and recommends override/new-profile/park with an approval-gated command.",
+      "files": [],
+      "expectations": [
+        "Separates source domain understanding from CLI candidate scoring",
+        "Explicitly applies wiki boundary and pollution-risk reasoning",
+        "Explains why the proposed existing wiki should not be silently broadened",
+        "Returns the command only as pending approval",
+        "Preserves the human review gate"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I queried the wiki and got a decent answer with citations. Decide whether it should be saved as a synthesis, and explain what backlink updates are allowed.",
+      "expected_output": "The agent applies the query write-back checklist before promotion, requires explicit human approval for save-synthesis, and distinguishes narrow confirmed-promotion backlinks from ingest-time or broad backlink repair.",
+      "files": [],
+      "expectations": [
+        "Checks for durable reuse value such as cross-source insight, sufficient citations, novelty, and clear source coverage",
+        "Does not treat a polished or merely helpful answer as automatically durable wiki knowledge",
+        "Requires explicit human approval before running save-synthesis --confirm",
+        "Allows only narrow auditable backlinks from confirmed synthesis promotion",
+        "Rejects ingest-time or broad backlink repair as part of normal query promotion"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/llm-wiki setup for my local atlas. I have not specified a path yet.",
+      "expected_output": "The agent treats /llm-wiki setup as the root setup workflow, attempts host-neutral root resolution, and if no explicit/env/config root exists asks for the local knowledge or registry path and whether to save it as the host-local default. It does not invent or reuse a maintainer-specific path.",
+      "files": [],
+      "expectations": [
+        "Recognizes /llm-wiki setup as the setup/connect/create workflow",
+        "Checks explicit path, llm_wiki_root, and host-local config before asking",
+        "Asks for the local root and whether to save it when no root is available",
+        "Does not use a committed personal absolute path as the default"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "/llm-wiki inbox",
+      "expected_output": "The agent treats /llm-wiki inbox as the raw/inbox processing workflow, inspects the current root's inbox, decodes non-Markdown drops through /anything2md before ingest/intake/route, and returns review-gated proposals rather than accepting them automatically.",
+      "files": [],
+      "expectations": [
+        "Recognizes /llm-wiki inbox as the inbox inspection and processing workflow",
+        "Inspects raw/inbox before deciding whether work exists",
+        "Uses /anything2md before llm-wiki commands for non-Markdown drops",
+        "Preserves route/profile/taxonomy human approval gates"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "/llm-wiki query what does the wiki say about retrieval noise?",
+      "expected_output": "The agent treats /llm-wiki query as a citation-grounded query workflow over the resolved wiki or registry, reports evidence-backed answers, and does not write back a synthesis unless the durable-value criteria and human approval are satisfied.",
+      "files": [],
+      "expectations": [
+        "Recognizes /llm-wiki query as the query/query-registry workflow",
+        "Uses citations from returned evidence",
+        "Says when no evidence matches",
+        "Does not run save-synthesis without explicit approval"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "/llm-wiki review",
+      "expected_output": "The agent treats /llm-wiki review as a pending-decision workflow, summarizes route, intake, profile, taxonomy, bridge, and synthesis review state as applicable, then asks which approval action to take before mutating anything.",
+      "files": [],
+      "expectations": [
+        "Recognizes /llm-wiki review as the proposal/review queue workflow",
+        "Covers route, intake, profile, taxonomy, bridge, and synthesis review state when present",
+        "Separates summary from pending commands",
+        "Does not run accept/reject/park/promote commands before approval"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "/llm-wiki maintain",
+      "expected_output": "The agent treats /llm-wiki maintain as health and freshness maintenance, runs status/lint/index checks as appropriate, reports broken links, raw drift, low-confidence pages, pending proposals, stale indexes, and scale risks, and avoids broad repairs unless requested.",
+      "files": [],
+      "expectations": [
+        "Recognizes /llm-wiki maintain as the status/lint/index health workflow",
+        "Reports health findings and index freshness",
+        "Mentions pending proposals when relevant",
+        "Does not perform broad repairs without user request"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "/llm-wiki govern",
+      "expected_output": "The agent treats /llm-wiki govern as knowledge-organization governance, works through registry, profile, taxonomy, bridge, and routing boundary commands, and keeps all semantic materialization behind human approval.",
+      "files": [],
+      "expectations": [
+        "Recognizes /llm-wiki govern as the registry/profile/taxonomy/bridge governance workflow",
+        "Uses governance commands rather than raw file edits",
+        "Applies classification principles and boundary review",
+        "Preserves approval gates before semantic materialization"
+      ]
+    }
+  ]
+}
