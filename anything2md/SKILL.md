@@ -1,6 +1,6 @@
 ---
 name: anything2md
-description: Convert document-like sources to Markdown with a deterministic decoder router. Use this whenever a user wants PDFs, images, DOC/DOCX, PPT/PPTX, XLS/XLSX, EPUB, HTML, ZIPs, audio, notebooks, CSV/JSON/XML, or other non-.md/.txt files turned into Markdown for review, knowledge ingest, RAG, wiki workflows, or other agent processing. The router sends PDF, images, Word, PowerPoint, and Excel formats to MinerU for high-fidelity Markdown/assets, and sends remaining formats to MarkItDown. Prefer this skill before downstream skills try to read or ingest non-Markdown documents.
+description: Convert document-like sources and trusted article URLs to Markdown with a deterministic decoder router. Use this whenever a user wants PDFs, images, DOC/DOCX, PPT/PPTX, XLS/XLSX, ordinary web articles, WeChat public articles, EPUB, HTML, ZIPs, audio, notebooks, CSV/JSON/XML, or other non-.md/.txt sources turned into Markdown for review, knowledge ingest, RAG, wiki workflows, or other agent processing. The router sends PDF, images, Word, PowerPoint, and Excel formats to MinerU, trusted HTTP(S) article URLs to the built-in article extractor, and remaining formats to MarkItDown. Prefer this skill before downstream skills try to read or ingest non-Markdown documents.
 license: MIT
 metadata:
   version: 0.1.0
@@ -11,18 +11,19 @@ metadata:
 
 # anything2md
 
-Use this skill to convert local non-Markdown documents into Markdown derivatives with structured metadata. The original document remains the source evidence; the decoded Markdown is a derivative for downstream agent workflows.
+Use this skill to convert local non-Markdown documents and trusted article URLs into Markdown derivatives with structured metadata. The original document or URL remains the source evidence; the decoded Markdown is a derivative for downstream agent workflows.
 
 The bundled script is a decoder router:
 
 - **MinerU precision extraction** for `.pdf`, `.png`, `.jpg`, `.jpeg`, `.jp2`, `.webp`, `.gif`, `.bmp`, `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and `.xlsx`.
+- **Built-in article extraction** for trusted HTTP(S) article URLs when `--allow-uri` is passed, including a WeChat public article branch adapted from the tested local WeChat article pipeline.
 - **MarkItDown fallback** for other non-Markdown formats such as EPUB, HTML, CSV/JSON/XML, ZIPs, audio, notebooks, RSS/Wikipedia/YouTube-style captures, and plugin-provided formats.
 
 If the source is already Markdown or plain text, skip conversion unless the user explicitly wants normalized metadata/frontmatter.
 
 ## Standard Flow
 
-1. Confirm the source is a trusted local file, or require explicit `--allow-uri` for URI conversion.
+1. Confirm the source is a trusted local file, or require explicit `--allow-uri` for article URL conversion.
 2. Decode the document to a `.md` output path.
 3. Preserve the metadata JSON sidecar and extracted assets.
 4. Review conversion quality when formulas, OCR, tables, or figures matter.
@@ -47,12 +48,15 @@ The script:
 - accepts local files by default
 - rejects URI input unless `--allow-uri` is explicitly passed
 - routes PDF/images/Word/PowerPoint/Excel to `mineru-open-api extract --model vlm` by default
+- routes trusted HTTP(S) article URLs to the built-in article extractor by default
+- handles ordinary article URLs as core正文 extraction, not full-page UI capture
+- handles WeChat public article URLs with WeChat-specific title/account/body/lazy-image/noise handling
 - routes every other non-Markdown format to MarkItDown
 - uses the installed Python `markitdown` package when available
 - falls back to a `markitdown` executable on `PATH`
 - supports MarkItDown's plugin listing, plugin opt-in, data URI retention, Document Intelligence, and Content Understanding flags
 - writes Markdown plus a `.metadata.json` sidecar
-- writes MinerU extracted assets beside the output by default, or under `<knowledgeRoot>/anything2md/assets/<decoded-name>/` when a knowledge root is supplied
+- writes MinerU/article extracted assets beside the output by default, or under `<knowledgeRoot>/anything2md/assets/<decoded-name>/` when a knowledge root is supplied
 - rewrites Markdown image references to the moved MinerU asset location
 - auto-splits PDF inputs above MinerU's per-task page limit into temporary page chunks, runs those chunks with bounded parallelism, then writes one merged Markdown output without leaving intermediate part files
 - adds provenance frontmatter unless `--no-frontmatter` is passed
@@ -65,6 +69,7 @@ Force a backend only for diagnosis:
 
 ```bash
 uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py report.pdf --decoder mineru --mineru-model vlm --json
+uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py 'https://example.com/article' --allow-uri --decoder article --json
 uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py page.html --decoder markitdown --json
 ```
 
@@ -106,6 +111,9 @@ The archive profile is self-contained and project-neutral. It does not depend on
 ## Safe Defaults
 
 - Prefer local files. Avoid MarkItDown MCP, MinerU web crawl, and broad URI conversion for normal conversion work.
+- For ordinary web articles and WeChat public articles, use the built-in article extractor with `--allow-uri`; do not route to MinerU crawl by default.
+- Treat article conversion as正文 extraction only. It is not for landing pages, dashboards, interactive UI, or whole-page browser snapshots.
+- Ordinary article conversion defaults to no image downloads. WeChat article conversion defaults to downloading article images, following the tested WeChat pipeline behavior; use `--article-images remote` or `--article-images none` when desired.
 - Use MinerU `vlm` as the default for routed high-fidelity formats. Use `--mineru-model pipeline` only when the user explicitly prioritizes no-hallucination reliability over complex-layout fidelity.
 - Keep plugins disabled unless the user or source explicitly requires a known installed MarkItDown plugin.
 - Do not enable cloud Document Intelligence, Azure Content Understanding, OCR, or LLM-backed conversion implicitly. Use `--use-docintel` or `--use-cu` only when the user explicitly selected that cloud path and provided the required endpoint.
@@ -132,6 +140,9 @@ Remaining risks: <conversion quality or missing dependency concerns>
 - MinerU sends document content to the configured MinerU API. Use it only when that privacy boundary is acceptable.
 - MinerU's effective per-task page limit may be lower than its broad document-size limit. The script automatically splits PDFs over 200 pages when no explicit `--pages` range is supplied, runs up to 10 chunks in parallel by default, and supports `--mineru-chunk-concurrency` plus retry/backoff flags when the operator wants to tune throughput against API rate limits.
 - MinerU is not currently the default for HTML. Saved HTML pages can be slow or timeout under MinerU-HTML; use MarkItDown or a dedicated HTML cleaner first.
+- Article URL extraction is intentionally based on tested article-pipeline behavior: fetch the page, isolate the article body, normalize lazy images, convert HTML to Markdown, and format noise away. Do not replace it with MinerU crawl or a general website renderer.
+- The ordinary article branch is for article pages. If the URL is a product page, web app, landing page, or visual UI, force MarkItDown or use a browser/scraper workflow outside this skill.
+- WeChat direct fetch may still fail when WeChat returns an access-verification page; report that as a blocked source rather than silently falling back to a summary service.
 - MinerU is a better high-fidelity document decoder, but it is still not a verifier. Formula output, OCR, and table structure need review for critical sources.
 - MarkItDown fallback is broad, not layout-perfect. It is useful for agent-readable extraction, not exact visual reproduction.
 - Do not point agents at `markitdown-mcp` by default; it can read local files and network resources with the server user's privileges.

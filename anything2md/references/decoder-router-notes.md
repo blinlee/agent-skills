@@ -2,7 +2,7 @@
 
 ## Routing Surface
 
-`anything2md` routes high-fidelity document formats to MinerU and keeps MarkItDown as the broad fallback.
+`anything2md` routes high-fidelity document formats to MinerU, trusted HTTP(S) article URLs to its built-in article extractor, and keeps MarkItDown as the broad fallback.
 
 MinerU-routed extensions:
 
@@ -12,7 +12,7 @@ MinerU-routed extensions:
 - `.ppt`, `.pptx`
 - `.xls`, `.xlsx`
 
-All other non-Markdown formats stay on MarkItDown unless the operator explicitly forces `--decoder mineru` for diagnosis.
+Trusted HTTP(S) article URLs route to the built-in article extractor when `--allow-uri` is passed. All other non-Markdown formats stay on MarkItDown unless the operator explicitly forces a decoder for diagnosis.
 
 MinerU output assets are moved to the configured asset root, and Markdown references are rewritten to point there. If a knowledge root is supplied, the asset root defaults to `anything2md/assets/<decoded-name>/`.
 
@@ -24,13 +24,29 @@ The fallback path is designed around Microsoft MarkItDown's local conversion cap
 
 For `anything2md`, MarkItDown is the fallback for formats outside the MinerU high-fidelity list. It remains especially useful for HTML and lightweight structured text, where MinerU-HTML can be slow or timeout.
 
+## Article URL Boundary
+
+The article extractor is internal to `anything2md`; it does not call external skills. Its behavior is intentionally limited to the tested reference semantics:
+
+- ordinary article URLs: fetch the page, isolate the core article body, remove page chrome/noise, and write Markdown
+- WeChat public article URLs: fetch the article page, extract title/author/account/body, repair lazy image URLs, download images by default, and run the WeChat-style Markdown cleanup
+
+Use it for articles, not visual/UI pages. It is not a browser renderer, landing-page archiver, or full DOM snapshot tool.
+
+Article image modes:
+
+- `auto`: download WeChat images; omit ordinary article images
+- `download`: download article images under the anything2md asset root
+- `remote`: keep remote image URLs
+- `none`: omit images
+
 ## MinerU Boundary
 
 Use `mineru-open-api extract` for routed high-fidelity local files. The default model is `vlm` because the decoder's purpose is to preserve layout, formulas, tables, images, and OCR text before downstream processing.
 
 Use `--mineru-model pipeline` only when the user explicitly prioritizes no-hallucination reliability over complex-layout fidelity.
 
-Do not use `mineru-open-api crawl` as the default for saved HTML drops. A saved HTML file is routed to MarkItDown unless the user explicitly asks for MinerU-HTML experimentation.
+Do not use `mineru-open-api crawl` as the default for article URLs or saved HTML drops. Article URLs use the built-in article extractor; saved HTML files are routed to MarkItDown unless the user explicitly asks for MinerU-HTML experimentation.
 
 ## Preferred API Boundary
 
@@ -56,7 +72,7 @@ The internal script covers the practical MarkItDown CLI surface:
 - local file conversion by default
 - trusted URI conversion behind `--allow-uri`
 
-It also preserves MinerU controls for model, timeout, language, pages, OCR, formula recognition, table recognition, automatic PDF page chunking, chunk concurrency, and retry/backoff behavior.
+It also preserves MinerU controls for model, timeout, language, pages, OCR, formula recognition, table recognition, automatic PDF page chunking, chunk concurrency, and retry/backoff behavior, plus article controls for image handling, timeout, and saving extracted HTML.
 
 ## Profiles
 

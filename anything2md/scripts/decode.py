@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Decode a local document to Markdown.
+"""Decode a local document or trusted article URL to Markdown.
 
 High-fidelity document formats route to MinerU when available. Broad fallback
-formats route to MarkItDown.
+formats route to MarkItDown. Trusted article URLs route to the built-in article
+extractor when URI conversion is explicitly enabled.
 """
 
 from __future__ import annotations
@@ -141,8 +142,14 @@ def availability() -> dict[str, Any]:
     python_version = markitdown_python_version()
     markitdown_available = python_version is not None or markitdown_cli is not None
     mineru_available = mineru_cli is not None
+    try:
+        import requests  # noqa: F401
+
+        article_available = True
+    except Exception:
+        article_available = False
     return {
-        "status": "ok" if markitdown_available or mineru_available else "missing",
+        "status": "ok" if markitdown_available or mineru_available or article_available else "missing",
         "python": {
             "executable": sys.executable,
             "version": sys.version.split()[0],
@@ -154,6 +161,11 @@ def availability() -> dict[str, Any]:
         "router": {
             "mineruExtensions": sorted(MINERU_EXTENSIONS),
             "fallbackDecoder": "markitdown",
+            "uriDecoder": "article",
+        },
+        "article": {
+            "available": article_available,
+            "dependency": "requests",
         },
         "mineru": {
             "available": mineru_available,
@@ -246,6 +258,10 @@ def page_chunks(total_pages: int, chunk_size: int) -> list[tuple[int, int]]:
 def choose_decoder(args: argparse.Namespace, source: str) -> str:
     if args.decoder != "auto":
         return args.decoder
+    if is_uri(source):
+        parsed = source.split(":", 1)[0].lower()
+        if parsed in {"http", "https"}:
+            return "article"
     if source_extension(source) in MINERU_EXTENSIONS:
         return "mineru"
     return "markitdown"
@@ -582,11 +598,32 @@ def decode_with_mineru(args: argparse.Namespace, source: str, output_path: Path,
     )
 
 
+def decode_with_article(args: argparse.Namespace, source: str, output_path: Path, knowledge_root: Path | None) -> tuple[str, str, dict[str, Any]]:
+    if is_uri(source) and source.split(":", 1)[0].lower() not in {"http", "https"}:
+        raise ValueError("article decoder only supports http(s) URLs")
+
+    from article_extract import decode_article_url
+
+    asset_root = Path(args.asset_root).expanduser().resolve() if args.asset_root else default_asset_root(output_path, knowledge_root)
+    markdown, extra = decode_article_url(
+        source=source,
+        output_path=output_path,
+        asset_root=asset_root,
+        image_mode=args.article_images,
+        timeout=args.article_timeout,
+        save_html=args.article_save_html,
+    )
+    return markdown, "built-in", extra
+
+
 def decode(args: argparse.Namespace, source: str, output_path: Path, knowledge_root: Path | None) -> tuple[str, str, str, str, dict[str, Any]]:
     decoder = choose_decoder(args, source)
     if decoder == "mineru":
         markdown, backend, version, extra = decode_with_mineru(args, source, output_path, knowledge_root)
         return markdown, "mineru", backend, version, extra
+    if decoder == "article":
+        markdown, backend, extra = decode_with_article(args, source, output_path, knowledge_root)
+        return markdown, "article", backend, "built-in", extra
 
     if args.backend in ("auto", "python"):
         try:
@@ -629,12 +666,12 @@ def validate_source(args: argparse.Namespace) -> tuple[str, str | None]:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Decode a document to Markdown with MinerU for high-fidelity formats and MarkItDown as fallback.",
+        description="Decode a document or trusted article URL to Markdown with MinerU, built-in article extraction, and MarkItDown fallback.",
     )
     parser.add_argument("source", nargs="?", help="Local source file. URI input requires --allow-uri.")
     parser.add_argument("-o", "--output", help="Markdown output path. Defaults to <source>.decoded.md.")
     parser.add_argument("--metadata-output", help="Metadata JSON path. Defaults to <output>.metadata.json, or <knowledgeRoot>/anything2md/metadata when --knowledge-root is provided.")
-    parser.add_argument("--decoder", choices=["auto", "mineru", "markitdown"], default="auto", help="Decoder router choice. Auto uses MinerU for high-fidelity document formats and MarkItDown for the rest.")
+    parser.add_argument("--decoder", choices=["auto", "mineru", "article", "markitdown"], default="auto", help="Decoder router choice. Auto uses article extraction for trusted http(s) URLs, MinerU for high-fidelity document formats, and MarkItDown for the rest.")
     parser.add_argument("--backend", choices=["auto", "python", "cli"], default="auto")
     parser.add_argument("--mineru-model", choices=["vlm", "pipeline"], default="vlm", help="MinerU model for routed high-fidelity formats. Default: vlm.")
     parser.add_argument("--mineru-timeout", type=int, default=1800, help="MinerU extraction timeout per task in seconds.")
@@ -642,8 +679,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--mineru-chunk-concurrency", type=int, default=MINERU_DEFAULT_CHUNK_CONCURRENCY, help="Parallel MinerU chunk jobs for auto-split PDFs. Default: 10.")
     parser.add_argument("--mineru-chunk-retries", type=int, default=MINERU_DEFAULT_CHUNK_RETRIES, help="Retries per MinerU chunk after failures such as rate limiting. Default: 3.")
     parser.add_argument("--mineru-retry-delay", type=float, default=MINERU_DEFAULT_RETRY_DELAY_SECONDS, help="Initial retry delay in seconds; later retries use exponential backoff. Default: 10.")
-    parser.add_argument("--asset-root", help="Directory for MinerU extracted assets. Defaults to <knowledgeRoot>/anything2md/assets/<output-name> or <output>.assets.")
-    parser.add_argument("--allow-uri", action="store_true", help="Allow MarkItDown URI conversion for trusted inputs.")
+    parser.add_argument("--asset-root", help="Directory for MinerU/article extracted assets. Defaults to <knowledgeRoot>/anything2md/assets/<output-name> or <output>.assets.")
+    parser.add_argument("--article-images", choices=["auto", "download", "remote", "none"], default="auto", help="Article image behavior. Auto downloads WeChat images and omits ordinary article images.")
+    parser.add_argument("--article-timeout", type=int, default=30, help="Article URL fetch and image-download timeout in seconds. Default: 30.")
+    parser.add_argument("--article-save-html", action="store_true", help="Save the extracted article HTML under the asset root.")
+    parser.add_argument("--allow-uri", action="store_true", help="Allow trusted URI conversion. HTTP(S) URLs route to the built-in article extractor by default.")
     parser.add_argument("--use-plugins", action="store_true", help="Enable installed MarkItDown plugins.")
     parser.add_argument("--list-plugins", action="store_true", help="List installed MarkItDown plugins and exit.")
     parser.add_argument("--keep-data-uris", action="store_true", help="Keep data URIs in Markdown output.")
@@ -722,7 +762,7 @@ def main(argv: list[str]) -> int:
         if effective_profile == "auto":
             effective_profile = "archive" if args.knowledge_root or args.archive_original or args.archive_root else "generic"
         frontmatter = {
-            "title": args.title or Path(source).name,
+            "title": args.title or decode_extra.get("articleTitle") or Path(source).name,
             "anything2md_decoded": "true",
             "anything2md_profile": effective_profile,
             "source_label": safe_source_label,
@@ -766,6 +806,22 @@ def main(argv: list[str]) -> int:
                 metadata_payload["assetRoot"] = path_label(asset_root, knowledge_root)
             metadata_payload["assetFiles"] = [path_label(path, knowledge_root) for path in asset_files]
             for key in ("pageCount", "chunked", "chunkRanges", "maxPagesPerTask", "chunkConcurrency", "chunkRetries", "retryDelaySeconds"):
+                if key in decode_extra and decode_extra[key] is not None:
+                    metadata_payload[key] = decode_extra[key]
+            for key in (
+                "articleTitle",
+                "articleAuthor",
+                "articleSiteName",
+                "articleFinalUrl",
+                "articleIsWeChat",
+                "articleExtractionMethod",
+                "articleImageMode",
+                "articleImagesDownloaded",
+                "articleImageDownloadFailures",
+                "articleFailedImageUrls",
+                "articleFormatSummary",
+                "cleanHtmlPreviewLength",
+            ):
                 if key in decode_extra and decode_extra[key] is not None:
                     metadata_payload[key] = decode_extra[key]
         if args.include_absolute_paths:

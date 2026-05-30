@@ -39,6 +39,33 @@
         "Preserves anything2md archive frontmatter",
         "Archives the original only after successful decode"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Convert this trusted ordinary web article URL to Markdown. It is an article page, not a landing page or app UI; keep only the core article content.",
+      "expected_output": "Uses scripts/decode.py with --allow-uri, routes the HTTP(S) URL through the built-in article decoder, removes page chrome/noise, writes Markdown plus metadata, and does not use MinerU crawl.",
+      "files": [],
+      "expectations": [
+        "Uses scripts/decode.py",
+        "Passes --allow-uri for the trusted URL",
+        "Selects decoder article",
+        "Keeps core article body content",
+        "Does not use MinerU crawl"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Convert this WeChat public article URL to Markdown and preserve the article body/images as the WeChat page provides them.",
+      "expected_output": "Uses scripts/decode.py with --allow-uri, routes the mp.weixin.qq.com URL through the built-in WeChat article branch, extracts title/account/body, handles lazy images, writes Markdown plus metadata, and does not use MinerU crawl.",
+      "files": [],
+      "expectations": [
+        "Uses scripts/decode.py",
+        "Passes --allow-uri for the trusted URL",
+        "Selects decoder article with articleIsWeChat true",
+        "Extracts WeChat title/account/body",
+        "Handles lazy image URLs",
+        "Does not use MinerU crawl"
+      ]
     }
   ]
 }
