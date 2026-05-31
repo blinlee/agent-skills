@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Decode a local document or trusted article URL to Markdown.
+"""Decode a local document, local article HTML file, or trusted article URL to Markdown.
 
 High-fidelity document formats route to MinerU when available. Broad fallback
-formats route to MarkItDown. Trusted article URLs route to the built-in article
-extractor when URI conversion is explicitly enabled.
+formats route to MarkItDown. Trusted article URLs and local saved article HTML
+files route to the built-in article extractor.
 """
 
 from __future__ import annotations
@@ -44,6 +44,7 @@ MINERU_EXTENSIONS = {
     ".xls",
     ".xlsx",
 }
+ARTICLE_EXTENSIONS = {".html", ".htm"}
 MINERU_DEFAULT_MAX_PAGES_PER_TASK = 200
 MINERU_DEFAULT_CHUNK_CONCURRENCY = 10
 MINERU_DEFAULT_CHUNK_RETRIES = 3
@@ -160,8 +161,11 @@ def availability() -> dict[str, Any]:
         },
         "router": {
             "mineruExtensions": sorted(MINERU_EXTENSIONS),
+            "articleExtensions": sorted(ARTICLE_EXTENSIONS),
             "fallbackDecoder": "markitdown",
             "uriDecoder": "article",
+            "htmlDecoder": "article",
+            "articleRouteForced": True,
         },
         "article": {
             "available": article_available,
@@ -213,6 +217,13 @@ def source_extension(source: str) -> str:
     return Path(source).suffix.lower()
 
 
+def is_article_routed_source(source: str) -> bool:
+    if is_uri(source):
+        parsed = source.split(":", 1)[0].lower()
+        return parsed in {"http", "https"}
+    return source_extension(source) in ARTICLE_EXTENSIONS
+
+
 def pdf_page_count(path: Path) -> int | None:
     try:
         import fitz
@@ -256,12 +267,10 @@ def page_chunks(total_pages: int, chunk_size: int) -> list[tuple[int, int]]:
 
 
 def choose_decoder(args: argparse.Namespace, source: str) -> str:
+    if is_article_routed_source(source):
+        return "article"
     if args.decoder != "auto":
         return args.decoder
-    if is_uri(source):
-        parsed = source.split(":", 1)[0].lower()
-        if parsed in {"http", "https"}:
-            return "article"
     if source_extension(source) in MINERU_EXTENSIONS:
         return "mineru"
     return "markitdown"
@@ -600,7 +609,7 @@ def decode_with_mineru(args: argparse.Namespace, source: str, output_path: Path,
 
 def decode_with_article(args: argparse.Namespace, source: str, output_path: Path, knowledge_root: Path | None) -> tuple[str, str, dict[str, Any]]:
     if is_uri(source) and source.split(":", 1)[0].lower() not in {"http", "https"}:
-        raise ValueError("article decoder only supports http(s) URLs")
+        raise ValueError("article decoder only supports http(s) URLs or local HTML article files")
 
     from article_extract import decode_article_url
 
@@ -666,12 +675,12 @@ def validate_source(args: argparse.Namespace) -> tuple[str, str | None]:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Decode a document or trusted article URL to Markdown with MinerU, built-in article extraction, and MarkItDown fallback.",
+        description="Decode a document, local article HTML file, or trusted article URL to Markdown with MinerU, built-in article extraction, and MarkItDown fallback.",
     )
     parser.add_argument("source", nargs="?", help="Local source file. URI input requires --allow-uri.")
     parser.add_argument("-o", "--output", help="Markdown output path. Defaults to <source>.decoded.md.")
     parser.add_argument("--metadata-output", help="Metadata JSON path. Defaults to <output>.metadata.json, or <knowledgeRoot>/anything2md/metadata when --knowledge-root is provided.")
-    parser.add_argument("--decoder", choices=["auto", "mineru", "article", "markitdown"], default="auto", help="Decoder router choice. Auto uses article extraction for trusted http(s) URLs, MinerU for high-fidelity document formats, and MarkItDown for the rest.")
+    parser.add_argument("--decoder", choices=["auto", "mineru", "article", "markitdown"], default="auto", help="Decoder router choice for non-article sources. Trusted http(s) URLs and local HTML article files always use article extraction; other auto routes use MinerU for high-fidelity document formats and MarkItDown for the rest.")
     parser.add_argument("--backend", choices=["auto", "python", "cli"], default="auto")
     parser.add_argument("--mineru-model", choices=["vlm", "pipeline"], default="vlm", help="MinerU model for routed high-fidelity formats. Default: vlm.")
     parser.add_argument("--mineru-timeout", type=int, default=1800, help="MinerU extraction timeout per task in seconds.")
@@ -683,7 +692,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--article-images", choices=["auto", "download", "remote", "none"], default="auto", help="Article image behavior. Auto downloads WeChat images and omits ordinary article images.")
     parser.add_argument("--article-timeout", type=int, default=30, help="Article URL fetch and image-download timeout in seconds. Default: 30.")
     parser.add_argument("--article-save-html", action="store_true", help="Save the extracted article HTML under the asset root.")
-    parser.add_argument("--allow-uri", action="store_true", help="Allow trusted URI conversion. HTTP(S) URLs route to the built-in article extractor by default.")
+    parser.add_argument("--allow-uri", action="store_true", help="Allow trusted URI conversion. HTTP(S) URLs route to the built-in article extractor by default; local HTML article files do not require this flag.")
     parser.add_argument("--use-plugins", action="store_true", help="Enable installed MarkItDown plugins.")
     parser.add_argument("--list-plugins", action="store_true", help="List installed MarkItDown plugins and exit.")
     parser.add_argument("--keep-data-uris", action="store_true", help="Keep data URIs in Markdown output.")

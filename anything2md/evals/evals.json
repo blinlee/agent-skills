@@ -16,14 +16,15 @@
     },
     {
       "id": 2,
-      "prompt": "Turn this saved HTML export into Markdown for agent review. Do not use plugins, URI conversion, or cloud parsing.",
-      "expected_output": "Routes HTML to MarkItDown fallback, keeps plugins/URI/cloud features disabled, writes Markdown and metadata, and reports paths.",
+      "prompt": "Turn this saved ordinary article HTML export into Markdown for agent review. Do not use plugins, URI conversion, cloud parsing, MinerU, or MarkItDown fallback.",
+      "expected_output": "Routes local HTML article input to the built-in article decoder, keeps plugins/URI/cloud/MinerU/MarkItDown disabled, writes Markdown and metadata, and reports paths.",
       "files": [],
       "expectations": [
-        "Selects MarkItDown for HTML",
+        "Selects decoder article for local HTML",
         "Does not enable --allow-uri",
         "Does not enable --use-plugins",
         "Does not enable --use-docintel or --use-cu",
+        "Does not route to MinerU or MarkItDown",
         "Writes Markdown plus metadata"
       ]
     },

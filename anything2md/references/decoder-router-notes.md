@@ -2,7 +2,7 @@
 
 ## Routing Surface
 
-`anything2md` routes high-fidelity document formats to MinerU, trusted HTTP(S) article URLs to its built-in article extractor, and keeps MarkItDown as the broad fallback.
+`anything2md` routes high-fidelity document formats to MinerU, trusted HTTP(S) article URLs plus local saved `.html/.htm` article files to its built-in article extractor, and keeps MarkItDown as the broad fallback for remaining formats.
 
 MinerU-routed extensions:
 
@@ -12,7 +12,7 @@ MinerU-routed extensions:
 - `.ppt`, `.pptx`
 - `.xls`, `.xlsx`
 
-Trusted HTTP(S) article URLs route to the built-in article extractor when `--allow-uri` is passed. All other non-Markdown formats stay on MarkItDown unless the operator explicitly forces a decoder for diagnosis.
+Trusted HTTP(S) article URLs route to the built-in article extractor when `--allow-uri` is passed. Local `.html/.htm` article files route to the same extractor without `--allow-uri`. This article route is forced before decoder overrides, so it does not fall through to MinerU or MarkItDown. All other non-Markdown formats stay on MarkItDown unless the operator explicitly forces a decoder for diagnosis.
 
 MinerU output assets are moved to the configured asset root, and Markdown references are rewritten to point there. If a knowledge root is supplied, the asset root defaults to `anything2md/assets/<decoded-name>/`.
 
@@ -20,16 +20,16 @@ For PDFs above MinerU's per-task page limit, `decode.py` auto-splits the documen
 
 ## Supported Surface
 
-The fallback path is designed around Microsoft MarkItDown's local conversion capability. MarkItDown supports many common source formats through built-in converters, including Office documents, PDFs, HTML, CSV/JSON/XML, EPUB, ZIP archives, notebooks, images, audio, RSS/Wikipedia/YouTube-style captures, and plugin-provided formats.
+The fallback path is designed around Microsoft MarkItDown's local conversion capability. MarkItDown supports many common source formats through built-in converters, including Office documents, PDFs, CSV/JSON/XML, EPUB, ZIP archives, notebooks, images, audio, RSS/Wikipedia/YouTube-style captures, and plugin-provided formats.
 
-For `anything2md`, MarkItDown is the fallback for formats outside the MinerU high-fidelity list. It remains especially useful for HTML and lightweight structured text, where MinerU-HTML can be slow or timeout.
+For `anything2md`, MarkItDown is the fallback for formats outside the MinerU high-fidelity list and outside the article HTML boundary.
 
-## Article URL Boundary
+## Article HTML Boundary
 
 The article extractor is internal to `anything2md`; it does not call external skills. Its behavior is intentionally limited to the tested reference semantics:
 
-- ordinary article URLs: fetch the page, isolate the core article body, remove page chrome/noise, and write Markdown
-- WeChat public article URLs: fetch the article page, extract title/author/account/body, repair lazy image URLs, download images by default, and run the WeChat-style Markdown cleanup
+- ordinary article URLs and saved ordinary article HTML files: load the page, isolate the core article body, remove page chrome/noise, and write Markdown
+- WeChat public article URLs and saved WeChat HTML files: load the article page, extract title/author/account/body, repair lazy image URLs, download images by default, and run the WeChat-style Markdown cleanup
 
 Use it for articles, not visual/UI pages. It is not a browser renderer, landing-page archiver, or full DOM snapshot tool.
 
@@ -46,7 +46,7 @@ Use `mineru-open-api extract` for routed high-fidelity local files. The default 
 
 Use `--mineru-model pipeline` only when the user explicitly prioritizes no-hallucination reliability over complex-layout fidelity.
 
-Do not use `mineru-open-api crawl` as the default for article URLs or saved HTML drops. Article URLs use the built-in article extractor; saved HTML files are routed to MarkItDown unless the user explicitly asks for MinerU-HTML experimentation.
+Do not use `mineru-open-api crawl`, MinerU-HTML, or MarkItDown as the default for article URLs or saved article HTML drops. Article URLs and saved `.html/.htm` article files use the built-in article extractor with no automatic fallback.
 
 ## Preferred API Boundary
 
@@ -102,4 +102,4 @@ Use `--asset-root`, `--archive-root`, or `--metadata-output` to override those l
 
 MarkItDown MCP and broad URI conversion are intentionally not the default path. They are useful for local trusted agents, but they widen the read/network surface. Use them only when the user explicitly asks for that execution model and understands the trust boundary.
 
-MinerU web crawling and MinerU-HTML are also not the default path for saved HTML files until timeout/size behavior is better characterized.
+MinerU web crawling, MinerU-HTML, and MarkItDown fallback are not the default path for article URLs or saved article HTML files.

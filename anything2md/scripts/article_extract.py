@@ -3,7 +3,7 @@
 
 The WeChat branch is adapted from the tested
 `wechat-article-to-markdown-skill/scripts/wechat_article_pipeline.py` workflow.
-The generic branch follows the tested knowledge-collector article rule: fetch a
+The generic branch follows the tested knowledge-collector article rule: load a
 normal article page, keep core正文 only, and remove page chrome/noise.
 """
 
@@ -118,6 +118,24 @@ def fetch_html(url: str, timeout: int) -> tuple[str, str]:
     if response.encoding in (None, "ISO-8859-1"):
         response.encoding = "utf-8"
     return response.text, response.url
+
+
+def load_article_source(source: str, timeout: int) -> tuple[str, str, str]:
+    if validate_article_url(source):
+        source_html, final_url = fetch_html(source, timeout)
+        return source_html, source, final_url
+
+    path = Path(source).expanduser().resolve()
+    if not path.exists():
+        raise FileNotFoundError(f"article HTML file does not exist: {path}")
+    if not path.is_file():
+        raise ValueError(f"article HTML source is not a file: {path}")
+    if path.suffix.lower() not in {".html", ".htm"}:
+        raise ValueError("article decoder only supports http(s) URLs or local HTML article files")
+
+    source_html = path.read_text(encoding="utf-8", errors="replace")
+    file_url = path.as_uri()
+    return source_html, file_url, file_url
 
 
 class ArticleExtractor:
@@ -873,8 +891,8 @@ def decode_article_url(
     timeout: int,
     save_html: bool,
 ) -> tuple[str, dict[str, object]]:
-    source_html, final_url = fetch_html(source, timeout)
-    article = ArticleExtractor().extract(source_html, source, final_url)
+    source_html, original_url, final_url = load_article_source(source, timeout)
+    article = ArticleExtractor().extract(source_html, original_url, final_url)
     asset_root = asset_root or output_path.with_name(f"{output_path.name}.assets")
     body_markdown, conversion_summary = convert_article_to_markdown(
         article=article,
@@ -915,8 +933,8 @@ def decode_article_url(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch article URLs and convert them to formatted Markdown.")
-    parser.add_argument("url", help="Article URL")
+    parser = argparse.ArgumentParser(description="Convert article URLs or local article HTML files to formatted Markdown.")
+    parser.add_argument("url", help="Article URL or local article HTML file")
     parser.add_argument("--output", required=True, help="Markdown output path")
     parser.add_argument("--asset-root", help="Asset output directory")
     parser.add_argument("--article-images", choices=["auto", "download", "remote", "none"], default="auto")
