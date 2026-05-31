@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Decode a local document, local article HTML file, or trusted article URL to Markdown.
+"""Decode a local document, local article HTML file, trusted article URL, or Bilibili video URL to Markdown.
 
 High-fidelity document formats route to MinerU when available. Broad fallback
-formats route to MarkItDown. Trusted article URLs and local saved article HTML
+formats route to MarkItDown. Trusted Bilibili video URLs route to the built-in
+Bilibili transcript decoder. Trusted article URLs and local saved article HTML
 files route to the built-in article extractor.
 """
 
@@ -25,6 +26,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from typing import Any
+from urllib.parse import urlparse
 
 
 URI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
@@ -45,6 +47,11 @@ MINERU_EXTENSIONS = {
     ".xlsx",
 }
 ARTICLE_EXTENSIONS = {".html", ".htm"}
+BILIBILI_VIDEO_PATH_PATTERNS = (
+    re.compile(r"^/video/"),
+    re.compile(r"^/bangumi/play/"),
+    re.compile(r"^/medialist/play/"),
+)
 MINERU_DEFAULT_MAX_PAGES_PER_TASK = 200
 MINERU_DEFAULT_CHUNK_CONCURRENCY = 10
 MINERU_DEFAULT_CHUNK_RETRIES = 3
@@ -140,9 +147,21 @@ def mineru_cli_version(executable: str) -> str | None:
 def availability() -> dict[str, Any]:
     markitdown_cli = shutil.which("markitdown")
     mineru_cli = shutil.which("mineru-open-api")
+    yt_dlp_cli = shutil.which("yt-dlp")
+    ffmpeg_cli = shutil.which("ffmpeg")
+    whisper_cli = shutil.which("whisper")
+    opencc_cli = shutil.which("opencc")
+    trans_cli = shutil.which("trans")
+    try:
+        import argostranslate  # noqa: F401
+
+        argos_available = True
+    except Exception:
+        argos_available = False
     python_version = markitdown_python_version()
     markitdown_available = python_version is not None or markitdown_cli is not None
     mineru_available = mineru_cli is not None
+    bilibili_available = yt_dlp_cli is not None
     try:
         import requests  # noqa: F401
 
@@ -162,10 +181,29 @@ def availability() -> dict[str, Any]:
         "router": {
             "mineruExtensions": sorted(MINERU_EXTENSIONS),
             "articleExtensions": sorted(ARTICLE_EXTENSIONS),
+            "bilibiliDecoder": "bilibili",
+            "bilibiliRouteForced": True,
             "fallbackDecoder": "markitdown",
             "uriDecoder": "article",
             "htmlDecoder": "article",
             "articleRouteForced": True,
+        },
+        "bilibili": {
+            "available": bilibili_available,
+            "requiredBins": {
+                "yt-dlp": yt_dlp_cli,
+            },
+            "whisperFallbackBins": {
+                "ffmpeg": ffmpeg_cli,
+                "whisper": whisper_cli,
+            },
+            "optionalBins": {
+                "opencc": opencc_cli,
+            },
+            "translationBackends": {
+                "argos": argos_available,
+                "trans": trans_cli,
+            },
         },
         "article": {
             "available": article_available,
@@ -215,6 +253,25 @@ def source_extension(source: str) -> str:
     if is_uri(source):
         return Path(source.split("?", 1)[0]).suffix.lower()
     return Path(source).suffix.lower()
+
+
+def is_bilibili_video_url(source: str) -> bool:
+    if not is_uri(source):
+        return False
+    parsed = urlparse(source)
+    if parsed.scheme.lower() not in {"http", "https"}:
+        return False
+    host = parsed.netloc.lower().split("@")[-1].split(":")[0]
+    path = parsed.path or ""
+    if host == "b23.tv":
+        return bool(path.strip("/"))
+    if host.endswith("bilibili.tv"):
+        return bool(path.strip("/"))
+    if host.endswith("bilibili.com"):
+        if host.startswith("api."):
+            return False
+        return any(pattern.search(path) for pattern in BILIBILI_VIDEO_PATH_PATTERNS)
+    return False
 
 
 def is_article_routed_source(source: str) -> bool:
@@ -267,6 +324,8 @@ def page_chunks(total_pages: int, chunk_size: int) -> list[tuple[int, int]]:
 
 
 def choose_decoder(args: argparse.Namespace, source: str) -> str:
+    if is_bilibili_video_url(source):
+        return "bilibili"
     if is_article_routed_source(source):
         return "article"
     if args.decoder != "auto":
@@ -625,11 +684,33 @@ def decode_with_article(args: argparse.Namespace, source: str, output_path: Path
     return markdown, "built-in", extra
 
 
+def decode_with_bilibili(args: argparse.Namespace, source: str, output_path: Path) -> tuple[str, str, dict[str, Any]]:
+    from bilibili_extract import decode_bilibili_url
+
+    markdown, extra = decode_bilibili_url(
+        source=source,
+        output_path=output_path,
+        cookie_file=args.bilibili_cookies,
+        browser=args.bilibili_browser,
+        sub_langs=args.bilibili_sub_langs,
+        ai_langs=args.bilibili_ai_langs,
+        whisper_model=args.bilibili_whisper_model,
+        whisper_language=args.bilibili_whisper_language,
+        no_whisper=args.bilibili_no_whisper,
+        translation_backend=args.bilibili_translation_backend,
+        timeout=args.bilibili_timeout,
+    )
+    return markdown, "built-in", extra
+
+
 def decode(args: argparse.Namespace, source: str, output_path: Path, knowledge_root: Path | None) -> tuple[str, str, str, str, dict[str, Any]]:
     decoder = choose_decoder(args, source)
     if decoder == "mineru":
         markdown, backend, version, extra = decode_with_mineru(args, source, output_path, knowledge_root)
         return markdown, "mineru", backend, version, extra
+    if decoder == "bilibili":
+        markdown, backend, extra = decode_with_bilibili(args, source, output_path)
+        return markdown, "bilibili", backend, "built-in", extra
     if decoder == "article":
         markdown, backend, extra = decode_with_article(args, source, output_path, knowledge_root)
         return markdown, "article", backend, "built-in", extra
@@ -675,12 +756,12 @@ def validate_source(args: argparse.Namespace) -> tuple[str, str | None]:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Decode a document, local article HTML file, or trusted article URL to Markdown with MinerU, built-in article extraction, and MarkItDown fallback.",
+        description="Decode a document, local article HTML file, trusted article URL, or Bilibili video URL to Markdown with routed decoders.",
     )
     parser.add_argument("source", nargs="?", help="Local source file. URI input requires --allow-uri.")
     parser.add_argument("-o", "--output", help="Markdown output path. Defaults to <source>.decoded.md.")
     parser.add_argument("--metadata-output", help="Metadata JSON path. Defaults to <output>.metadata.json, or <knowledgeRoot>/anything2md/metadata when --knowledge-root is provided.")
-    parser.add_argument("--decoder", choices=["auto", "mineru", "article", "markitdown"], default="auto", help="Decoder router choice for non-article sources. Trusted http(s) URLs and local HTML article files always use article extraction; other auto routes use MinerU for high-fidelity document formats and MarkItDown for the rest.")
+    parser.add_argument("--decoder", choices=["auto", "mineru", "article", "bilibili", "markitdown"], default="auto", help="Decoder router choice for non-forced sources. Trusted Bilibili video URLs always use Bilibili extraction; trusted http(s) article URLs and local HTML article files always use article extraction; other auto routes use MinerU or MarkItDown.")
     parser.add_argument("--backend", choices=["auto", "python", "cli"], default="auto")
     parser.add_argument("--mineru-model", choices=["vlm", "pipeline"], default="vlm", help="MinerU model for routed high-fidelity formats. Default: vlm.")
     parser.add_argument("--mineru-timeout", type=int, default=1800, help="MinerU extraction timeout per task in seconds.")
@@ -692,7 +773,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--article-images", choices=["auto", "download", "remote", "none"], default="auto", help="Article image behavior. Auto downloads WeChat images and omits ordinary article images.")
     parser.add_argument("--article-timeout", type=int, default=30, help="Article URL fetch and image-download timeout in seconds. Default: 30.")
     parser.add_argument("--article-save-html", action="store_true", help="Save the extracted article HTML under the asset root.")
-    parser.add_argument("--allow-uri", action="store_true", help="Allow trusted URI conversion. HTTP(S) URLs route to the built-in article extractor by default; local HTML article files do not require this flag.")
+    parser.add_argument("--bilibili-cookies", help="Bilibili cookies.txt path. Used before browser cookie discovery.")
+    parser.add_argument("--bilibili-browser", choices=["auto", "chrome", "chromium", "edge", "firefox", "none"], default="auto", help="Browser cookie source for Bilibili subtitles. Default: auto.")
+    parser.add_argument("--bilibili-sub-langs", default="zh-CN,zh-TW,zh-Hans,zh,en,ja,ko,es,ar,pt,de,fr", help="Comma-separated human subtitle languages for Bilibili. Default prefers Chinese, then common languages.")
+    parser.add_argument("--bilibili-ai-langs", default="ai-zh,ai-en,ai-ja", help="Comma-separated Bilibili AI subtitle languages. Default: ai-zh,ai-en,ai-ja.")
+    parser.add_argument("--bilibili-whisper-model", default="medium", help="Whisper model for Bilibili audio fallback. Default: medium.")
+    parser.add_argument("--bilibili-whisper-language", default="Chinese", help="Whisper language for Bilibili audio fallback. Default: Chinese.")
+    parser.add_argument("--bilibili-no-whisper", action="store_true", help="Disable Whisper fallback when Bilibili subtitles are unavailable.")
+    parser.add_argument("--bilibili-translation-backend", choices=["auto", "argos", "trans", "none"], default="auto", help="Translate non-Chinese Bilibili subtitles to Chinese when no Chinese subtitle is available. Default: auto.")
+    parser.add_argument("--bilibili-timeout", type=int, default=1800, help="Bilibili yt-dlp and Whisper timeout per step in seconds. Default: 1800.")
+    parser.add_argument("--allow-uri", action="store_true", help="Allow trusted URI conversion. Bilibili video URLs route to the built-in Bilibili decoder; other HTTP(S) URLs route to the built-in article extractor; local HTML article files do not require this flag.")
     parser.add_argument("--use-plugins", action="store_true", help="Enable installed MarkItDown plugins.")
     parser.add_argument("--list-plugins", action="store_true", help="List installed MarkItDown plugins and exit.")
     parser.add_argument("--keep-data-uris", action="store_true", help="Keep data URIs in Markdown output.")
@@ -748,9 +838,11 @@ def main(argv: list[str]) -> int:
         return 0
 
     decoded_at = iso_now()
+    attempted_decoder = getattr(args, "decoder", "auto")
 
     try:
         source, source_sha256 = validate_source(args)
+        attempted_decoder = choose_decoder(args, source)
         output_path = Path(args.output).expanduser().resolve() if args.output else default_output_path(source, args.allow_uri).resolve()
         knowledge_root = Path(args.knowledge_root).expanduser().resolve() if args.knowledge_root else None
         metadata_path = (
@@ -764,14 +856,13 @@ def main(argv: list[str]) -> int:
         if metadata_path.exists() and not args.overwrite:
             raise FileExistsError(f"metadata output already exists: {metadata_path}")
 
-        decoder_name = choose_decoder(args, source)
         markdown, decoder_name, backend, decoder_version, decode_extra = decode(args, source, output_path, knowledge_root)
         safe_source_label = args.source_label or path_label(source, knowledge_root)
         effective_profile = args.profile
         if effective_profile == "auto":
             effective_profile = "archive" if args.knowledge_root or args.archive_original or args.archive_root else "generic"
         frontmatter = {
-            "title": args.title or decode_extra.get("articleTitle") or Path(source).name,
+            "title": args.title or decode_extra.get("articleTitle") or decode_extra.get("bilibiliTitle") or Path(source).name,
             "anything2md_decoded": "true",
             "anything2md_profile": effective_profile,
             "source_label": safe_source_label,
@@ -830,6 +921,23 @@ def main(argv: list[str]) -> int:
                 "articleFailedImageUrls",
                 "articleFormatSummary",
                 "cleanHtmlPreviewLength",
+                "bilibiliTitle",
+                "bilibiliUploader",
+                "bilibiliUploadDate",
+                "bilibiliDurationSeconds",
+                "bilibiliDuration",
+                "bilibiliVideoId",
+                "bilibiliWebpageUrl",
+                "bilibiliTranscriptSource",
+                "bilibiliSubtitleLanguage",
+                "bilibiliTranslatedToChinese",
+                "bilibiliTranslationBackend",
+                "bilibiliOriginalTranscriptSource",
+                "bilibiliOriginalSubtitleLanguage",
+                "bilibiliOriginalTranscriptChars",
+                "bilibiliCookieSource",
+                "bilibiliWhisperModel",
+                "bilibiliTranscriptChars",
             ):
                 if key in decode_extra and decode_extra[key] is not None:
                     metadata_payload[key] = decode_extra[key]
@@ -842,6 +950,8 @@ def main(argv: list[str]) -> int:
                 metadata_payload["assetRootAbsolutePath"] = decode_extra["assetRoot"]
             if decode_extra.get("assetFiles"):
                 metadata_payload["assetFileAbsolutePaths"] = decode_extra["assetFiles"]
+            if decode_extra.get("bilibiliCookieAbsolutePath"):
+                metadata_payload["bilibiliCookieAbsolutePath"] = decode_extra["bilibiliCookieAbsolutePath"]
         metadata_path.write_text(json.dumps(metadata_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
         if args.json:
@@ -852,7 +962,7 @@ def main(argv: list[str]) -> int:
     except Exception as exc:
         payload = {
             "status": "error",
-            "decoder": getattr(args, "decoder", "auto"),
+            "decoder": attempted_decoder,
             "errorType": exc.__class__.__name__,
             "error": str(exc),
             "decodedAt": decoded_at,

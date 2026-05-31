@@ -67,6 +67,36 @@
         "Handles lazy image URLs",
         "Does not use MinerU crawl"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "Convert this trusted Bilibili video URL to Markdown. I need the complete transcript and video metadata, not a webpage article extraction or summary.",
+      "expected_output": "Uses scripts/decode.py with --allow-uri, routes the Bilibili video URL through the built-in Bilibili decoder, extracts a Chinese subtitle/transcript or translates a non-Chinese subtitle to Chinese, writes Markdown plus metadata, and does not use article extraction, MinerU, or MarkItDown.",
+      "files": [],
+      "expectations": [
+        "Uses scripts/decode.py",
+        "Passes --allow-uri for the trusted URL",
+        "Selects decoder bilibili",
+        "Includes Bilibili video metadata",
+        "Includes complete Chinese transcript text",
+        "Prefers Chinese subtitles and records translation metadata when non-Chinese subtitles are translated",
+        "Does not route to article, MinerU, or MarkItDown",
+        "Does not generate an AI summary or summary placeholder"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Convert this trusted Bilibili video URL where only English subtitles are available. The output Markdown still must be Chinese.",
+      "expected_output": "Uses scripts/decode.py with --allow-uri, routes through the Bilibili decoder, translates the non-Chinese subtitle to Chinese with an available translation backend, records original subtitle and translation metadata, and fails clearly if translation is unavailable instead of emitting English Markdown.",
+      "files": [],
+      "expectations": [
+        "Selects decoder bilibili",
+        "Does not return non-Chinese transcript Markdown as success",
+        "Uses --bilibili-translation-backend auto by default",
+        "Records bilibiliTranslatedToChinese and bilibiliTranslationBackend when translation occurs",
+        "Preserves original subtitle language/source metadata",
+        "Fails clearly if no Chinese subtitle and no translation backend are available"
+      ]
     }
   ]
 }

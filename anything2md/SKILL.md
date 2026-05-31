@@ -1,21 +1,22 @@
 ---
 name: anything2md
-description: Convert document-like sources, local article HTML files, and trusted article URLs to Markdown with a deterministic decoder router. Use this whenever a user wants PDFs, images, DOC/DOCX, PPT/PPTX, XLS/XLSX, ordinary web articles, WeChat public articles, EPUB, HTML, ZIPs, audio, notebooks, CSV/JSON/XML, or other non-.md/.txt sources turned into Markdown for review, knowledge ingest, RAG, wiki workflows, or other agent processing. The router sends PDF, images, Word, PowerPoint, and Excel formats to MinerU, trusted HTTP(S) article URLs plus saved `.html/.htm` article files to the built-in article extractor, and remaining formats to MarkItDown. Prefer this skill before downstream skills try to read or ingest non-Markdown documents.
+description: Convert document-like sources, local article HTML files, trusted article URLs, and trusted Bilibili video URLs to Markdown with a deterministic decoder router. Use this whenever a user wants PDFs, images, DOC/DOCX, PPT/PPTX, XLS/XLSX, ordinary web articles, WeChat public articles, Bilibili video transcripts, EPUB, HTML, ZIPs, audio, notebooks, CSV/JSON/XML, or other non-.md/.txt sources turned into Markdown for review, knowledge ingest, RAG, wiki workflows, or other agent processing. The router sends Bilibili video URLs to the built-in Bilibili transcript decoder, PDF/images/Word/PowerPoint/Excel formats to MinerU, trusted HTTP(S) article URLs plus saved `.html/.htm` article files to the built-in article extractor, and remaining formats to MarkItDown. Prefer this skill before downstream skills try to read or ingest non-Markdown documents.
 license: MIT
 metadata:
   version: 0.1.0
   platforms: [linux, macos, windows]
-  tags: [mineru, markitdown, markdown, decoder, document-conversion]
+  tags: [mineru, markitdown, bilibili, transcript, markdown, decoder, document-conversion]
   category: knowledge-ingest
 ---
 
 # anything2md
 
-Use this skill to convert local non-Markdown documents, local article HTML files, and trusted article URLs into Markdown derivatives with structured metadata. The original document, HTML file, or URL remains the source evidence; the decoded Markdown is a derivative for downstream agent workflows.
+Use this skill to convert local non-Markdown documents, local article HTML files, trusted article URLs, and trusted Bilibili video URLs into Markdown derivatives with structured metadata. The original document, HTML file, video URL, or article URL remains the source evidence; the decoded Markdown is a derivative for downstream agent workflows.
 
 The bundled script is a decoder router:
 
 - **MinerU precision extraction** for `.pdf`, `.png`, `.jpg`, `.jpeg`, `.jp2`, `.webp`, `.gif`, `.bmp`, `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and `.xlsx`.
+- **Built-in Bilibili transcript extraction** for trusted Bilibili video URLs when `--allow-uri` is passed, selecting Chinese subtitles by default and translating non-Chinese subtitles to Chinese when no Chinese subtitle is available.
 - **Built-in article extraction** for trusted HTTP(S) article URLs when `--allow-uri` is passed and for local saved `.html/.htm` article files, including a WeChat public article branch adapted from the tested local WeChat article pipeline.
 - **MarkItDown fallback** for other non-Markdown formats such as EPUB, CSV/JSON/XML, ZIPs, audio, notebooks, RSS/Wikipedia/YouTube-style captures, and plugin-provided formats.
 
@@ -47,10 +48,12 @@ The script:
 
 - accepts local files by default
 - rejects URI input unless `--allow-uri` is explicitly passed
+- routes trusted Bilibili video URLs to the built-in Bilibili transcript decoder as a forced route
 - routes PDF/images/Word/PowerPoint/Excel to `mineru-open-api extract --model vlm` by default
 - routes trusted HTTP(S) article URLs and local saved `.html/.htm` article files to the built-in article extractor as a forced route
 - handles ordinary article sources as core正文 extraction, not full-page UI capture
 - handles WeChat public article URLs or saved WeChat HTML files with WeChat-specific title/account/body/lazy-image/noise handling
+- handles Bilibili videos as Chinese transcript extraction: Chinese human CC subtitles, Chinese Bilibili AI subtitles, translated non-Chinese subtitles, then Whisper if enabled
 - routes every other non-Markdown format to MarkItDown
 - uses the installed Python `markitdown` package when available
 - falls back to a `markitdown` executable on `PATH`
@@ -69,6 +72,7 @@ Force a backend only for non-article-source diagnosis:
 
 ```bash
 uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py report.pdf --decoder mineru --mineru-model vlm --json
+uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py 'https://www.bilibili.com/video/BVxxxx/' --allow-uri --decoder bilibili --json
 uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py 'https://example.com/article' --allow-uri --decoder article --json
 uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py page.html --decoder article --json
 ```
@@ -111,7 +115,9 @@ The archive profile is self-contained and project-neutral. It does not depend on
 ## Safe Defaults
 
 - Prefer local files. Avoid MarkItDown MCP, MinerU web crawl, and broad URI conversion for normal conversion work.
+- For Bilibili video URLs, use the built-in Bilibili decoder with `--allow-uri`; do not route to article extraction, MinerU, MarkItDown, or the external Bilibili reference skill.
 - For ordinary web articles and WeChat public articles, use the built-in article extractor; pass `--allow-uri` only for URL inputs. Saved article HTML files route there automatically.
+- Bilibili conversion writes Chinese complete transcript Markdown with metadata only. It does not generate AI summaries, summary placeholders, favorite-folder scanning, Knowledge RAG indexing, cron jobs, or notifications.
 - Treat article conversion as正文 extraction only. It is not for landing pages, dashboards, interactive UI, or whole-page browser snapshots.
 - Ordinary article conversion defaults to no image downloads. WeChat article conversion defaults to downloading article images, following the tested WeChat pipeline behavior; use `--article-images remote` or `--article-images none` when desired.
 - Use MinerU `vlm` as the default for routed high-fidelity formats. Use `--mineru-model pipeline` only when the user explicitly prioritizes no-hallucination reliability over complex-layout fidelity.
@@ -139,6 +145,9 @@ Remaining risks: <conversion quality or missing dependency concerns>
 
 - MinerU sends document content to the configured MinerU API. Use it only when that privacy boundary is acceptable.
 - MinerU's effective per-task page limit may be lower than its broad document-size limit. The script automatically splits PDFs over 200 pages when no explicit `--pages` range is supplied, runs up to 10 chunks in parallel by default, and supports `--mineru-chunk-concurrency` plus retry/backoff flags when the operator wants to tune throughput against API rate limits.
+- Bilibili video conversion depends on `yt-dlp`. Subtitle-only paths are fast; Whisper fallback requires `ffmpeg` and `whisper`, may be slow, and can be disabled with `--bilibili-no-whisper`.
+- Bilibili AI subtitles often require a valid login cookie. Pass `--bilibili-cookies <cookies.txt>` when browser cookie access is unavailable or undesirable. Cookie metadata is redacted by default and records only `file`, `browser`, or `none`; absolute cookie paths are included only when `--include-absolute-paths` is explicitly set.
+- Bilibili output is Chinese by default. If only non-Chinese subtitles are available, the decoder translates them to Chinese with `argos` or `trans` when available; if translation is unavailable, it fails instead of returning non-Chinese transcript Markdown. Use `--bilibili-translation-backend none` only for diagnosis.
 - MinerU and MarkItDown are not the default for `.html/.htm` article files. Saved article HTML routes to the built-in article extractor and fails there if it is not an article-shaped source.
 - Article extraction is intentionally based on tested article-pipeline behavior: load the page, isolate the article body, normalize lazy images, convert HTML to Markdown, and format noise away. Do not replace it with MinerU crawl, MarkItDown fallback, or a general website renderer for article sources.
 - The ordinary article branch is for article pages. If the source is a product page, web app, landing page, or visual UI, use a browser/scraper workflow outside this skill.

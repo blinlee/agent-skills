@@ -2,7 +2,7 @@
 
 ## Routing Surface
 
-`anything2md` routes high-fidelity document formats to MinerU, trusted HTTP(S) article URLs plus local saved `.html/.htm` article files to its built-in article extractor, and keeps MarkItDown as the broad fallback for remaining formats.
+`anything2md` routes trusted Bilibili video URLs to its built-in Bilibili transcript decoder, high-fidelity document formats to MinerU, trusted HTTP(S) article URLs plus local saved `.html/.htm` article files to its built-in article extractor, and keeps MarkItDown as the broad fallback for remaining formats.
 
 MinerU-routed extensions:
 
@@ -11,6 +11,8 @@ MinerU-routed extensions:
 - `.doc`, `.docx`
 - `.ppt`, `.pptx`
 - `.xls`, `.xlsx`
+
+Trusted Bilibili video URLs route to the built-in Bilibili decoder when `--allow-uri` is passed. This Bilibili route is forced before the ordinary article route and before decoder overrides, so it does not fall through to article extraction, MinerU, or MarkItDown.
 
 Trusted HTTP(S) article URLs route to the built-in article extractor when `--allow-uri` is passed. Local `.html/.htm` article files route to the same extractor without `--allow-uri`. This article route is forced before decoder overrides, so it does not fall through to MinerU or MarkItDown. All other non-Markdown formats stay on MarkItDown unless the operator explicitly forces a decoder for diagnosis.
 
@@ -22,7 +24,24 @@ For PDFs above MinerU's per-task page limit, `decode.py` auto-splits the documen
 
 The fallback path is designed around Microsoft MarkItDown's local conversion capability. MarkItDown supports many common source formats through built-in converters, including Office documents, PDFs, CSV/JSON/XML, EPUB, ZIP archives, notebooks, images, audio, RSS/Wikipedia/YouTube-style captures, and plugin-provided formats.
 
-For `anything2md`, MarkItDown is the fallback for formats outside the MinerU high-fidelity list and outside the article HTML boundary.
+For `anything2md`, MarkItDown is the fallback for formats outside the Bilibili route, MinerU high-fidelity list, and article HTML boundary.
+
+## Bilibili Video Boundary
+
+The Bilibili decoder is internal to `anything2md`; it does not call external skills. Its behavior is intentionally limited to the tested single-video transcript semantics:
+
+- use `yt-dlp --dump-json` for title, uploader, date, duration, id, and canonical URL metadata
+- use explicit cookie files or browser cookies when available, but redact cookie paths from default metadata
+- retry `yt-dlp` without cookies when cookie-backed metadata, subtitle, or audio requests fail
+- prefer Chinese human CC subtitles
+- fall back to Chinese Bilibili AI subtitles
+- translate non-Chinese subtitles to Chinese with `argos` or `trans` when no Chinese subtitle is available
+- fail clearly instead of returning non-Chinese Markdown when translation is required but unavailable
+- fall back to local Whisper only when subtitles are unavailable and `--bilibili-no-whisper` is not set
+- use optional `opencc` when available to normalize transcript text to simplified Chinese
+- write Markdown with metadata and complete transcript only
+
+Do not import favorite-folder scanning, processed-video state, cron, Knowledge RAG indexing, notifications, or AI summary placeholders. This route is for converting one trusted Bilibili video URL to a transcript document.
 
 ## Article HTML Boundary
 
@@ -46,7 +65,7 @@ Use `mineru-open-api extract` for routed high-fidelity local files. The default 
 
 Use `--mineru-model pipeline` only when the user explicitly prioritizes no-hallucination reliability over complex-layout fidelity.
 
-Do not use `mineru-open-api crawl`, MinerU-HTML, or MarkItDown as the default for article URLs or saved article HTML drops. Article URLs and saved `.html/.htm` article files use the built-in article extractor with no automatic fallback.
+Do not use `mineru-open-api crawl`, MinerU-HTML, or MarkItDown as the default for Bilibili videos, article URLs, or saved article HTML drops. Bilibili video URLs use the built-in Bilibili decoder. Article URLs and saved `.html/.htm` article files use the built-in article extractor with no automatic fallback.
 
 ## Preferred API Boundary
 
@@ -56,7 +75,7 @@ Use local-file conversion by default:
 - CLI: `markitdown <path> --output <file.md>`
 - MinerU CLI: `mineru-open-api extract <path> --format md --model vlm --output <file.md>`
 
-The bundled `decode.py` script selects MinerU or MarkItDown first, then MarkItDown tries the Python package and falls back to the `markitdown` CLI. Use it through `uv run --python 3.13 --with "markitdown[all]" ...` so the fallback runtime does not fall back to macOS system Python 3.9.
+The bundled `decode.py` script selects forced Bilibili and article routes first, then MinerU for high-fidelity document formats, then MarkItDown for remaining formats. MarkItDown tries the Python package and falls back to the `markitdown` CLI. Use it through `uv run --python 3.13 --with "markitdown[all]" ...` so the fallback runtime does not fall back to macOS system Python 3.9.
 
 ## CLI Surface
 
@@ -72,7 +91,7 @@ The internal script covers the practical MarkItDown CLI surface:
 - local file conversion by default
 - trusted URI conversion behind `--allow-uri`
 
-It also preserves MinerU controls for model, timeout, language, pages, OCR, formula recognition, table recognition, automatic PDF page chunking, chunk concurrency, and retry/backoff behavior, plus article controls for image handling, timeout, and saving extracted HTML.
+It also preserves MinerU controls for model, timeout, language, pages, OCR, formula recognition, table recognition, automatic PDF page chunking, chunk concurrency, and retry/backoff behavior; article controls for image handling, timeout, and saving extracted HTML; and Bilibili controls for cookies, browser cookie source, subtitle languages, AI subtitle languages, translation backend, Whisper model/language, Whisper disable, and timeout.
 
 ## Profiles
 
@@ -102,4 +121,4 @@ Use `--asset-root`, `--archive-root`, or `--metadata-output` to override those l
 
 MarkItDown MCP and broad URI conversion are intentionally not the default path. They are useful for local trusted agents, but they widen the read/network surface. Use them only when the user explicitly asks for that execution model and understands the trust boundary.
 
-MinerU web crawling, MinerU-HTML, and MarkItDown fallback are not the default path for article URLs or saved article HTML files.
+MinerU web crawling, MinerU-HTML, and MarkItDown fallback are not the default path for Bilibili video URLs, article URLs, or saved article HTML files.
