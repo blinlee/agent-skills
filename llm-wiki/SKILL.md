@@ -39,7 +39,7 @@ Treat these command-like phrases as stable workflow entrypoints. Resolve the loc
 - `/llm-wiki setup` → connect or create a root. Use explicit path, saved default, or `llm_wiki_root`; if no root is available, ask for one and whether to save it. Use `init`/`status` for one wiki, or `registry-init`/`registry-list` for an atlas registry.
 - `/llm-wiki inbox` → inspect `raw/inbox`, identify unprocessed drops, decode non-Markdown files with `/anything2md`, then run the normal ingest or atlas intake/routing flow. Return pending route/profile/taxonomy decisions for approval instead of accepting them silently.
 - `/llm-wiki query <question>` → answer from the current wiki or registry with citations. Use `query` for one wiki and `query-registry` for an atlas. Do not fabricate when no evidence matches, and do not run `save-synthesis` without explicit approval.
-- `/llm-wiki review` → summarize pending review state and ask for the next approval decision. Include route proposals, intake items, profile proposals, taxonomy proposals/evidence, bridge proposals, and synthesis candidates as applicable. Run accept/reject/park/promote commands only after approval.
+- `/llm-wiki review` → present pending knowledge decisions in user-facing terms, then ask for the next approval decision. Focus first on what the material is, where it should live, which cross-links look reasonable, what uncertainty remains, and what one decision the human needs to make. Internal proposal types such as route/profile/taxonomy/bridge may be inspected, but they should be translated instead of dumped verbatim unless the user asks for detail. Run accept/reject/park/promote commands only after approval.
 - `/llm-wiki maintain` → run health and freshness checks such as `status`, `lint`, and `index` when appropriate. Report broken links, raw drift, low-confidence/contested pages, pending proposals, stale indexes, and scale risks. Do not perform broad repairs unless the user asked for repair.
 - `/llm-wiki govern` → manage the knowledge organization layer: registry membership, profile boundaries, taxonomy/category decisions, bridge links, and routing policy review. Use `registry-*`, `profile-*`, `taxonomy-*`, and `bridge-*` commands while preserving human approval gates.
 
@@ -128,6 +128,39 @@ Recommended human decision:
 - Bridges, if relevant:
 - Command after approval:
 ```
+
+## Review report shape
+
+`/llm-wiki review` is a user approval surface, not an internal queue dump. Default to this report shape for each pending item:
+
+```text
+Material:
+- <source or item being reviewed>
+
+Content judgment:
+- <what it is about in plain language>
+
+Suggested home:
+- <target wiki, section, category path, or note that a new boundary may be needed>
+
+Suggested cross-links:
+- <existing pages or wikis that should be connected, or "none">
+
+Uncertainty:
+- <boundary risk, weak evidence, or "none">
+
+Decision needed:
+- <accept / reject / park / override with one short sentence>
+```
+
+Translate internal workflow nouns before showing them to the user:
+
+- `route proposal` -> suggested home
+- `profile proposal` -> new or adjusted boundary may be needed
+- `taxonomy proposal` -> suggested category structure
+- `bridge proposal` -> suggested cross-link
+
+Keep proposal ids, queue names, and concrete commands in a short operator note only when needed for execution or when the user explicitly asks for the internal details.
 
 ## Mandatory deterministic steps
 

@@ -130,11 +130,13 @@
     {
       "id": 11,
       "prompt": "/llm-wiki review",
-      "expected_output": "The agent treats /llm-wiki review as a pending-decision workflow, summarizes route, intake, profile, taxonomy, bridge, and synthesis review state as applicable, then asks which approval action to take before mutating anything.",
+      "expected_output": "The agent treats /llm-wiki review as a user approval workflow, explains each pending item in plain language, focuses on suggested placement and cross-links, calls out any uncertainty, and asks for one approval decision before mutating anything.",
       "files": [],
       "expectations": [
-        "Recognizes /llm-wiki review as the proposal/review queue workflow",
-        "Covers route, intake, profile, taxonomy, bridge, and synthesis review state when present",
+        "Recognizes /llm-wiki review as the pending-decision workflow for human approval",
+        "Explains what the material is and where it should live before exposing internal queue terminology",
+        "Focuses on suggested placement, cross-links, uncertainty, and decision needed",
+        "Translates route/profile/taxonomy/bridge style internals into user-facing language by default",
         "Separates summary from pending commands",
         "Does not run accept/reject/park/promote commands before approval"
       ]

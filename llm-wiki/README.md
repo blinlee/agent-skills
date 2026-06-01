@@ -85,7 +85,7 @@ When used as a skill from this repository root, llm-wiki exposes six stable user
 | `/llm-wiki setup` | Connect to or initialize a local knowledge root or registry root. If no root is known, the agent asks for one and can save it as a host-local default. |
 | `/llm-wiki inbox` | Inspect `raw/inbox`, decode non-Markdown drops, ingest or route new material, and surface review-gated decisions. |
 | `/llm-wiki query <question>` | Ask the current wiki or registry with citation-grounded answers. |
-| `/llm-wiki review` | Review pending intake, route, profile, taxonomy, bridge, or synthesis proposals before accepting/rejecting them. |
+| `/llm-wiki review` | Review pending placement and cross-link decisions in user-facing terms, then approve, reject, park, or override them. |
 | `/llm-wiki maintain` | Run health and freshness checks such as `status`, `lint`, and `index`. |
 | `/llm-wiki govern` | Manage registry membership, profile boundaries, taxonomy, bridges, and routing policy. |
 
