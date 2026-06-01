@@ -101,7 +101,7 @@ The skill resolves the local target root in this order:
 3. a host-local config managed by `scripts/root_config.py`
 4. if none exists, ask the user for the root and whether to save it locally
 
-Saved defaults live in user config such as `$llm_wiki_config`, `$XDG_CONFIG_HOME/llm-wiki/config.json`, or the OS user config directory. They are not committed to this repository.
+Saved defaults are agent-shared host-local state. `scripts/root_config.py set` writes to `$llm_wiki_config` only when that explicit override is set; otherwise it writes the canonical user config path such as `~/.config/llm-wiki/config.json` on Unix/macOS or `%APPDATA%/llm-wiki/config.json` on Windows. `show` also reads `$XDG_CONFIG_HOME/llm-wiki/config.json` and macOS Application Support as compatibility fallbacks. Defaults are not committed to this repository.
 
 ### 1. Initialize a knowledge root
 
@@ -185,8 +185,8 @@ The core llm-wiki CLI ingests Markdown/text-like sources. For PDFs, images, Word
 
 The llm-wiki skill enforces this before ingesting or routing non-Markdown drops:
 
-1. verify `/anything2md` is installed with `python scripts/skill_discovery.py anything2md --json`
-2. run `python scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
+1. verify `/anything2md` is installed with `python3 scripts/skill_discovery.py anything2md --json`
+2. run `python3 scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
 3. run the returned `shellCommand`, which decodes the source without passing `--knowledge-root`
 4. continue with the normal llm-wiki ingest, route, review, lint, and index workflow using the returned `decodedMarkdown`
 

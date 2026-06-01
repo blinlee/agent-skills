@@ -21,16 +21,16 @@ Resolution order:
 
 1. Use the root explicitly provided in the user's request.
 2. Otherwise use `llm_wiki_root` when it is set in the current environment.
-3. Otherwise read the host-local default with `python scripts/root_config.py show --strict --require-existing`.
-4. If no root is available, stop before running llm-wiki commands. Ask the user to provide the local wiki/registry root and whether it should be saved as this machine's default.
+3. Otherwise read the host-local default with `python3 scripts/root_config.py show --strict --require-existing`.
+4. If no root is available, stop before running llm-wiki commands and ask the user to provide the local wiki/registry root. When the user provides a root, save it back to host-local config before continuing unless the user explicitly says not to save it.
 
-When the user approves saving a default, write only to host-local config, never to this repo or the skill directory:
+When saving a default, write only to host-local config, never to this repo or the skill directory:
 
 ```bash
-python scripts/root_config.py set <root> --kind <knowledge|registry|unknown>
+python3 scripts/root_config.py set <root> --kind <knowledge|registry|unknown>
 ```
 
-The default config path is `$llm_wiki_config` when set, then `$XDG_CONFIG_HOME/llm-wiki/config.json`, then the OS user config directory such as `~/.config/llm-wiki/config.json`. Do not commit or document a personal absolute root as the skill default. If the saved default points to a missing path, report that and ask for a replacement instead of guessing.
+The default config is agent-shared host-local state. `scripts/root_config.py set` writes to `$llm_wiki_config` only when that explicit override is set; otherwise it writes the canonical user config path such as `~/.config/llm-wiki/config.json` on Unix/macOS or `%APPDATA%/llm-wiki/config.json` on Windows. `show` reads the explicit override, the canonical user config, `$XDG_CONFIG_HOME/llm-wiki/config.json`, and macOS Application Support for compatibility. Do not commit or document a personal absolute root as the skill default. If the saved default points to a missing path, report that and ask for a replacement instead of guessing.
 
 ## User-facing workflow triggers
 
@@ -171,13 +171,13 @@ npm run --silent cli -- query-registry <registryRoot> <question>
 For non-Markdown local document sources, `/anything2md` is a required upstream skill. Before decoding, verify the installed skill exists with the portable discovery helper:
 
 ```bash
-python scripts/skill_discovery.py anything2md --json
+python3 scripts/skill_discovery.py anything2md --json
 ```
 
 If that check fails, stop and report that `/anything2md` is unavailable; do not create a placeholder Markdown file and do not run llm-wiki ingest, intake, or route commands on the original non-Markdown file. When it exists, plan the decode with the llm-wiki handoff helper. The helper creates a command that archives the original under `raw/objects/<sha-prefix>/<sha>/`, writes decoded Markdown under that same raw object, and keeps decoder metadata/assets under `raw/objects/<sha-prefix>/<sha>/decoder/`. This keeps the root free of tool-specific top-level directories while preserving both the original source and Markdown derivative as raw evidence.
 
 ```bash
-python scripts/decoder_handoff.py <resolvedRoot> <sourcePath> --anything2md-root <anything2mdSkillRoot>
+python3 scripts/decoder_handoff.py <resolvedRoot> <sourcePath> --anything2md-root <anything2mdSkillRoot>
 # run the returned shellCommand
 npm run --silent cli -- ingest <knowledgeRoot> <decodedMarkdownPath>
 npm run --silent cli -- lint <knowledgeRoot>

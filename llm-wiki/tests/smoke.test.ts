@@ -115,6 +115,65 @@ describe('buildCli', () => {
     }
   })
 
+  it('stores the default root in canonical user config across different XDG environments', async () => {
+    if (process.platform === 'win32') {
+      return
+    }
+
+    const workspace = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-shared-root-config-'))
+    const home = path.join(workspace, 'home')
+    const root = path.join(workspace, 'knowledge')
+    const canonicalConfigPath = path.join(home, '.config', 'llm-wiki', 'config.json')
+    const baseEnv = {
+      ...process.env,
+      HOME: home,
+      llm_wiki_config: '',
+      llm_wiki_root: '',
+      llm_wiki_knowledge_root: '',
+    }
+
+    try {
+      await mkdir(root, { recursive: true })
+      await mkdir(home, { recursive: true })
+      const resolvedRoot = await realpath(root)
+
+      await execFile(pythonBin, ['scripts/root_config.py', 'set', root, '--kind', 'registry'], {
+        cwd: process.cwd(),
+        env: { ...baseEnv, XDG_CONFIG_HOME: path.join(workspace, 'agent-a-xdg') },
+      })
+
+      const saved = JSON.parse(await readFile(canonicalConfigPath, 'utf8')) as {
+        defaultRoot: string
+        defaultRootKind: string
+      }
+      expect(saved.defaultRoot).toBe(resolvedRoot)
+      expect(saved.defaultRootKind).toBe('registry')
+
+      const { stdout } = await execFile(
+        pythonBin,
+        ['scripts/root_config.py', 'show', '--strict', '--require-existing'],
+        {
+          cwd: process.cwd(),
+          env: { ...baseEnv, XDG_CONFIG_HOME: path.join(workspace, 'agent-b-xdg') },
+        }
+      )
+      const resolved = JSON.parse(stdout.trim()) as {
+        status: string
+        root: string
+        exists: boolean
+        kind: string
+        configPath: string
+      }
+      expect(resolved.status).toBe('found')
+      expect(resolved.root).toBe(resolvedRoot)
+      expect(resolved.exists).toBe(true)
+      expect(resolved.kind).toBe('registry')
+      expect(resolved.configPath).toBe(canonicalConfigPath)
+    } finally {
+      await rm(workspace, { recursive: true, force: true })
+    }
+  })
+
   it('discovers required upstream skills through the portable skill discovery helper', async () => {
     const workspace = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-skill-discovery-'))
     const skillsRoot = path.join(workspace, 'skills')

@@ -101,7 +101,7 @@ skill 按以下顺序解析本地目标 root：
 3. `scripts/root_config.py` 管理的本机本地配置
 4. 若仍不存在，则询问用户 root 路径以及是否保存为本机默认
 
-保存的默认值位于 `$llm_wiki_config`、`$XDG_CONFIG_HOME/llm-wiki/config.json` 或系统用户配置目录等本机位置，不会提交到本仓库。
+保存的默认值是 agent 共享的本机状态。`scripts/root_config.py set` 仅在显式设置 `$llm_wiki_config` 时写入该覆盖路径；否则写入稳定的用户级 canonical 路径，例如 Unix/macOS 下的 `~/.config/llm-wiki/config.json`，或 Windows 下的 `%APPDATA%/llm-wiki/config.json`。`show` 还会兼容读取 `$XDG_CONFIG_HOME/llm-wiki/config.json` 和 macOS Application Support。默认值不会提交到本仓库。
 
 ### 1）初始化一个 knowledge root
 
@@ -185,8 +185,8 @@ npm run --silent cli -- query-registry ~/my-wikis "What do my notes say about Lo
 
 llm-wiki skill 在摄入或路由非 Markdown 投递物前执行这个流程：
 
-1. 用 `python scripts/skill_discovery.py anything2md --json` 验证 `/anything2md` 已安装
-2. 运行 `python scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
+1. 用 `python3 scripts/skill_discovery.py anything2md --json` 验证 `/anything2md` 已安装
+2. 运行 `python3 scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
 3. 执行返回的 `shellCommand`，该命令不会向 anything2md 传 `--knowledge-root`
 4. 使用返回的 `decodedMarkdown` 继续正常的 llm-wiki ingest、route、review、lint、index 流程
 

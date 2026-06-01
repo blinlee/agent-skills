@@ -12,21 +12,50 @@ from pathlib import Path
 from typing import Any
 
 
-def config_path() -> Path:
-    override = os.environ.get("llm_wiki_config")
-    if override:
-        return Path(override).expanduser()
-
-    xdg_config = os.environ.get("XDG_CONFIG_HOME")
-    if xdg_config:
-        return Path(xdg_config).expanduser() / "llm-wiki" / "config.json"
-
+def canonical_config_path() -> Path:
     if platform.system().lower() == "windows":
         appdata = os.environ.get("APPDATA")
         if appdata:
             return Path(appdata) / "llm-wiki" / "config.json"
 
     return Path.home() / ".config" / "llm-wiki" / "config.json"
+
+
+def override_config_path() -> Path | None:
+    override = os.environ.get("llm_wiki_config")
+    if override:
+        return Path(override).expanduser()
+    return None
+
+
+def read_config_paths() -> list[Path]:
+    paths: list[Path] = []
+
+    override = override_config_path()
+    if override:
+        paths.append(override)
+
+    paths.append(canonical_config_path())
+
+    xdg_config = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config:
+        paths.append(Path(xdg_config).expanduser() / "llm-wiki" / "config.json")
+
+    if platform.system().lower() == "darwin":
+        paths.append(Path.home() / "Library" / "Application Support" / "llm-wiki" / "config.json")
+
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = str(path)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(path)
+    return deduped
+
+
+def write_config_path() -> Path:
+    return override_config_path() or canonical_config_path()
 
 
 def read_config(path: Path) -> dict[str, Any]:
@@ -60,11 +89,10 @@ def found_payload(source: str, root: str, path: Path, kind: str, updated_at: str
 
 
 def show_default(args: argparse.Namespace) -> int:
-    path = config_path()
     env_root = os.environ.get("llm_wiki_root")
     if env_root:
         root = str(Path(env_root).expanduser().resolve(strict=False))
-        payload = found_payload("env", root, path, os.environ.get("llm_wiki_root_kind", "unknown"))
+        payload = found_payload("env", root, write_config_path(), os.environ.get("llm_wiki_root_kind", "unknown"))
         if args.require_existing and not payload["exists"]:
             payload["status"] = "missing_path"
             payload["error"] = "resolved_root_does_not_exist"
@@ -73,28 +101,48 @@ def show_default(args: argparse.Namespace) -> int:
         write_json(payload)
         return 0
 
-    data = read_config(path)
-    if "_error" in data:
-        write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
-        return 2
-
-    root = data.get("defaultRoot")
-    if not root:
-        write_json({"status": "missing", "configPath": str(path)})
-        return 1 if args.strict else 0
-
-    payload = found_payload("config", str(root), path, data.get("defaultRootKind", "unknown"), data.get("updatedAt"))
-    if args.require_existing and not payload["exists"]:
-        payload["status"] = "missing_path"
-        payload["error"] = "resolved_root_does_not_exist"
+    legacy_env_root = os.environ.get("llm_wiki_knowledge_root")
+    if legacy_env_root:
+        root = str(Path(legacy_env_root).expanduser().resolve(strict=False))
+        payload = found_payload("env", root, write_config_path(), "knowledge")
+        if args.require_existing and not payload["exists"]:
+            payload["status"] = "missing_path"
+            payload["error"] = "resolved_root_does_not_exist"
+            write_json(payload)
+            return 1
         write_json(payload)
-        return 1
-    write_json(payload)
-    return 0
+        return 0
+
+    searched_paths = read_config_paths()
+    for path in searched_paths:
+        data = read_config(path)
+        if "_error" in data:
+            write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
+            return 2
+
+        root = data.get("defaultRoot")
+        if not root:
+            continue
+
+        payload = found_payload("config", str(root), path, data.get("defaultRootKind", "unknown"), data.get("updatedAt"))
+        if args.require_existing and not payload["exists"]:
+            payload["status"] = "missing_path"
+            payload["error"] = "resolved_root_does_not_exist"
+            write_json(payload)
+            return 1
+        write_json(payload)
+        return 0
+
+    write_json({
+        "status": "missing",
+        "configPath": str(write_config_path()),
+        "searchedConfigPaths": [str(path) for path in searched_paths],
+    })
+    return 1 if args.strict else 0
 
 
 def set_default(args: argparse.Namespace) -> int:
-    path = config_path()
+    path = write_config_path()
     root = Path(args.root).expanduser().resolve(strict=False)
     data = read_config(path)
     if "_error" in data:
@@ -111,7 +159,7 @@ def set_default(args: argparse.Namespace) -> int:
 
 
 def clear_default(_: argparse.Namespace) -> int:
-    path = config_path()
+    path = write_config_path()
     data = read_config(path)
     if "_error" in data:
         write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
