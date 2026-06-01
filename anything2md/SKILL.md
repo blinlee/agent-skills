@@ -31,17 +31,17 @@ If the source is already Markdown or plain text, skip conversion unless the user
 5. Hand the decoded Markdown to the downstream workflow; do not invent downstream-specific ingest behavior inside this skill.
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py <source-file> \
+python3 scripts/decode.py <source-file> \
   --output <decoded-file.md> \
   --json
 ```
 
 ## Mandatory Deterministic Step
 
-Run the bundled decoder script from the project root. Use `uv` with Python 3.13 so the MarkItDown fallback does not accidentally run under macOS system Python 3.9, which is too old for current MarkItDown:
+Run the bundled decoder script from the project root. **Default to local `python3`** — the script's internal router selects the right decoder per source type, and article/Bilibili/MinerU decoders do not depend on markitdown at all. Only fall back to `uv run` when the markitdown decoder is actually needed and the Python package is missing.
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py <source-file> --output <decoded-file.md> --json
+python3 scripts/decode.py <source-file> --output <decoded-file.md> --json
 ```
 
 The script:
@@ -68,25 +68,30 @@ The script:
 - can move the original local document into a deterministic archive root with `--knowledge-root <root> --archive-original`
 - exits nonzero with a structured error if the selected decoder is missing or conversion fails
 
-Force a backend only for non-article-source diagnosis:
+### When to use `uv run`
+
+Only use `uv run --with "markitdown[all]"` when **all** of these are true:
+1. The source will route to the **markitdown** decoder (not article, bilibili, or mineru)
+2. `python3 -c "import markitdown"` fails (package not installed locally)
+3. `which markitdown` returns nothing (CLI not installed either)
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py report.pdf --decoder mineru --mineru-model vlm --json
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py 'https://www.bilibili.com/video/BVxxxx/' --allow-uri --decoder bilibili --json
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py 'https://example.com/article' --allow-uri --decoder article --json
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py page.html --decoder article --json
+# Only when markitdown decoder is needed AND not locally installed:
+uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py report.pdf --decoder markitdown --json
 ```
+
+### Diagnostic commands
 
 Check availability without converting:
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py --check --json
+python3 scripts/decode.py --check --json
 ```
 
 List installed MarkItDown plugins:
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py --list-plugins --json
+python3 scripts/decode.py --list-plugins --json
 ```
 
 ## Archive Profile
@@ -94,7 +99,7 @@ uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py --list-pl
 Use the archive profile when the converted Markdown should become part of a portable knowledge corpus with stable metadata, assets, and original-file retention.
 
 ```bash
-uv run --python 3.13 --with "markitdown[all]" python scripts/decode.py <sourcePath> \
+python3 scripts/decode.py <sourcePath> \
   --output <decodedMarkdownPath> \
   --knowledge-root <knowledgeRoot> \
   --archive-original \
@@ -156,5 +161,6 @@ Remaining risks: <conversion quality or missing dependency concerns>
 - MarkItDown fallback is broad, not layout-perfect. It is useful for agent-readable extraction, not exact visual reproduction.
 - Do not point agents at `markitdown-mcp` by default; it can read local files and network resources with the server user's privileges.
 - `markitdown[all]` can add heavy optional dependencies. If installation is not desired, report that decoding is unavailable instead of silently changing the workflow.
-- Use Python 3.13 through `uv`; do not rely on `/usr/bin/python3` on macOS.
+- Prefer local `python3` as the default runner. Only use `uv run --python 3.13 --with "markitdown[all]"` when the markitdown decoder is needed AND the package is not installed locally. The script's router handles decoder selection internally; article, Bilibili, and MinerU decoders do not need markitdown.
+- If `python3` fails with a network error or import error for a non-markitdown decoder, the issue is likely a missing local dependency (e.g., `requests` for article extraction), not a missing markitdown package — install the specific dependency rather than falling back to `uv run`.
 - Generic conversion writes `anything2md_decoded` frontmatter. `--profile auto` uses `archive` when knowledge-root/archive flags are used; pass `--profile archive` when you want that behavior to be explicit.
