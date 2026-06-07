@@ -87,7 +87,7 @@ describe('cli dedup and lifecycle', () => {
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.txt'),
     })
     expect(['needs_review', 'partial']).toContain(weak.status)
-    expect(weak.reviewFiles.length).toBeGreaterThan(0)
+    expect(weak.reviewFiles).toEqual([])
     expect(weak.retainedPath).toContain(path.join('raw', 'staged'))
     await expect(access(weak.retainedPath!)).resolves.toBeUndefined()
   })
@@ -134,7 +134,7 @@ describe('cli dedup and lifecycle', () => {
       knowledgeRoot,
       question: 'What is OpenClaw?',
     })
-    expect(staleAnswer.answer).toMatch(/could not find enough matching evidence/i)
+    expect(staleAnswer.answer).toMatch(/没有在当前索引的 wiki 中找到足够证据/)
     expect(staleAnswer.citations).toEqual([])
 
     const freshAnswer = await runQueryCommand({
@@ -147,7 +147,7 @@ describe('cli dedup and lifecycle', () => {
     )
   })
 
-  it('cleans stale derived pages for legacy manifests that do not have pageSnapshots', async () => {
+  it('cleans stale derived pages for snapshotless manifests that do not have pageSnapshots', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
     tempRoots.push(knowledgeRoot, inputRoot)
@@ -187,7 +187,7 @@ describe('cli dedup and lifecycle', () => {
       knowledgeRoot,
       question: 'What is OpenClaw?',
     })
-    expect(staleAnswer.answer).toMatch(/could not find enough matching evidence/i)
+    expect(staleAnswer.answer).toMatch(/没有在当前索引的 wiki 中找到足够证据/)
     expect(staleAnswer.citations).toEqual([])
   })
 

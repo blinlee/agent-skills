@@ -3,8 +3,19 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { parseWikiPageTarget, wikiSectionHeading, wikiSectionOrder } from './sections.js'
 
-const INDEX_HEADER = '# Wiki Index'
-const LOG_HEADER = '# Wiki Log'
+const INDEX_HEADER = '# Wiki 索引'
+const LOG_HEADER = '# Wiki 日志'
+const LEGACY_INDEX_HEADERS = new Set(['# Wiki Index'])
+const LEGACY_LOG_HEADERS = new Set(['# Wiki Log'])
+const LEGACY_INDEX_SECTION_HEADINGS = new Set([
+  '## Sources',
+  '## Entities',
+  '## Concepts',
+  '## Syntheses',
+  '## Comparisons',
+  '## Queries',
+  '## Other',
+])
 const fileWriteQueues = new Map<string, Promise<void>>()
 
 export type WikiIndexMutation = {
@@ -29,7 +40,7 @@ export async function appendWikiLog(knowledgeRoot: string, logEntry: string): Pr
   return serializeFileUpdate(logPath, async () => {
     const existingContent = await readTextFileOrEmpty(logPath)
     const existingLines = splitNonEmptyLines(existingContent)
-      .filter((line) => line !== LOG_HEADER && !isTemplateProseLine(line))
+      .filter((line) => line !== LOG_HEADER && !LEGACY_LOG_HEADERS.has(line) && !isTemplateProseLine(line))
     const nextLine = `${new Date().toISOString()}\t${JSON.stringify(logEntry.trim())}`
     const nextContent = [LOG_HEADER, '', ...existingLines, nextLine].join('\n').trimEnd() + '\n'
 
@@ -42,7 +53,7 @@ export async function appendWikiLog(knowledgeRoot: string, logEntry: string): Pr
 async function buildIndexContent(indexPath: string, mutation: Required<WikiIndexMutation>): Promise<string> {
   const existingContent = await readTextFileOrEmpty(indexPath)
   const existingLines = splitNonEmptyLines(existingContent)
-    .filter((line) => line !== INDEX_HEADER && !isIndexSectionHeading(line) && !isTemplateProseLine(line))
+    .filter((line) => line !== INDEX_HEADER && !LEGACY_INDEX_HEADERS.has(line) && !isIndexSectionHeading(line) && !isTemplateProseLine(line))
   const mergedEntries = existingLines.filter((line) => !mutation.removeEntries.includes(line))
 
   for (const entry of mutation.addEntries) {
@@ -103,7 +114,7 @@ function renderGroupedIndexEntries(entries: string[]): string[] {
       output.push('')
     }
 
-    output.push('## Other', ...remaining)
+    output.push('## 其他', ...remaining)
   }
 
   return output
@@ -119,7 +130,9 @@ function removeEntries(target: string[], entriesToRemove: string[]): void {
 }
 
 function isIndexSectionHeading(line: string): boolean {
-  return wikiSectionOrder.some((section) => wikiSectionHeading(section) === line) || line === '## Other'
+  return wikiSectionOrder.some((section) => wikiSectionHeading(section) === line)
+    || line === '## 其他'
+    || LEGACY_INDEX_SECTION_HEADINGS.has(line)
 }
 
 function isTemplateProseLine(line: string): boolean {

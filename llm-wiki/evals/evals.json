@@ -56,13 +56,13 @@
         "Resolves the registry root from an explicit path, llm_wiki_root, or host-local config before inspecting atlas raw/inbox; if none exists, asks for the path and whether to save it as the local default",
         "Checks that /anything2md is available before decoding non-Markdown input",
         "Stops and reports the missing required decoder skill if /anything2md is unavailable",
-        "Uses /anything2md rather than any archived legacy decoder entrypoint",
+        "Uses /anything2md rather than any removed decoder entrypoint",
         "Does not run intake-scan, route-inbox, or route directly on the original PDF",
         "Treats route-inbox output as a proposal rather than semantic truth",
         "Reads source evidence beyond filename, frontmatter, or route score",
         "Produces source understanding, proposal audit, boundary review, and recommended human decision",
         "Allows create-profile, park, reject/convert, bridge, or override when no existing wiki strongly fits",
-        "Does not run route-accept, profile-accept, intake-park, intake-reject, or other review-gated commands before explicit approval"
+        "Does not run route-accept, profile-accept, intake-park, intake-reject, or other approval-gated commands before explicit approval"
       ]
     },
     {
@@ -106,13 +106,15 @@
     {
       "id": 9,
       "prompt": "/llm-wiki inbox",
-      "expected_output": "The agent treats /llm-wiki inbox as the raw/inbox processing workflow, inspects the current root's inbox, decodes non-Markdown drops through /anything2md before ingest/intake/route, and returns review-gated proposals rather than accepting them automatically.",
+      "expected_output": "The agent treats /llm-wiki inbox as the end-to-end new-material workflow, inspects the current root's inbox, decodes non-Markdown drops through /anything2md before ingest/intake/route, presents this batch's placement and linking decisions in user-facing terms, and executes only approved accept/reject/park/override actions.",
       "files": [],
       "expectations": [
-        "Recognizes /llm-wiki inbox as the inbox inspection and processing workflow",
+        "Recognizes /llm-wiki inbox as the inbox processing and approval-closure workflow",
         "Inspects raw/inbox before deciding whether work exists",
         "Uses /anything2md before llm-wiki commands for non-Markdown drops",
-        "Preserves route/profile/taxonomy human approval gates"
+        "Presents suggested home, cross-links, uncertainty, and decision needed for this batch",
+        "Preserves route/profile/taxonomy human approval gates",
+        "Does not require a separate review pass"
       ]
     },
     {
@@ -129,16 +131,15 @@
     },
     {
       "id": 11,
-      "prompt": "/llm-wiki review",
-      "expected_output": "The agent treats /llm-wiki review as a user approval workflow, explains each pending item in plain language, focuses on suggested placement and cross-links, calls out any uncertainty, and asks for one approval decision before mutating anything.",
+      "prompt": "What should I run after /llm-wiki inbox to finish reviewing the same batch?",
+      "expected_output": "The agent explains that there is no separate public review workflow anymore. /llm-wiki inbox is responsible for processing new material and presenting the approval decisions for that batch; maintain is for health visibility and govern is for structural knowledge-organization changes.",
       "files": [],
       "expectations": [
-        "Recognizes /llm-wiki review as the pending-decision workflow for human approval",
-        "Explains what the material is and where it should live before exposing internal queue terminology",
-        "Focuses on suggested placement, cross-links, uncertainty, and decision needed",
-        "Translates route/profile/taxonomy/bridge style internals into user-facing language by default",
-        "Separates summary from pending commands",
-        "Does not run accept/reject/park/promote commands before approval"
+        "Does not advertise a separate review command as a public workflow",
+        "Says /llm-wiki inbox owns new-batch approval closure",
+        "Distinguishes maintain as health/backlog visibility",
+        "Distinguishes govern as structural organization work",
+        "Preserves human approval before mutations"
       ]
     },
     {

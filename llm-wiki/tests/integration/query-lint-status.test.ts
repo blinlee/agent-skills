@@ -78,13 +78,13 @@ describe('query, lint, and status', () => {
       'wiki/comparisons',
       'wiki/queries',
     ]))
-    expect(schema).toContain('# Wiki Schema')
-    expect(schema).toContain('llm-wiki compiles normalized raw material')
+    expect(schema).toContain('# Wiki 结构说明')
+    expect(schema).toContain('llm-wiki 会把规范化的原始材料编译成')
     expect(schema).toContain('[[sources/source-slug|Title]]')
-    expect(schema).toContain('Human-in-the-loop classification')
+    expect(schema).toContain('人在回路分类')
     expect(schema).toContain('High model confidence is not approval')
-    expect(index).toBe('# Wiki Index\n')
-    expect(log).toBe('# Wiki Log\n')
+    expect(index).toBe('# Wiki 索引\n')
+    expect(log).toBe('# Wiki 日志\n')
   })
 
   it('answers from wiki/index.md and reports healthy status', async () => {
@@ -129,7 +129,7 @@ describe('query, lint, and status', () => {
       question: 'What is flibbertigibbet quantum umbrella?',
     })
 
-    expect(answer.answer).toMatch(/could not find enough matching evidence/i)
+    expect(answer.answer).toMatch(/没有在当前索引的 wiki 中找到足够证据/)
     expect(answer.citations).toEqual([])
     expect(answer.synthesisSuggestion).toBeNull()
   })

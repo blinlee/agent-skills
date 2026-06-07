@@ -133,8 +133,8 @@ describe('ensureKnowledgeRootLayout', () => {
     expect((await stat(path.join(tempRoot, 'review', 'merge-candidates'))).isDirectory()).toBe(true)
     expect((await stat(path.join(tempRoot, 'graph'))).isDirectory()).toBe(true)
 
-    await expect(readFile(path.join(tempRoot, 'wiki', 'index.md'), 'utf8')).resolves.toContain('# Wiki Index')
-    await expect(readFile(path.join(tempRoot, 'wiki', 'log.md'), 'utf8')).resolves.toContain('# Wiki Log')
+    await expect(readFile(path.join(tempRoot, 'wiki', 'index.md'), 'utf8')).resolves.toContain('# Wiki 索引')
+    await expect(readFile(path.join(tempRoot, 'wiki', 'log.md'), 'utf8')).resolves.toContain('# Wiki 日志')
     await expect(readFile(path.join(tempRoot, 'system', 'jobs', 'jobs.json'), 'utf8')).resolves.toContain('"jobs"')
     await expect(readFile(path.join(tempRoot, 'system', 'dedup', 'manifest.json'), 'utf8')).resolves.toContain('"entries"')
     await expect(readFile(path.join(tempRoot, 'taxonomy', 'topic-registry.json'), 'utf8')).resolves.toContain('"topics"')

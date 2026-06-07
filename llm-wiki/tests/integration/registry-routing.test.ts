@@ -208,7 +208,7 @@ describe('multi-wiki registry routing', () => {
     expect(result.scan.newCount).toBe(1)
     expect(result.results[0].proposal.recommendedWikiId).toBe('ai')
     expect(result.results[0].proposal.humanReviewRequired).toBe(true)
-    await expect(readFile(path.join(aiRoot, 'wiki', 'index.md'), 'utf8')).resolves.toBe('# Wiki Index\n')
+    await expect(readFile(path.join(aiRoot, 'wiki', 'index.md'), 'utf8')).resolves.toBe('# Wiki 索引\n')
   })
 
   it('creates default atlas wiki roots under wikis/<id> and tracks raw intake state', async () => {

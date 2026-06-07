@@ -1,11 +1,11 @@
 export const wikiSectionOrder = ['sources', 'entities', 'concepts', 'syntheses', 'comparisons', 'queries'];
 const wikiSectionTitles = {
-    sources: 'Sources',
-    entities: 'Entities',
-    concepts: 'Concepts',
-    syntheses: 'Syntheses',
-    comparisons: 'Comparisons',
-    queries: 'Queries',
+    sources: '来源',
+    entities: '实体',
+    concepts: '概念',
+    syntheses: '综合',
+    comparisons: '比较',
+    queries: '查询',
 };
 export function isWikiSection(value) {
     return wikiSectionOrder.includes(value);

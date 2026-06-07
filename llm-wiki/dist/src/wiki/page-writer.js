@@ -65,8 +65,8 @@ async function removeStalePages(knowledgeRoot, previousOutputManifest, currentOu
     const stalePageFiles = previousOutputManifest?.pageFiles.filter((filePath) => !currentOutputManifest.pageFiles.includes(filePath) && isSourceOwnedPageFile(filePath)) ?? [];
     await Promise.all(stalePageFiles.map((filePath) => rm(path.join(knowledgeRoot, filePath), { force: true })));
 }
-// Some legacy roots contain source-owned semantic pages from older compilers, so
-// stale cleanup only deletes outputs unambiguously owned by one source compile.
+// Stale cleanup is scoped to source-owned pages so shared or manually-created
+// semantic pages are not deleted during a source recompile.
 function isSourceOwnedPageFile(filePath) {
     const normalizedPath = path.normalize(filePath);
     const relativeToWiki = normalizedPath.startsWith(`wiki${path.sep}`)

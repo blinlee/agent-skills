@@ -1,6 +1,6 @@
 ---
 name: llm-wiki
-description: Build, ingest, organize, query, lint, repair, review, and promote an llm-wiki knowledge root through the llm-wiki CLI. Use this whenever the user asks to create or maintain an Obsidian-compatible AI wiki, ingest raw sources or raw/inbox, classify or review knowledge, manage backlinks/indexes/taxonomy, detect raw-source drift, answer questions from a wiki, promote syntheses, audit wiki health, or work with llm-wiki/karpathy/Hermes-style wiki workflows. Supports the user-facing triggers /llm-wiki setup, /llm-wiki inbox, /llm-wiki query, /llm-wiki review, /llm-wiki maintain, and /llm-wiki govern. For PDFs, images, Word, PowerPoint, Excel, EPUB/HTML, ZIPs, audio, or other non-.md/.txt documents, first invoke the installed /anything2md skill to create a Markdown derivative, then continue the normal llm-wiki ingest flow. Do not use for generic markdown editing unless an llm-wiki knowledge root or layout is involved.
+description: Build, ingest, organize, query, lint, repair, govern, and promote an llm-wiki knowledge root through the llm-wiki CLI. Use this whenever the user asks to create or maintain an Obsidian-compatible AI wiki, ingest raw sources or raw/inbox, classify or approve knowledge placement, manage backlinks/indexes/taxonomy, detect raw-source drift, answer questions from a wiki, promote syntheses, audit wiki health, or work with llm-wiki/karpathy/Hermes-style wiki workflows. Supports the user-facing triggers /llm-wiki setup, /llm-wiki inbox, /llm-wiki query, /llm-wiki maintain, and /llm-wiki govern. For PDFs, images, Word, PowerPoint, Excel, EPUB/HTML, ZIPs, audio, or other non-.md/.txt documents, first invoke the installed /anything2md skill to create a Markdown derivative, then continue the normal llm-wiki ingest flow. Do not use for generic markdown editing unless an llm-wiki knowledge root or layout is involved.
 license: MIT
 metadata:
   version: 0.4.0
@@ -11,7 +11,7 @@ metadata:
 
 # llm-wiki Skill
 
-Use this skill to operate an llm-wiki knowledge root through the repo CLI. The CLI/core is the mutation surface; choose the right command, preserve review gates, and report validation evidence.
+Use this skill to operate an llm-wiki knowledge root through the repo CLI. The CLI/core is the mutation surface; choose the right command, preserve approval gates, and report validation evidence.
 
 ## Resolve the local wiki root first
 
@@ -34,13 +34,12 @@ The default config is agent-shared host-local state. `scripts/root_config.py set
 
 ## User-facing workflow triggers
 
-Treat these command-like phrases as stable workflow entrypoints. Resolve the local root first for all six.
+Treat these command-like phrases as stable workflow entrypoints. Resolve the local root first for all five.
 
 - `/llm-wiki setup` → connect or create a root. Use explicit path, saved default, or `llm_wiki_root`; if no root is available, ask for one and whether to save it. Use `init`/`status` for one wiki, or `registry-init`/`registry-list` for an atlas registry.
-- `/llm-wiki inbox` → inspect `raw/inbox`, identify unprocessed drops, decode non-Markdown files with `/anything2md`, then run the normal ingest or atlas intake/routing flow. Return pending route/profile/taxonomy decisions for approval instead of accepting them silently.
+- `/llm-wiki inbox` → process new raw material end to end: inspect `raw/inbox`, decode non-Markdown files with `/anything2md`, run normal ingest or atlas intake/routing, present this batch's placement/linking decisions in user-facing terms, and execute only the human-approved accept/reject/park/override operation. A completed inbox pass leaves the new batch accepted, rejected, or explicitly parked.
 - `/llm-wiki query <question>` → answer from the current wiki or registry with citations. Use `query` for one wiki and `query-registry` for an atlas. Do not fabricate when no evidence matches, and do not run `save-synthesis` without explicit approval.
-- `/llm-wiki review` → present pending knowledge decisions in user-facing terms, then ask for the next approval decision. Focus first on what the material is, where it should live, which cross-links look reasonable, what uncertainty remains, and what one decision the human needs to make. Internal proposal types such as route/profile/taxonomy/bridge may be inspected, but they should be translated instead of dumped verbatim unless the user asks for detail. Run accept/reject/park/promote commands only after approval.
-- `/llm-wiki maintain` → run health and freshness checks such as `status`, `lint`, and `index` when appropriate. Report broken links, raw drift, low-confidence/contested pages, pending proposals, stale indexes, and scale risks. Do not perform broad repairs unless the user asked for repair.
+- `/llm-wiki maintain` → run health and freshness checks such as `status`, `lint`, and `index` when appropriate. Report broken links, raw drift, low-confidence/contested pages, unresolved proposal state, stale indexes, and scale risks. Do not perform broad repairs unless the user asked for repair.
 - `/llm-wiki govern` → manage the knowledge organization layer: registry membership, profile boundaries, taxonomy/category decisions, bridge links, and routing policy review. Use `registry-*`, `profile-*`, `taxonomy-*`, and `bridge-*` commands while preserving human approval gates.
 
 ## First orient yourself
@@ -50,7 +49,7 @@ For existing roots, inspect these before mutation when useful:
 1. `wiki/SCHEMA.md` — local conventions, review policy, page thresholds.
 2. `wiki/index.md` — durable page catalog.
 3. `wiki/log.md` — recent mutations and query history.
-4. `review/queue/` and `taxonomy/proposals/` — unresolved review items.
+4. `review/queue/` and `taxonomy/proposals/` — internal unresolved proposal state.
 
 Distinguish the **package root** where `npm run --silent cli -- ...` runs from the **knowledge root** passed to the CLI.
 
@@ -61,10 +60,10 @@ The package CLI runs through the checked-in compiled entrypoint `dist/src/cli.js
 - **Create/setup wiki** → `init`, then `status`.
 - **Create/setup atlas registry** → `registry-init <registryRoot>`, then `registry-list <registryRoot>`.
 - **Register an isolated wiki** → `registry-add <registryRoot> [knowledgeRoot] --id <wikiId> --scope <terms>`; omit `knowledgeRoot` to create `wikis/<wikiId>` under the atlas. Prefer concise seed profiles; let later profile proposals refine boundaries.
-- **Route source for a personal atlas** → first inspect atlas `raw/inbox` drops. Markdown/text drops can proceed to `intake-scan <registryRoot>` / `intake-next <registryRoot>`, then `route <registryRoot> <sourcePathOrUrl>` or `route-inbox <registryRoot>`. Non-Markdown document drops must be decoded with `/anything2md` before any intake/route command touches them; archive the original under `raw/objects`, route only the decoded Markdown derivative, and run the agent semantic classification review before returning an audited recommendation and asking for approval.
+- **Route source for a personal atlas** → first inspect atlas `raw/inbox` drops. Markdown/text drops can proceed to `intake-scan <registryRoot>` / `intake-next <registryRoot>`, then `route <registryRoot> <sourcePathOrUrl>` or `route-inbox <registryRoot>`. Non-Markdown document drops must be decoded with `/anything2md` before any intake/route command touches them; archive the original under `raw/objects`, route only the decoded Markdown derivative, and run the agent semantic classification audit before returning an approval-ready recommendation.
 - **Accept route** → after human approval, run `route-accept <registryRoot> <proposalId> [--wiki <wikiId>] [--reviewer <name>]`, then lint/index the accepted target wiki; close, park, or reject the intake item only when that follow-up decision is approved or clearly part of the approved operation.
 - **Profile boundary work** → `profile-suggest`, `profile-accept`, `profile-reject`, and `profile-review`; profiles evolve through explicit proposals, never silent drift.
-- **Review cross-wiki bridges** → `bridge-list`, then `bridge-accept` or `bridge-reject`; accepted bridges append explicit `llm-wiki://<wikiId>/<section>/<slug>` links to generated wiki pages. Run `bridge-index` after bridge edits.
+- **Govern cross-wiki bridges** → `bridge-list`, then `bridge-accept` or `bridge-reject`; accepted bridges append explicit `llm-wiki://<wikiId>/<section>/<slug>` links to generated wiki pages. Run `bridge-index` after bridge edits.
 - **Decode a non-Markdown document** → verify the installed `/anything2md` skill exists, then run `scripts/decoder_handoff.py` to plan llm-wiki-owned output paths. If `/anything2md` is missing, stop before ingest and report the missing required decoder skill. Do not pass `--knowledge-root` to anything2md from llm-wiki; it creates a top-level `anything2md/` operational corpus that does not belong in an llm-wiki root. Archive originals, decoder metadata, assets, and decoded derivatives under `raw/objects`.
 - **Ingest one source into a known target wiki** → if the source is already Markdown/text, run `ingest <root> <sourcePathOrUrl>`, then `lint`. If the source is a non-Markdown document, first decode it with `/anything2md`, then run `ingest <root> <decodedMarkdownPath>` and `lint`.
 - **Ingest dropped files into a known wiki** → if the user says files are in a specific wiki root's `raw/inbox`, ingest Markdown/text drops normally. For non-Markdown document drops, decode each document first with the llm-wiki decoder handoff, then ingest the decoded Markdown so the later archive/stage/review/taxonomy flow stays the normal llm-wiki flow. For atlas-level unclassified drops, decode first, route the decoded Markdown, and keep the original out of the input queue.
@@ -73,7 +72,7 @@ The package CLI runs through the checked-in compiled entrypoint `dist/src/cli.js
 - **Promote reusable answer** → run `query`, then `save-synthesis <root> <suggestionId> --confirm` only when the returned answer is worth durable write-back and the user clearly approves promotion.
 - **Build retrieval/graph substrate** → `index <root>` after ingest or repair to write page/chunk/link/backlink indexes.
 - **Audit/repair health** → `lint`; fix generated layers (`wiki/`, `review/`, `taxonomy/`, `system/`) as appropriate; rerun `lint`.
-- **Review classification** → run `taxonomy-list <root>`, return the proposed operation summary, and ask whether to accept, reject, or edit the plan. Run `taxonomy-accept` or `taxonomy-reject` only after approval. Accepted taxonomy topics materialize durable concept pages; repeated accept is idempotent and must not overwrite human-edited concept pages. Rejected topics close proposal state. Cleanup of already-polluted legacy roots is repair/migration work, not the normal new-ingest path.
+- **Govern classification** → run `taxonomy-list <root>`, return the proposed operation summary, and ask whether to accept, reject, or edit the plan. Run `taxonomy-accept` or `taxonomy-reject` only after approval. Accepted taxonomy topics materialize durable concept pages; repeated accept is idempotent and must not overwrite human-edited concept pages. Rejected topics close proposal state. Cleanup of already-polluted historical roots is repair/migration work, not the normal new-ingest path.
 
 ## Classification principles
 
@@ -91,7 +90,7 @@ When classification is involved, use model judgment inside a controlled knowledg
 10. **Links are semantic relationships, not classification shortcuts.** Use wikilinks/backlinks for concept relationships, citations, contrasts, dependencies, applications, and evidence trails. Use cross-wiki `llm-wiki://...` links for bridges between schemes.
 11. **Historical decisions calibrate future classification.** Use accepted/rejected routes, taxonomy decisions, aliases, and `profile-review` to suggest boundary repairs, but never let profiles or category graphs drift automatically.
 
-Standard atlas flow: `intake-scan` → `intake-next` → `route`/`route-inbox` → agent reads enough source material to understand it → agent audits the route/profile/classification package against the principles above and `references/classification-review.md` → return an audited recommendation with the pending command → ask the user to approve one next operation → run the approved `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-park`, or `intake-reject`. Do not skip the approval step for review-gated operations.
+Standard atlas inbox flow: `intake-scan` → `intake-next` → `route`/`route-inbox` → agent reads enough source material to understand it → agent audits the route/profile/classification package against the principles above and `references/classification-review.md` → return an audited recommendation with the pending command → ask the user to approve one next operation → run the approved `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-park`, or `intake-reject`. Do not skip the approval step for approval-gated operations.
 
 The CLI route result is a candidate generator and durable proposal record, not semantic proof. The agent must review the material itself before recommending route acceptance, override, new profile creation, bridge review, park, reject, or conversion.
 
@@ -129,9 +128,9 @@ Recommended human decision:
 - Command after approval:
 ```
 
-## Review report shape
+## Inbox approval report shape
 
-`/llm-wiki review` is a user approval surface, not an internal queue dump. Default to this report shape for each pending item:
+`/llm-wiki inbox` includes the approval surface for newly processed material. It is not an internal queue dump. Default to this report shape for each batch item that needs a human decision:
 
 ```text
 Material:

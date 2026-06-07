@@ -3,12 +3,12 @@ export const wikiSectionOrder = ['sources', 'entities', 'concepts', 'syntheses',
 export type WikiSection = (typeof wikiSectionOrder)[number]
 
 const wikiSectionTitles: Record<WikiSection, string> = {
-  sources: 'Sources',
-  entities: 'Entities',
-  concepts: 'Concepts',
-  syntheses: 'Syntheses',
-  comparisons: 'Comparisons',
-  queries: 'Queries',
+  sources: '来源',
+  entities: '实体',
+  concepts: '概念',
+  syntheses: '综合',
+  comparisons: '比较',
+  queries: '查询',
 }
 
 export type WikiPageTarget = {

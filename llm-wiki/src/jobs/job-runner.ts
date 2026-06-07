@@ -346,22 +346,22 @@ function buildReviewRelatedPages(generation: Awaited<ReturnType<typeof generateK
 
 function buildDefaultReviewSuggestedActions(kind: string): string[] {
   if (kind === 'low-confidence') {
-    return ['Review the low-confidence candidate and approve, merge, rename, or reject it.']
+    return ['低置信候选仅作为治理信号处理；确认后再决定是否批准、合并、重命名或拒绝。']
   }
 
   if (kind === 'semantic-candidate') {
-    return ['Review the candidate and approve, merge, rename, or reject it before creating durable wiki semantics.']
+    return ['在创建稳定 wiki 语义前，先判断该候选是否应被批准、合并、重命名或拒绝。']
   }
 
   if (kind === 'ambiguous-classification') {
-    return ['Resolve the ambiguous classification before promoting it into durable taxonomy or wiki structure.']
+    return ['先解决分类歧义，再提升为稳定 taxonomy 或 wiki 结构。']
   }
 
   if (kind === 'sparse-artifact') {
-    return ['Add more source evidence or mark the artifact as intentionally sparse.']
+    return ['补充来源证据，或明确标记该材料本来就是稀疏材料。']
   }
 
-  return ['Review the item and decide whether it should change durable wiki or taxonomy state.']
+  return ['判断该事项是否应该改变稳定 wiki 或 taxonomy 状态。']
 }
 
 function shouldRecordSuccessfulManifest(status: JobStatus): boolean {
@@ -394,7 +394,7 @@ async function reconcileStaleDerivedOutputs(input: {
   const indexEntriesToAdd = new Set<string>()
   const indexEntriesToRemove = new Set<string>()
   const writtenFiles: string[] = []
-  const legacySnapshotCache = new Map<string, Promise<OutputPageSnapshot[]>>()
+  const snapshotReconstructionCache = new Map<string, Promise<OutputPageSnapshot[]>>()
 
   for (const filePath of staleDerivedFiles) {
     const remainingOwners = await collectDerivedPageOwners({
@@ -402,7 +402,7 @@ async function reconcileStaleDerivedOutputs(input: {
       filePath,
       urlFetchTimeoutMs: input.urlFetchTimeoutMs,
       repoSampleLimit: input.repoSampleLimit,
-      legacySnapshotCache,
+      snapshotReconstructionCache,
     })
 
     if (remainingOwners.length === 0) {
@@ -458,14 +458,14 @@ async function collectDerivedPageOwners(input: {
   filePath: string
   urlFetchTimeoutMs: number
   repoSampleLimit: number
-  legacySnapshotCache: Map<string, Promise<OutputPageSnapshot[]>>
+  snapshotReconstructionCache: Map<string, Promise<OutputPageSnapshot[]>>
 }): Promise<DerivedPageOwner[]> {
   const owners = await Promise.all(input.entries.map(async (entry) => {
     const snapshots = await collectEntryPageSnapshots({
       entry,
       urlFetchTimeoutMs: input.urlFetchTimeoutMs,
       repoSampleLimit: input.repoSampleLimit,
-      legacySnapshotCache: input.legacySnapshotCache,
+      snapshotReconstructionCache: input.snapshotReconstructionCache,
     })
 
     return snapshots
@@ -480,7 +480,7 @@ async function collectEntryPageSnapshots(input: {
   entry: DedupEntry
   urlFetchTimeoutMs: number
   repoSampleLimit: number
-  legacySnapshotCache: Map<string, Promise<OutputPageSnapshot[]>>
+  snapshotReconstructionCache: Map<string, Promise<OutputPageSnapshot[]>>
 }): Promise<OutputPageSnapshot[]> {
   const manifest = input.entry.lastOutputManifest
   if (!manifest) {
@@ -496,22 +496,22 @@ async function collectEntryPageSnapshots(input: {
     return []
   }
 
-  const cachedSnapshots = input.legacySnapshotCache.get(input.entry.identity)
+  const cachedSnapshots = input.snapshotReconstructionCache.get(input.entry.identity)
   if (cachedSnapshots) {
     return cachedSnapshots
   }
 
-  const reconstructSnapshotsPromise = reconstructLegacyPageSnapshots({
+  const reconstructSnapshotsPromise = reconstructMissingPageSnapshots({
     entry: input.entry,
     urlFetchTimeoutMs: input.urlFetchTimeoutMs,
     repoSampleLimit: input.repoSampleLimit,
   }).catch(() => [])
 
-  input.legacySnapshotCache.set(input.entry.identity, reconstructSnapshotsPromise)
+  input.snapshotReconstructionCache.set(input.entry.identity, reconstructSnapshotsPromise)
   return reconstructSnapshotsPromise
 }
 
-async function reconstructLegacyPageSnapshots(input: {
+async function reconstructMissingPageSnapshots(input: {
   entry: DedupEntry
   urlFetchTimeoutMs: number
   repoSampleLimit: number

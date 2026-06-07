@@ -181,7 +181,7 @@ describe('cli ingest regressions', () => {
     expect(dedupManifest.entries[path.resolve(sourceBPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/syntheses/beta-notes-synthesis.md')
   })
 
-  it('keeps legacy snapshot handling source-owned after one owner changes', async () => {
+  it('keeps snapshotless manifest handling source-owned after one owner changes', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
     tempRoots.push(knowledgeRoot, inputRoot)

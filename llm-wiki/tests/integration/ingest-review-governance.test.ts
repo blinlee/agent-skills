@@ -15,7 +15,7 @@ afterEach(async () => {
 })
 
 describe('ingest review governance', () => {
-  it('gates low-confidence heuristic classifications behind review instead of durable wiki pages', async () => {
+  it('keeps heuristic classifications out of durable pages and human approval queues', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-review-governance-'))
     const sourcePath = path.join(os.tmpdir(), `llm-wiki-review-source-${Date.now()}.md`)
     tempRoots.push(knowledgeRoot)
@@ -34,8 +34,7 @@ describe('ingest review governance', () => {
 
     expect(ingestResult.status).toBe('needs_review')
 
-    const lowConfidenceReview = ingestResult.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'low-confidence')))
-    expect(lowConfidenceReview).toBeTruthy()
+    expect(ingestResult.reviewFiles.some((filePath) => filePath.includes(path.join('review', 'low-confidence')))).toBe(false)
 
     await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
@@ -46,24 +45,26 @@ describe('ingest review governance', () => {
       code: 'ENOENT',
     })
 
-    const reviewRecord = JSON.parse(await readFile(lowConfidenceReview!, 'utf8'))
-    expect(reviewRecord).toEqual(expect.objectContaining({
-      type: 'low-confidence',
-      issueSummary: expect.stringMatching(/Rust Analyzer/),
-      reason: expect.stringMatching(/gated/i),
-      status: 'open',
-      relatedSources: expect.arrayContaining([expect.stringContaining(path.basename(sourcePath))]),
-      relatedPages: expect.arrayContaining(['sources/compiler-notes']),
-      evidence: expect.arrayContaining([expect.stringMatching(/Rust Analyzer/)]),
-      confidence: expect.any(Number),
-      candidate: expect.objectContaining({
-        kind: 'entity',
-        slug: 'rust-analyzer',
-        title: 'Rust Analyzer',
-        source: 'heuristic',
+    const reviewRecords = await Promise.all(
+      ingestResult.reviewFiles
+        .filter((filePath) => filePath.includes(path.join('review', 'queue')))
+        .map(async (filePath) => JSON.parse(await readFile(filePath, 'utf8'))),
+    )
+    expect(reviewRecords).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'semantic-candidate',
+        status: 'open',
+        relatedSources: expect.arrayContaining([expect.stringContaining(path.basename(sourcePath))]),
+        relatedPages: expect.arrayContaining(['sources/compiler-notes']),
+        candidate: expect.objectContaining({
+          kind: 'entity',
+          slug: 'openclaw',
+          title: 'OpenClaw',
+          source: 'marker',
+        }),
       }),
-      suggestedActions: expect.arrayContaining([expect.stringMatching(/review/i)]),
-    }))
+    ]))
+    expect(JSON.stringify(reviewRecords)).not.toContain('Rust Analyzer')
   })
 
   it('removes stale review artifacts when recompiling a changed source', async () => {
@@ -83,7 +84,7 @@ describe('ingest review governance', () => {
       input: sourcePath,
     })
 
-    const firstReviewArtifact = firstIngest.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'low-confidence')))
+    const firstReviewArtifact = firstIngest.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'queue')))
     expect(firstReviewArtifact).toBeTruthy()
 
     await writeFile(sourcePath, '# Scratch note\n\nplaceholder\n', 'utf8')
@@ -95,10 +96,8 @@ describe('ingest review governance', () => {
 
     expect(secondIngest.status).toMatch(/completed|partial|needs_review/)
 
-    const mergeCandidateFiles = await readdir(path.join(knowledgeRoot, 'review', 'merge-candidates'))
     const queueFiles = await readdir(path.join(knowledgeRoot, 'review', 'queue'))
 
-    expect(mergeCandidateFiles).toEqual([])
     if (queueFiles.includes(path.basename(firstReviewArtifact!))) {
       await expect(readFile(path.join(knowledgeRoot, 'review', 'queue', path.basename(firstReviewArtifact!)), 'utf8')).resolves.not.toContain('Rust Analyzer')
     }

@@ -42,12 +42,12 @@ describe('wiki writes', () => {
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), 'utf8')).resolves.toContain('# Compilation\n\n...\n')
 
     const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
-    expect(indexContent).toContain('# Wiki Index')
-    expect(indexContent).toContain('## Other')
+    expect(indexContent).toContain('# Wiki 索引')
+    expect(indexContent).toContain('## 其他')
     expect(indexContent).toContain('[[compiler-notes]]')
 
     const logContent = await readFile(path.join(knowledgeRoot, 'wiki', 'log.md'), 'utf8')
-    expect(logContent).toContain('# Wiki Log')
+    expect(logContent).toContain('# Wiki 日志')
 
     const logLines = readLogDataLines(logContent)
     expect(logLines).toHaveLength(1)
@@ -65,7 +65,7 @@ describe('wiki writes', () => {
 
     const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
 
-    expect(indexContent).toMatch(/# Wiki Index\n\n## Sources\n- \[\[sources\/compiler-notes\|Compiler Notes\]\]\n\n## Entities\n- \[\[entities\/openclaw\|OpenClaw\]\]\n\n## Concepts\n- \[\[concepts\/compilation\|Compilation\]\]/)
+    expect(indexContent).toMatch(/# Wiki 索引\n\n## 来源\n- \[\[sources\/compiler-notes\|Compiler Notes\]\]\n\n## 实体\n- \[\[entities\/openclaw\|OpenClaw\]\]\n\n## 概念\n- \[\[concepts\/compilation\|Compilation\]\]/)
   })
 
   it('drops template prose instead of preserving it as an index or log entry', async () => {
@@ -102,7 +102,8 @@ describe('wiki writes', () => {
 
     expect(indexContent).not.toContain('Sectioned catalog')
     expect(indexContent).not.toContain('## Other')
-    expect(indexContent).toContain('## Sources')
+    expect(indexContent).not.toContain('## 其他')
+    expect(indexContent).toContain('## 来源')
     expect(logLines).toHaveLength(1)
     expect(parseLogLineMessage(logLines[0])).toBe('ingested compiler-notes')
   })
@@ -201,7 +202,7 @@ function readLogDataLines(content: string): string[] {
   return content
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.length > 0 && line !== '# Wiki Log')
+    .filter((line) => line.length > 0 && line !== '# Wiki Log' && line !== '# Wiki 日志')
 }
 
 function parseLogLineMessage(line: string): string {

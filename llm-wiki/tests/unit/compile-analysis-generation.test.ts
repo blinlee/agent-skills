@@ -88,7 +88,7 @@ describe('compile pipeline', () => {
       expect.objectContaining({
         artifactId: artifact.id,
         kind: 'semantic-candidate',
-        reason: expect.stringContaining('Candidate entity "OpenClaw"'),
+        reason: expect.stringContaining('显式实体候选“OpenClaw”'),
         candidate: expect.objectContaining({
           kind: 'entity',
           slug: 'openclaw',
@@ -100,7 +100,7 @@ describe('compile pipeline', () => {
       expect.objectContaining({
         artifactId: artifact.id,
         kind: 'semantic-candidate',
-        reason: expect.stringContaining('Candidate concept "Compilation"'),
+        reason: expect.stringContaining('显式概念候选“Compilation”'),
         candidate: expect.objectContaining({
           kind: 'concept',
           slug: 'compilation',
@@ -135,11 +135,11 @@ describe('compile pipeline', () => {
 
     expect(result.sourcePage.body).not.toContain('[[entities/openclaw|OpenClaw]]')
     expect(result.sourcePage.body).not.toContain('[[concepts/compilation|Compilation]]')
-    expect(result.sourcePage.body).toContain('Semantic candidates are stored in review and taxonomy proposal files until approved.')
+    expect(result.sourcePage.body).toContain('候选语义会先保存在内部提案状态中')
   })
 
 
-  it('gates low-confidence heuristic classifications behind review instead of durable wiki pages', async () => {
+  it('keeps low-confidence heuristic classifications out of durable pages and review effects', async () => {
     const artifact: NormalizedArtifact = {
       id: 's2-governance',
       sourceKind: 'md',
@@ -167,20 +167,12 @@ describe('compile pipeline', () => {
     ]))
     expect(result.entityPages).toEqual([])
     expect(result.conceptPages).toEqual([])
-    expect(result.reviewEffects).toEqual(expect.arrayContaining([
+    expect(result.reviewEffects).not.toEqual(expect.arrayContaining([
       expect.objectContaining({
-        artifactId: artifact.id,
         kind: 'low-confidence',
-        severity: 'low',
-        reason: expect.stringMatching(/Rust Analyzer/),
-        candidate: expect.objectContaining({
-          kind: 'entity',
-          slug: 'rust-analyzer',
-          title: 'Rust Analyzer',
-          source: 'heuristic',
-        }),
       }),
     ]))
+    expect(JSON.stringify(result.reviewEffects)).not.toContain('Rust Analyzer')
   })
 
   it('combines structured markers with same-class heuristics before dedupe and bounds', async () => {
@@ -335,7 +327,7 @@ describe('compile pipeline', () => {
     expect(analysis.reviewTriggers).toEqual([])
   })
 
-  it('trusts canonical analysis review triggers when generating review effects', async () => {
+  it('keeps low-confidence analysis triggers out of generated human approval effects', async () => {
     const artifact: NormalizedArtifact = {
       id: 's4',
       sourceKind: 'md',
@@ -398,22 +390,19 @@ describe('compile pipeline', () => {
     const result = await generateKnowledgeChanges(analysis)
 
     expect(result.reviewEffects).toEqual(expect.arrayContaining([
-      {
-        artifactId: artifact.id,
-        kind: 'low-confidence',
-        severity: 'low',
-        reason: 'Canonical analysis requested manual review.',
-      },
       expect.objectContaining({
         artifactId: artifact.id,
         kind: 'semantic-candidate',
-        reason: expect.stringContaining('Candidate entity "OpenClaw"'),
+        reason: expect.stringContaining('显式实体候选“OpenClaw”'),
       }),
       expect.objectContaining({
         artifactId: artifact.id,
         kind: 'semantic-candidate',
-        reason: expect.stringContaining('Candidate concept "Compilation"'),
+        reason: expect.stringContaining('显式概念候选“Compilation”'),
       }),
+    ]))
+    expect(result.reviewEffects).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'low-confidence' }),
     ]))
   })
 })

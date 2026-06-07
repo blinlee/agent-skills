@@ -63,8 +63,6 @@ export type KnowledgeGenerationResult = {
   reviewEffects: ReviewEffect[]
 }
 
-const MIN_REVIEW_CONFIDENCE = 0.7
-
 export type KnowledgeGenerationOptions = {
   sourceSlug?: string
 }
@@ -114,28 +112,43 @@ function buildSourcePageBody(analysis: ArtifactAnalysis): string {
   return [
     `# ${analysis.artifact.title}`,
     '',
-    `- Artifact ID: ${analysis.artifactId}`,
-    `- Source kind: ${analysis.artifact.sourceKind}`,
-    `- Source ref: ${analysis.artifact.sourceRef}`,
-    `- Analysis confidence: ${analysis.confidence}`,
+    `- 资料 ID: ${analysis.artifactId}`,
+    `- 来源类型: ${sourceKindLabel(analysis.artifact.sourceKind)}`,
+    `- 来源引用: ${analysis.artifact.sourceRef}`,
+    `- 分析置信度: ${analysis.confidence}`,
     '',
-    '## Summary',
-    analysis.sourceSummary,
+    '## 摘要',
+    buildFastReadSummary(analysis),
     '',
-    '## Evidence preservation',
-    'Source of truth: raw captured source material. This page is a derived index/summary and must not replace the raw evidence.',
+    '## 证据说明',
+    '原始采集材料是事实依据。本页是派生的索引和速读摘要，用于定位与浏览，不能替代原始证据。',
     '',
-    'Semantic candidates are stored in review and taxonomy proposal files until approved. Unapproved candidates are intentionally not linked from this page.',
+    '候选语义会先保存在内部提案状态中；未经批准的候选项不会从本页直接写成稳定链接。',
     '',
-    '### Verbatim evidence samples',
+    '### 原文证据片段',
     ...selectVerbatimEvidenceSamples(analysis.artifact.content).map((line) => `- ${line}`),
     '',
-    '### Caveats / edge-case signals',
+    '### 注意点 / 边界信号',
     ...selectCaveatSignals(analysis.artifact.content),
     '',
-    '## Source excerpt',
+    '## 原文摘录',
     analysis.artifact.content.slice(0, 1200),
   ].join('\n')
+}
+
+function buildFastReadSummary(analysis: ArtifactAnalysis): string {
+  return `这是一份${sourceKindLabel(analysis.artifact.sourceKind)}来源材料，标题为《${analysis.artifact.title}》。当前编译置信度为 ${analysis.confidence}。本页用于快速了解资料身份、证据位置和后续治理状态；具体论断请以下方原文摘录和归档原始材料为准。`
+}
+
+function sourceKindLabel(sourceKind: ArtifactAnalysis['artifact']['sourceKind']): string {
+  const labels: Record<ArtifactAnalysis['artifact']['sourceKind'], string> = {
+    md: 'Markdown',
+    txt: '文本',
+    url: '网页',
+    repo: '代码仓库',
+  }
+
+  return labels[sourceKind]
 }
 
 function selectVerbatimEvidenceSamples(content: string): string[] {
@@ -160,7 +173,7 @@ function selectCaveatSignals(content: string): string[] {
     .slice(0, 5)
     .map((line) => `- ${line.length > 240 ? `${line.slice(0, 237)}...` : line}`)
 
-  return caveats.length > 0 ? caveats : ['- None detected; review raw source before treating summary as complete.']
+  return caveats.length > 0 ? caveats : ['- 未检测到明显边界信号；在将摘要视为完整结论前仍需核对原始材料。']
 }
 
 function buildIndexMutations(
@@ -211,12 +224,18 @@ function buildReviewEffects(
   conceptCandidates: AnalysisCandidate[],
 ): ReviewEffect[] {
   return [
-    ...analysis.reviewTriggers.map((trigger) => ({
-      ...trigger,
-      artifactId: analysis.artifactId,
-    })),
-    ...entityCandidates.map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'entity', candidate)),
-    ...conceptCandidates.map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'concept', candidate)),
+    ...analysis.reviewTriggers
+      .filter((trigger) => trigger.kind !== 'low-confidence')
+      .map((trigger) => ({
+        ...trigger,
+        artifactId: analysis.artifactId,
+      })),
+    ...entityCandidates
+      .filter((candidate) => candidate.source === 'marker')
+      .map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'entity', candidate)),
+    ...conceptCandidates
+      .filter((candidate) => candidate.source === 'marker')
+      .map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'concept', candidate)),
   ]
 }
 
@@ -225,15 +244,11 @@ function buildCandidateReviewEffect(
   candidateType: 'entity' | 'concept',
   candidate: AnalysisCandidate,
 ): ReviewEffect {
-  const lowConfidence = candidate.source === 'heuristic' && candidate.confidence < MIN_REVIEW_CONFIDENCE
-
   return {
     artifactId,
-    kind: lowConfidence ? 'low-confidence' : 'semantic-candidate',
+    kind: 'semantic-candidate',
     severity: 'low',
-    reason: lowConfidence
-      ? `Low-confidence heuristic ${candidateType} "${candidate.title}" (${candidate.confidence.toFixed(2)}) was gated from durable wiki writes pending review.`
-      : `Candidate ${candidateType} "${candidate.title}" (${candidate.confidence.toFixed(2)}) requires review before becoming durable wiki semantics.`,
+    reason: `显式${candidateType === 'entity' ? '实体' : '概念'}候选“${candidate.title}”（${candidate.confidence.toFixed(2)}）需要批准后才能成为稳定 wiki 语义。`,
     evidence: candidate.evidence,
     confidence: candidate.confidence,
     candidate: {
@@ -245,8 +260,8 @@ function buildCandidateReviewEffect(
       evidence: candidate.evidence,
     },
     suggestedActions: [
-      `Review whether "${candidate.title}" should become a durable ${candidateType} page.`,
-      'Approve, rename/merge, or reject the candidate before hardening it into the wiki.',
+      `判断“${candidate.title}”是否应成为稳定${candidateType === 'entity' ? '实体' : '概念'}页面。`,
+      '在写入稳定 wiki 前，先批准、重命名/合并或拒绝该候选项。',
     ],
   }
 }

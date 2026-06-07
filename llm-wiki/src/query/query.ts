@@ -349,7 +349,7 @@ function isOverviewQuestion(question: string): boolean {
 
 function buildAnswer(question: string, selection: QuerySelectionResult): string {
   if (selection.mode === 'no-match') {
-    return `I could not find enough matching evidence in the indexed wiki to answer “${question}”. Try rephrasing with known page titles or ingesting more source material.`
+    return `我没有在当前索引的 wiki 中找到足够证据来回答“${question}”。可以换用已知页面标题重问，或先摄入更多来源材料。`
   }
 
   if (selection.mode === 'overview') {
@@ -357,22 +357,22 @@ function buildAnswer(question: string, selection: QuerySelectionResult): string 
       .map(({ page, content }) => `${page.title}: ${extractSummary(content)}`)
       .join(' ')
 
-    return compact(`Based on indexed sources, the wiki currently covers: ${sourceSummaries}`)
+    return compact(`根据已索引来源，当前 wiki 主要覆盖：${sourceSummaries}`)
   }
 
   const primary = selection.pages[0]
   const related = selection.pages.slice(1)
-  const summary = primary ? extractSummary(primary.content) : 'No indexed wiki page matched the question.'
+  const summary = primary ? extractSummary(primary.content) : '没有索引页面匹配这个问题。'
   const relatedLead = related.length > 0
-    ? ` Related pages: ${related.map(({ page }) => page.title).join(', ')}.`
+    ? ` 相关页面：${related.map(({ page }) => page.title).join('、')}。`
     : ''
 
-  return `${primary?.page.title ?? 'The wiki'} answers “${question}” with: ${summary}.${relatedLead}`.replace(/\.\./g, '.')
+  return `${primary?.page.title ?? '这个 wiki'} 对“${question}”的回答是：${summary}。${relatedLead}`.replace(/。。/g, '。')
 }
 
 function extractSummary(markdown: string): string {
   const normalized = markdown.replace(/\r\n?/g, '\n')
-  const summaryMatch = normalized.match(/^## Summary\n([\s\S]*?)(?:\n## |$)/m)
+  const summaryMatch = normalized.match(/^## (?:摘要|Summary)\n([\s\S]*?)(?:\n## |$)/m)
   if (summaryMatch?.[1]) {
     return compact(summaryMatch[1])
   }
@@ -386,6 +386,10 @@ function extractSummary(markdown: string): string {
     .filter((line) => !line.startsWith('- Source kind:'))
     .filter((line) => !line.startsWith('- Source ref:'))
     .filter((line) => !line.startsWith('- Analysis confidence:'))
+    .filter((line) => !line.startsWith('- 资料 ID:'))
+    .filter((line) => !line.startsWith('- 来源类型:'))
+    .filter((line) => !line.startsWith('- 来源引用:'))
+    .filter((line) => !line.startsWith('- 分析置信度:'))
 
   return compact(lines.slice(0, 3).join(' '))
 }
@@ -464,21 +468,21 @@ function buildSuggestionMarkdown(input: {
 }): string {
   const citationLines = input.citations.length > 0
     ? input.citations.map((citation) => `- [[${citation.target}|${citation.title}]] — ${citation.excerpt}`)
-    : ['- No supporting citations were captured.']
+    : ['- 未捕获到支撑引用。']
 
   return [
     `# ${input.title}`,
     '',
-    `- Suggestion ID: ${input.suggestionId}`,
-    `- Created at: ${input.createdAt}`,
+    `- 建议 ID: ${input.suggestionId}`,
+    `- 创建时间: ${input.createdAt}`,
     '',
-    '## Query',
+    '## 问题',
     input.question,
     '',
-    '## Synthesis',
+    '## 综合回答',
     input.answer,
     '',
-    '## Citations',
+    '## 引用',
     ...citationLines,
   ].join('\n').trimEnd() + '\n'
 }

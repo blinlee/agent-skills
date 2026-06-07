@@ -78,14 +78,13 @@ npm test
 
 ### Agent 工作流触发词
 
-当从本仓库根目录作为 skill 使用时，llm-wiki 暴露六个稳定的用户工作流：
+当从本仓库根目录作为 skill 使用时，llm-wiki 暴露五个稳定的用户工作流：
 
 | 触发词 | 用途 |
 | --- | --- |
 | `/llm-wiki setup` | 连接或初始化本地 knowledge root / registry root。若没有已知 root，agent 需要询问路径，并可按用户确认保存为本机默认。 |
-| `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再摄入或路由新材料，并返回需要人工批准的决策。 |
+| `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再摄入或路由新材料，当场给出本批次的归档/连接决策，并只执行已批准的接受、拒绝、暂存或改派动作。 |
 | `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。 |
-| `/llm-wiki review` | 用用户视角审查待处理的归档位置与交叉连接决策，再按批准执行接受、拒绝、暂存或改派。 |
 | `/llm-wiki maintain` | 运行 `status`、`lint`、`index` 等健康与新鲜度检查。 |
 | `/llm-wiki govern` | 管理 registry 成员、profile 边界、taxonomy、bridge 和 routing policy。 |
 

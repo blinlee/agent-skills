@@ -79,7 +79,7 @@ describe('save-synthesis', () => {
 
     const pageContent = await readFile(promoted.pagePath, 'utf8')
     expect(pageContent).toMatch(/Compiler Notes/i)
-    expect(pageContent).toMatch(/## Citations/i)
+    expect(pageContent).toMatch(/## 引用/)
   })
 
   it('promotes distinct synthesis pages for multiple reviewed suggestions from the same primary page', async () => {
@@ -127,7 +127,7 @@ describe('save-synthesis', () => {
     expect(firstPageContent).not.toContain('Summarize Compiler Notes for an architect review')
   })
 
-  it('recomputes a deterministic unique slug when reviewed legacy suggestions collide at promotion time', async () => {
+  it('recomputes a deterministic unique slug when reviewed suggestions collide at promotion time', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
@@ -145,8 +145,8 @@ describe('save-synthesis', () => {
       question: 'Summarize Compiler Notes for an architect review',
     })
 
-    const legacySlug = 'compiler-notes-query-synthesis'
-    const expectedFallbackSlug = `${legacySlug}-${secondAnswer.synthesisSuggestion!.id.replace(/^synthesis-/, '')}`
+    const baseSlug = 'compiler-notes-query-synthesis'
+    const expectedFallbackSlug = `${baseSlug}-${secondAnswer.synthesisSuggestion!.id.replace(/^synthesis-/, '')}`
 
     for (const suggestion of [firstAnswer.synthesisSuggestion!, secondAnswer.synthesisSuggestion!]) {
       const rawSuggestion = await readFile(suggestion.filePath, 'utf8')
@@ -156,7 +156,7 @@ describe('save-synthesis', () => {
         suggestion.filePath,
         JSON.stringify({
           ...parsedSuggestion,
-          slug: legacySlug,
+          slug: baseSlug,
           status: 'reviewed',
           reviewedAt: new Date().toISOString(),
           reviewer: 'integration-test',
@@ -193,7 +193,7 @@ describe('save-synthesis', () => {
     const indexContent = await readFile(firstPromotion.indexPath, 'utf8')
     const logContent = await readFile(secondPromotion.logPath, 'utf8')
 
-    expect(indexContent).toContain(`[[syntheses/${legacySlug}|Compiler Notes synthesis suggestion]]`)
+    expect(indexContent).toContain(`[[syntheses/${baseSlug}|Compiler Notes synthesis suggestion]]`)
     expect(indexContent).toContain(`[[syntheses/${expectedFallbackSlug}|Compiler Notes synthesis suggestion]]`)
     expect(logContent).toContain(`\\"slug\\":\\"${expectedFallbackSlug}\\"`)
   })
@@ -216,8 +216,8 @@ describe('save-synthesis', () => {
       question: 'Summarize Compiler Notes for an architect review',
     })
 
-    const legacySlug = 'compiler-notes-query-synthesis'
-    const expectedFallbackSlug = `${legacySlug}-${secondAnswer.synthesisSuggestion!.id.replace(/^synthesis-/, '')}`
+    const baseSlug = 'compiler-notes-query-synthesis'
+    const expectedFallbackSlug = `${baseSlug}-${secondAnswer.synthesisSuggestion!.id.replace(/^synthesis-/, '')}`
 
     for (const suggestion of [firstAnswer.synthesisSuggestion!, secondAnswer.synthesisSuggestion!]) {
       const rawSuggestion = await readFile(suggestion.filePath, 'utf8')
@@ -227,7 +227,7 @@ describe('save-synthesis', () => {
         suggestion.filePath,
         JSON.stringify({
           ...parsedSuggestion,
-          slug: legacySlug,
+          slug: baseSlug,
           status: 'reviewed',
           reviewedAt: new Date().toISOString(),
           reviewer: 'integration-test',
@@ -249,7 +249,7 @@ describe('save-synthesis', () => {
         knowledgeRoot,
         suggestionId: secondAnswer.synthesisSuggestion!.id,
       }),
-    ).rejects.toThrow(new RegExp(`page slug collision for \"${legacySlug}\" also conflicts at \"${expectedFallbackSlug}\"`, 'i'))
+    ).rejects.toThrow(new RegExp(`page slug collision for \"${baseSlug}\" also conflicts at \"${expectedFallbackSlug}\"`, 'i'))
 
     await expect(readFile(fallbackPath, 'utf8')).resolves.toContain('another-suggestion')
   })
