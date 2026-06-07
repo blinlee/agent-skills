@@ -19,6 +19,6 @@ Routing:
 
 Bilibili cookies may be supplied with `--bilibili-cookies` or discovered from a browser, but default metadata records only the redacted source kind. Resolved cookie paths are emitted only with `--include-absolute-paths`.
 
-Bilibili output defaults to Chinese: Chinese subtitles are selected first; if only non-Chinese subtitles are available, the decoder translates them to Chinese with `argos` or `trans` when available and records the translation metadata.
+Bilibili output defaults to Chinese: Chinese subtitles are selected first; if only non-Chinese subtitles are available, the decoder translates them to Chinese with `argos` or `trans` when available and records the translation metadata. Use `--bilibili-translation-backend auto|argos|trans|none` to control that fallback.
 
 Archive mode is available through `--profile archive`, `--knowledge-root`, `--archive-root`, and `--archive-original` when a caller wants stable metadata, assets, and original-file retention under a portable `anything2md/` layout.
