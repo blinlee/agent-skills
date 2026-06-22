@@ -1,8 +1,8 @@
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { runIngestCommand, runQueryCommand, runSaveSynthesisCommand } from '../../src/cli.js'
+import { runBuildIndexCommand, runIngestCommand, runInitCommand, runQueryCommand, runSaveSynthesisCommand } from '../../src/cli.js'
 
 const tempRoots: string[] = []
 
@@ -79,7 +79,101 @@ describe('save-synthesis', () => {
 
     const pageContent = await readFile(promoted.pagePath, 'utf8')
     expect(pageContent).toMatch(/Compiler Notes/i)
+    expect(pageContent).toMatch(/## 证据约束/)
+    expect(pageContent).toMatch(/Answerability: answered/)
     expect(pageContent).toMatch(/## 引用/)
+  })
+
+  it('preserves structured contradiction evidence when promoting a synthesis suggestion', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-conflict-'))
+    tempRoots.push(knowledgeRoot)
+    await runInitCommand({ knowledgeRoot })
+    await mkdir(path.join(knowledgeRoot, 'wiki', 'sources'), { recursive: true })
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'sources', 'claim-atlas.md'),
+      '# Claim Atlas\n\nClaim atlas says evidence mapping requires citation indexes, chunk ids, confidence values, and explicit reasons. Grounded claims cannot be emitted without supporting citation spans.\n',
+      'utf8',
+    )
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'sources', 'claim-conflict.md'),
+      '# Claim Conflict\n\nClaim atlas has conflict evidence: the old mapping conflicts with newer chunk-level implementation evidence. This note is outdated and stale.\n',
+      'utf8',
+    )
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'sources', 'claim-contradiction.md'),
+      '# Claim Contradiction\n\nContradictory evidence says page-level-only claims are no longer acceptable for claim atlas diagnostics.\n',
+      'utf8',
+    )
+    await writeFile(path.join(knowledgeRoot, 'wiki', 'index.md'), [
+      '# Wiki 索引',
+      '',
+      '- [[sources/claim-atlas|Claim Atlas]]',
+      '- [[sources/claim-conflict|Claim Conflict]]',
+      '- [[sources/claim-contradiction|Claim Contradiction]]',
+      '',
+    ].join('\n'), 'utf8')
+    await runBuildIndexCommand({ knowledgeRoot })
+
+    const answer = await runQueryCommand({
+      knowledgeRoot,
+      question: 'claim atlas conflict stale contradictory evidence mapping',
+    })
+    expect(answer.synthesisSuggestion).toBeTruthy()
+    expect(answer.grounding.contradictionTable.length).toBeGreaterThan(0)
+
+    await markSuggestionReviewed(answer.synthesisSuggestion!.filePath)
+    await runSaveSynthesisCommand({
+      knowledgeRoot,
+      suggestionId: answer.synthesisSuggestion!.id,
+    })
+
+    const promotedSuggestion = JSON.parse(await readFile(answer.synthesisSuggestion!.filePath, 'utf8')) as {
+      grounding: {
+        conflicts: Array<{ evidencePair: unknown[]; evidence: unknown[]; targets: string[]; chunkIds: string[] }>
+        contradictionTable: Array<{ evidence: unknown[]; targets: string[]; chunkIds: string[] }>
+      }
+    }
+    expect(promotedSuggestion.grounding.conflicts[0]?.evidencePair.length).toBeGreaterThan(0)
+    expect(promotedSuggestion.grounding.conflicts[0]?.evidence.length).toBeGreaterThan(0)
+    expect(promotedSuggestion.grounding.conflicts[0]?.targets.length).toBeGreaterThan(0)
+    expect(promotedSuggestion.grounding.conflicts[0]?.chunkIds.length).toBeGreaterThan(0)
+    expect(promotedSuggestion.grounding.contradictionTable[0]?.evidence.length).toBeGreaterThan(0)
+  })
+
+  it('rejects synthesis suggestions without grounding metadata', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
+    tempRoots.push(knowledgeRoot)
+
+    await runIngestCommand({
+      knowledgeRoot,
+      input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
+    })
+
+    const answer = await runQueryCommand({
+      knowledgeRoot,
+      question: 'Summarize Compiler Notes for a new teammate',
+    })
+    const rawSuggestion = await readFile(answer.synthesisSuggestion!.filePath, 'utf8')
+    const suggestion = JSON.parse(rawSuggestion) as Record<string, unknown>
+    delete suggestion.grounding
+
+    await writeFile(
+      answer.synthesisSuggestion!.filePath,
+      JSON.stringify({
+        ...suggestion,
+        status: 'reviewed',
+        reviewedAt: new Date().toISOString(),
+        reviewer: 'integration-test',
+      }, null, 2),
+      'utf8',
+    )
+
+    await expect(
+      runSaveSynthesisCommand({
+        knowledgeRoot,
+        suggestionId: answer.synthesisSuggestion!.id,
+      }),
+    ).rejects.toThrow(/missing grounding metadata/i)
   })
 
   it('promotes distinct synthesis pages for multiple reviewed suggestions from the same primary page', async () => {

@@ -15,25 +15,36 @@ import {
   rejectIntakeFile,
   type IntakeLifecycleState,
 } from '../intake/lifecycle.js'
+import { contentDedupIndexPath, createContentDedupStore, type ContentDedupCandidate } from '../intake/content-dedup-store.js'
 import { createDedupStore, type DedupDecision, type DedupEntry, type OutputPageSnapshot } from '../intake/dedup-store.js'
 import { hashFileLike, hashParsedArtifactForDedup, hashSourceMetadata } from '../intake/fingerprint.js'
+import { detectSourceMetadataMismatch } from '../intake/mismatch-gate.js'
 import { classifySource, isSupportedSourceKind, type DiscoveredSourceKind } from '../intake/source-discovery.js'
 import { createJobStore } from './job-store.js'
 import { parseMarkdownSource } from '../parsers/markdown.js'
 import { parseRepoSource } from '../parsers/repo.js'
 import { parseTextSource } from '../parsers/text.js'
-import { parseUrlSource, type CleanedUrlContent } from '../parsers/url.js'
+import { parseUrlSource } from '../parsers/url.js'
 import type { ParsedArtifact } from '../parsers/base.js'
 import { ensureKnowledgeRootLayout } from '../paths.js'
 import type { JobStatus, SourceKind } from '../types.js'
 import { stripManagedRawFrontmatter } from '../intake/raw-store.js'
 import { updateWikiIndex } from '../wiki/index-log.js'
-import { buildKnowledgeOutputManifest, removeWikiPageFile, restoreWikiPageSnapshot, writeKnowledgeChanges } from '../wiki/page-writer.js'
+import { removeWikiPageFile, restoreWikiPageSnapshot, writeKnowledgeChanges } from '../wiki/page-writer.js'
 import { applySourceSemanticLinks, pruneMissingSourceSemanticLinks } from '../wiki/semantic-links.js'
+import { runBuildIndex } from '../index/wiki-index.js'
+import type { EmbedIndexResult } from '../retrieval/embed-index.js'
+import { loadContentDedupEmbedding } from '../intake/content-dedup-embedding.js'
+import { runEntityExtraction, type RunEntityExtractionResult } from '../retrieval/entity-extract.js'
+import { keyInfoIndexPath, runKeyInfoExtraction, type RunKeyInfoExtractionResult } from '../retrieval/key-info.js'
+import { runIngestEmbedIndex, summarizeEmbeddingResult, summarizeIndexResult } from './ingest-indexing.js'
+import { classifyUrlFailure, fetchCleanedUrlContent } from './url-source.js'
 
 export type RunIngestJobInput = {
   knowledgeRoot: string
   input: string
+  extractEntities?: boolean
+  extractKeyInfo?: boolean
 }
 
 export type IngestJobResult = {
@@ -48,9 +59,48 @@ export type IngestJobResult = {
   archivePath: string | null
   rejectedPath: string | null
   retainedPath: string | null
+  index?: IngestIndexSummary
+  embedding?: IngestEmbeddingSummary
 }
 
 type JobDetails = Record<string, unknown>
+
+export type IngestIndexSummary =
+  | {
+    status: 'rebuilt'
+    chunkCount: number
+    pageCount: number
+  }
+  | {
+    status: 'failed'
+    error: string
+  }
+
+export type IngestEmbeddingSummary =
+  | ({
+    status: 'rebuilt'
+  } & Pick<
+    EmbedIndexResult,
+    | 'provider'
+    | 'model'
+    | 'reusedCount'
+    | 'missingCount'
+    | 'embeddedCount'
+    | 'staleRemovedCount'
+    | 'batchSize'
+    | 'concurrency'
+    | 'batchCount'
+    | 'providerRequestCount'
+    | 'coverage'
+  >)
+  | {
+    status: 'skipped'
+    reason: string
+  }
+  | {
+    status: 'failed'
+    error: string
+  }
 
 export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobResult> {
   const config = loadConfig({
@@ -62,6 +112,7 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
 
   const jobStore = createJobStore(config.jobStorePath)
   const dedupStore = createDedupStore(path.join(config.knowledgeRoot, 'system', 'dedup', 'manifest.json'))
+  const contentDedupStore = createContentDedupStore(contentDedupIndexPath(config.knowledgeRoot))
   const sourceKind = classifySource(input.input)
   const lifecycle = createEmptyLifecycleState()
   const writtenFiles: string[] = []
@@ -80,6 +131,8 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
   })
 
   const persistResult = async (status: JobStatus, dedupDecision: DedupDecision | null, details: JobDetails = {}) => {
+    const index = details.index as IngestIndexSummary | undefined
+    const embedding = details.embedding as IngestEmbeddingSummary | undefined
     await jobStore.updateStatus(jobId, status, {
       input: input.input,
       sourceKind,
@@ -106,6 +159,8 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       archivePath: lifecycle.archivePath,
       rejectedPath: lifecycle.rejectedPath,
       retainedPath: lifecycle.retainedPath,
+      ...(index ? { index } : {}),
+      ...(embedding ? { embedding } : {}),
     } satisfies IngestJobResult
   }
 
@@ -136,6 +191,136 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       repoSampleLimit: config.repoSamplingLimits.maxFiles,
     })
     const { fingerprint } = preparedSource
+    const parsedArtifactForDedup = preparedSource.parsedArtifact ?? await parseSource({
+      sourceKind,
+      input: input.input,
+      sourceId: buildStableSourceId(sourceKind, sourceIdentity),
+      stagedPath: null,
+      urlFetchTimeoutMs: config.urlFetchTimeoutMs,
+      repoSampleLimit: config.repoSamplingLimits.maxFiles,
+    })
+    let contentDedupCheck = await contentDedupStore.check({
+      sourceIdentity,
+      sourceKind,
+      sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
+      title: parsedArtifactForDedup.title,
+      content: parsedArtifactForDedup.content,
+    })
+    const resolvedContentDedupDecision = await contentDedupStore.getResolvedDecision({
+      docHash: contentDedupCheck.docHash,
+      sourceIdentity,
+    })
+    const bypassContentDedupConfirmation = resolvedContentDedupDecision?.userDecision === 'ingest'
+      || resolvedContentDedupDecision?.userDecision === 'keep_both'
+      || resolvedContentDedupDecision?.userDecision === 'update'
+
+    if (resolvedContentDedupDecision?.userDecision === 'skip') {
+      return persistResult('completed', { action: 'skip', reason: 'content-dedup-user-skip' }, {
+        step: 'content-dedup-user-skip',
+        sourceIdentity,
+        fingerprint,
+        skipped: true,
+        contentDedup: {
+          docHash: contentDedupCheck.docHash,
+          pendingDecisionId: resolvedContentDedupDecision.id,
+          matchedPageId: resolvedContentDedupDecision.matchedPageId,
+          matchedSourceIdentity: resolvedContentDedupDecision.matchedSourceIdentity,
+          userDecision: resolvedContentDedupDecision.userDecision,
+        },
+      })
+    }
+
+    if (contentDedupCheck.exactMatch && !bypassContentDedupConfirmation) {
+      await contentDedupStore.recordSkip({
+        docHash: contentDedupCheck.docHash,
+        sourceIdentity,
+        match: contentDedupCheck.exactMatch,
+      })
+      return persistResult('completed', { action: 'skip', reason: 'content-exact-hash' }, {
+        step: 'content-dedup-skip',
+        sourceIdentity,
+        fingerprint,
+        skipped: true,
+        contentDedup: {
+          docHash: contentDedupCheck.docHash,
+          matchedPageId: contentDedupCheck.exactMatch.pageId,
+          matchedSourceIdentity: contentDedupCheck.exactMatch.sourceIdentity,
+          reason: 'exact_hash',
+        },
+      })
+    }
+    const contentDedupEmbedding = await loadContentDedupEmbedding(parsedArtifactForDedup.content)
+    if (contentDedupEmbedding.vector) {
+      contentDedupCheck = await contentDedupStore.check({
+        sourceIdentity,
+        sourceKind,
+        sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
+        title: parsedArtifactForDedup.title,
+        content: parsedArtifactForDedup.content,
+        embeddingVector: contentDedupEmbedding.vector,
+        embeddingProvider: contentDedupEmbedding.provider,
+        embeddingModel: contentDedupEmbedding.model,
+      })
+      if (contentDedupCheck.semanticMatch && !bypassContentDedupConfirmation) {
+        await contentDedupStore.recordSkip({
+          docHash: contentDedupCheck.docHash,
+          sourceIdentity,
+          match: contentDedupCheck.semanticMatch.record,
+          reason: 'semantic_0.98',
+          similarity: contentDedupCheck.semanticMatch.similarity,
+        })
+        return persistResult('completed', { action: 'skip', reason: 'content-semantic-high' }, {
+          step: 'content-dedup-skip',
+          sourceIdentity,
+          fingerprint,
+          skipped: true,
+          contentDedup: {
+            docHash: contentDedupCheck.docHash,
+            matchedPageId: contentDedupCheck.semanticMatch.record.pageId,
+            matchedSourceIdentity: contentDedupCheck.semanticMatch.record.sourceIdentity,
+            reason: 'semantic_0.98',
+            similarity: contentDedupCheck.semanticMatch.similarity,
+            embeddingProvider: contentDedupEmbedding.provider,
+            embeddingModel: contentDedupEmbedding.model,
+          },
+        })
+      }
+    }
+    if (contentDedupCheck.candidates.length > 0) {
+      await contentDedupStore.recordCandidates({
+        docHash: contentDedupCheck.docHash,
+        sourceIdentity,
+        candidates: contentDedupCheck.candidates,
+      })
+    }
+    const confirmationCandidate = bypassContentDedupConfirmation
+      ? null
+      : pickContentDedupConfirmationCandidate(contentDedupCheck.candidates)
+    if (confirmationCandidate) {
+      const pendingDecision = await contentDedupStore.createPendingDecision({
+        docHash: contentDedupCheck.docHash,
+        sourceIdentity,
+        sourceKind,
+        sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
+        title: parsedArtifactForDedup.title,
+        candidate: confirmationCandidate,
+      })
+      return persistResult('needs_review', { action: 'pending', reason: 'content-dedup-confirmation' }, {
+        step: 'content-dedup-confirmation',
+        sourceIdentity,
+        fingerprint,
+        contentDedup: {
+          docHash: contentDedupCheck.docHash,
+          pendingDecision,
+          candidates: contentDedupCheck.candidates.map((candidate) => ({
+            reason: candidate.reason,
+            similarity: candidate.similarity,
+            matchedPageId: candidate.record.pageId,
+            matchedSourceIdentity: candidate.record.sourceIdentity,
+          })),
+        },
+      })
+    }
     const previousDedupEntry = await dedupStore.get(sourceIdentity)
     const dedupDecision = await dedupStore.shouldCompile({
       identity: sourceIdentity,
@@ -176,14 +361,7 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       stagedPath: lifecycle.stagedPath,
     })
 
-    const parsedArtifact = preparedSource.parsedArtifact ?? await parseSource({
-      sourceKind,
-      input: input.input,
-      sourceId: buildStableSourceId(sourceKind, sourceIdentity),
-      stagedPath: lifecycle.stagedPath,
-      urlFetchTimeoutMs: config.urlFetchTimeoutMs,
-      repoSampleLimit: config.repoSamplingLimits.maxFiles,
-    })
+    const parsedArtifact = parsedArtifactForDedup
 
     if (!lifecycle.stagedPath && (sourceKind === 'url' || sourceKind === 'repo')) {
       lifecycle.stagedPath = await stageNormalizedArtifact({
@@ -196,6 +374,7 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       })
     }
 
+    const metadataMismatch = detectSourceMetadataMismatch(parsedArtifact)
     const analysis = await analyzeArtifact(parsedArtifact)
     const otherDedupEntries = (await dedupStore.list()).filter((entry) => entry.identity !== sourceIdentity)
     let generation = await generateKnowledgeChanges(analysis)
@@ -243,6 +422,26 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
     )
 
     const reviewArtifacts = [
+      ...(metadataMismatch
+        ? [{
+            id: `${parsedArtifact.id}-metadata-mismatch`,
+            artifactId: parsedArtifact.id,
+            type: metadataMismatch.type,
+            issueSummary: metadataMismatch.reason,
+            severity: metadataMismatch.severity,
+            reason: metadataMismatch.reason,
+            status: 'open',
+            relatedSources: [parsedArtifact.sourceRef],
+            relatedPages: buildReviewRelatedPages(generation),
+            evidence: metadataMismatch.evidence,
+            confidence: 0.9,
+            suggestedActions: [
+              'Verify whether source filename/URL metadata belongs to this parsed content before promoting it into stable wiki pages.',
+              'If mismatched, move the item out of source intake or correct the source metadata/title before re-ingesting.',
+            ],
+            mismatch: metadataMismatch,
+          }]
+        : []),
       ...generation.reviewEffects.map((effect, index) => ({
         id: `${parsedArtifact.id}-review-${index + 1}`,
         artifactId: parsedArtifact.id,
@@ -284,7 +483,60 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       taxonomyFiles.push(...taxonomyResult.files)
     }
 
-    const finalStatus = resolveFinalStatus(generation.reviewEffects.length > 0 || generation.taxonomyEffects.length > 0)
+    let entityExtractionResult: RunEntityExtractionResult | null = null
+    if (input.extractEntities) {
+      try {
+        entityExtractionResult = await runEntityExtraction({
+          knowledgeRoot: config.knowledgeRoot,
+          artifact: parsedArtifact,
+          pageTarget: `sources/${generation.sourcePage.slug}`,
+          pageTitle: generation.sourcePage.title,
+          sourceIdentity,
+          sourceKind,
+        })
+        if (entityExtractionResult.status === 'extracted') {
+          writtenFiles.push(entityExtractionResult.filePath)
+        }
+      } catch (error) {
+        entityExtractionResult = {
+          status: 'skipped',
+          reason: `entity extraction failed: ${(error as Error).message}`,
+          filePath: path.join(config.knowledgeRoot, 'system', 'index', 'entity-extractions.json'),
+        }
+      }
+    }
+
+    let keyInfoExtractionResult: RunKeyInfoExtractionResult | null = null
+    if (input.extractKeyInfo) {
+      try {
+        keyInfoExtractionResult = await runKeyInfoExtraction({
+          knowledgeRoot: config.knowledgeRoot,
+          artifact: parsedArtifact,
+          pageTarget: `sources/${generation.sourcePage.slug}`,
+          pageTitle: generation.sourcePage.title,
+          sourceIdentity,
+          sourceKind,
+        })
+        if (keyInfoExtractionResult.status === 'extracted') {
+          writtenFiles.push(keyInfoExtractionResult.filePath)
+        }
+      } catch (error) {
+        keyInfoExtractionResult = {
+          status: 'skipped',
+          reason: `key_info extraction failed: ${(error as Error).message}`,
+          filePath: keyInfoIndexPath(config.knowledgeRoot),
+        }
+      }
+    }
+
+    let indexResult: Awaited<ReturnType<typeof runBuildIndex>> | null = null
+    let embedResult: EmbedIndexResult | null = null
+    let indexFailure: string | null = null
+    let embeddingFailure: string | null = null
+    let embeddingSkippedReason: string | null = null
+
+    const finalStatus = resolveFinalStatus(Boolean(metadataMismatch) || generation.reviewEffects.length > 0 || generation.taxonomyEffects.length > 0)
+    let resultStatus = finalStatus
     const outputManifest = {
       ...writeResult.outputManifest,
       reviewFiles: currentReviewManifest,
@@ -299,7 +551,24 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       lifecycle.retainedPath = await retainReviewableIntake(lifecycle.stagedPath)
     }
 
-    if (shouldRecordSuccessfulManifest(finalStatus)) {
+    // Rebuild after raw lifecycle finalization so raw-backed citations do not
+    // point at stale staged paths once a completed source moves to archive.
+    try {
+      indexResult = await runBuildIndex({ knowledgeRoot: config.knowledgeRoot })
+      try {
+        const optionalEmbedResult = await runIngestEmbedIndex(config.knowledgeRoot)
+        embedResult = optionalEmbedResult.result
+        embeddingSkippedReason = optionalEmbedResult.skippedReason
+      } catch (error) {
+        embeddingFailure = error instanceof Error ? error.message : String(error)
+        // embedding is optional; do not fail the ingest
+      }
+    } catch (error) {
+      indexFailure = error instanceof Error ? error.message : String(error)
+      resultStatus = finalStatus === 'completed' ? 'partial' : finalStatus
+    }
+
+    if (shouldRecordSuccessfulManifest(resultStatus)) {
       await dedupStore.recordSuccess({
         identity: sourceIdentity,
         sourceKind,
@@ -308,14 +577,86 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
         outputManifest,
       })
     }
+    if (shouldRecordSuccessfulManifest(resultStatus) && indexResult) {
+      await contentDedupStore.recordDocument({
+        docHash: contentDedupCheck.docHash,
+        sourceIdentity,
+        sourceKind,
+        sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
+        title: parsedArtifact.title,
+        pageId: `sources/${generation.sourcePage.slug}`,
+        chunkCount: indexResult?.chunkCount ?? 0,
+        embeddingProvider: contentDedupEmbedding.provider,
+        embeddingModel: contentDedupEmbedding.model,
+        embeddingVector: contentDedupEmbedding.vector,
+      })
+    }
 
-    return persistResult(finalStatus, dedupDecision, {
+    return persistResult(resultStatus, dedupDecision, {
       step: 'completed',
       sourceIdentity,
       fingerprint,
       reviewTriggerCount: analysis.reviewTriggers.length,
       entityCount: analysis.candidateEntities.length,
       conceptCount: analysis.candidateConcepts.length,
+      ...(entityExtractionResult ? {
+        entityExtraction: {
+          status: entityExtractionResult.status,
+          reason: entityExtractionResult.reason,
+          entityCount: entityExtractionResult.record?.entities.length ?? 0,
+          relationshipCount: entityExtractionResult.record?.relationships.length ?? 0,
+          keyValueCount: entityExtractionResult.record?.keyValues.length ?? 0,
+          filePath: entityExtractionResult.filePath,
+        },
+      } : {}),
+      ...(keyInfoExtractionResult ? {
+        keyInfoExtraction: {
+          status: keyInfoExtractionResult.status,
+          reason: keyInfoExtractionResult.reason,
+          keyClaimCount: keyInfoExtractionResult.record?.keyClaims.length ?? 0,
+          evidenceCount: keyInfoExtractionResult.record?.evidence.length ?? 0,
+          filePath: keyInfoExtractionResult.filePath,
+        },
+      } : {}),
+      contentDedup: {
+        docHash: contentDedupCheck.docHash,
+        ...(resolvedContentDedupDecision ? {
+          userDecision: resolvedContentDedupDecision.userDecision,
+          pendingDecisionId: resolvedContentDedupDecision.id,
+        } : {}),
+        ...(contentDedupEmbedding.provider ? { embeddingProvider: contentDedupEmbedding.provider } : {}),
+        ...(contentDedupEmbedding.model ? { embeddingModel: contentDedupEmbedding.model } : {}),
+        ...(contentDedupEmbedding.diagnostic ? { embeddingDiagnostic: contentDedupEmbedding.diagnostic } : {}),
+        candidateCount: contentDedupCheck.candidates.length,
+        candidates: contentDedupCheck.candidates.map((candidate) => ({
+          reason: candidate.reason,
+          similarity: candidate.similarity,
+          matchedPageId: candidate.record.pageId,
+          matchedSourceIdentity: candidate.record.sourceIdentity,
+        })),
+      },
+      ...(metadataMismatch ? { metadataMismatch } : {}),
+      ...(indexResult ? {
+        index: summarizeIndexResult(indexResult),
+      } : indexFailure ? {
+        index: {
+          status: 'failed',
+          error: indexFailure,
+        } satisfies IngestIndexSummary,
+      } : {}),
+      ...(embedResult ? {
+        embedding: summarizeEmbeddingResult(embedResult),
+      } : embeddingSkippedReason ? {
+        embedding: {
+          status: 'skipped',
+          reason: embeddingSkippedReason,
+        } satisfies IngestEmbeddingSummary,
+      } : embeddingFailure ? {
+        embedding: {
+          status: 'failed',
+          error: embeddingFailure,
+        } satisfies IngestEmbeddingSummary,
+      } : {}),
     })
   } catch (error) {
     if (!lifecycle.rejectedPath && isLocalFileCandidate(sourceKind, input.input)) {
@@ -357,6 +698,10 @@ function buildDefaultReviewSuggestedActions(kind: string): string[] {
     return ['先解决分类歧义，再提升为稳定 taxonomy 或 wiki 结构。']
   }
 
+  if (kind === 'source-metadata-mismatch') {
+    return ['先核对文件名、URL、标题与正文是否属于同一来源；不一致时修正或隔离来源后再重新摄入。']
+  }
+
   if (kind === 'sparse-artifact') {
     return ['补充来源证据，或明确标记该材料本来就是稀疏材料。']
   }
@@ -366,6 +711,14 @@ function buildDefaultReviewSuggestedActions(kind: string): string[] {
 
 function shouldRecordSuccessfulManifest(status: JobStatus): boolean {
   return status === 'completed' || status === 'needs_review' || status === 'partial'
+}
+
+function pickContentDedupConfirmationCandidate(candidates: ContentDedupCandidate[]): ContentDedupCandidate | null {
+  return candidates.find((candidate) =>
+    candidate.reason === 'semantic_match'
+    && (candidate.similarity ?? 0) >= 0.88
+    && (candidate.similarity ?? 0) < 0.98,
+  ) ?? candidates.find((candidate) => candidate.reason === 'url_match') ?? null
 }
 
 type DerivedPageOwner = {
@@ -394,15 +747,10 @@ async function reconcileStaleDerivedOutputs(input: {
   const indexEntriesToAdd = new Set<string>()
   const indexEntriesToRemove = new Set<string>()
   const writtenFiles: string[] = []
-  const snapshotReconstructionCache = new Map<string, Promise<OutputPageSnapshot[]>>()
-
   for (const filePath of staleDerivedFiles) {
     const remainingOwners = await collectDerivedPageOwners({
       entries: input.otherEntries,
       filePath,
-      urlFetchTimeoutMs: input.urlFetchTimeoutMs,
-      repoSampleLimit: input.repoSampleLimit,
-      snapshotReconstructionCache,
     })
 
     if (remainingOwners.length === 0) {
@@ -447,7 +795,7 @@ function collectStaleDerivedFiles(
 ): string[] {
   const previousDerivedFiles = new Set<string>([
     ...previousOutputManifest.pageFiles.filter(isDerivedWikiPage),
-    ...(previousOutputManifest.pageSnapshots ?? []).map((snapshot) => snapshot.filePath).filter(isDerivedWikiPage),
+    ...previousOutputManifest.pageSnapshots.map((snapshot) => snapshot.filePath).filter(isDerivedWikiPage),
   ])
 
   return [...previousDerivedFiles].filter((filePath) => !currentOutputManifest.pageFiles.includes(filePath))
@@ -456,17 +804,9 @@ function collectStaleDerivedFiles(
 async function collectDerivedPageOwners(input: {
   entries: DedupEntry[]
   filePath: string
-  urlFetchTimeoutMs: number
-  repoSampleLimit: number
-  snapshotReconstructionCache: Map<string, Promise<OutputPageSnapshot[]>>
 }): Promise<DerivedPageOwner[]> {
   const owners = await Promise.all(input.entries.map(async (entry) => {
-    const snapshots = await collectEntryPageSnapshots({
-      entry,
-      urlFetchTimeoutMs: input.urlFetchTimeoutMs,
-      repoSampleLimit: input.repoSampleLimit,
-      snapshotReconstructionCache: input.snapshotReconstructionCache,
-    })
+    const snapshots = entry.lastOutputManifest?.pageSnapshots ?? []
 
     return snapshots
       .filter((snapshot) => snapshot.filePath === input.filePath)
@@ -474,64 +814,6 @@ async function collectDerivedPageOwners(input: {
   }))
 
   return owners.flat()
-}
-
-async function collectEntryPageSnapshots(input: {
-  entry: DedupEntry
-  urlFetchTimeoutMs: number
-  repoSampleLimit: number
-  snapshotReconstructionCache: Map<string, Promise<OutputPageSnapshot[]>>
-}): Promise<OutputPageSnapshot[]> {
-  const manifest = input.entry.lastOutputManifest
-  if (!manifest) {
-    return []
-  }
-
-  const snapshots = manifest.pageSnapshots ?? []
-  if (snapshots.length > 0) {
-    return snapshots
-  }
-
-  if (!manifest.pageFiles.some(isDerivedWikiPage)) {
-    return []
-  }
-
-  const cachedSnapshots = input.snapshotReconstructionCache.get(input.entry.identity)
-  if (cachedSnapshots) {
-    return cachedSnapshots
-  }
-
-  const reconstructSnapshotsPromise = reconstructMissingPageSnapshots({
-    entry: input.entry,
-    urlFetchTimeoutMs: input.urlFetchTimeoutMs,
-    repoSampleLimit: input.repoSampleLimit,
-  }).catch(() => [])
-
-  input.snapshotReconstructionCache.set(input.entry.identity, reconstructSnapshotsPromise)
-  return reconstructSnapshotsPromise
-}
-
-async function reconstructMissingPageSnapshots(input: {
-  entry: DedupEntry
-  urlFetchTimeoutMs: number
-  repoSampleLimit: number
-}): Promise<OutputPageSnapshot[]> {
-  const parsedArtifact = await parseSource({
-    sourceKind: input.entry.sourceKind,
-    input: input.entry.identity,
-    sourceId: buildStableSourceId(input.entry.sourceKind, input.entry.identity),
-    stagedPath: null,
-    urlFetchTimeoutMs: input.urlFetchTimeoutMs,
-    repoSampleLimit: input.repoSampleLimit,
-  })
-  const analysis = await analyzeArtifact(parsedArtifact)
-  const generation = await generateKnowledgeChanges(analysis)
-  return buildKnowledgeOutputManifest({
-    sourcePage: generation.sourcePage,
-    entityPages: generation.entityPages,
-    conceptPages: generation.conceptPages,
-    indexEntries: generation.indexMutations.map((mutation) => mutation.value),
-  }).pageSnapshots ?? []
 }
 
 function pickMostRecentSnapshotOwner(
@@ -691,83 +973,9 @@ function isLocalFileCandidate(sourceKind: DiscoveredSourceKind, source: string):
 }
 
 function resolveFailureStatus(sourceKind: DiscoveredSourceKind, error: unknown): JobStatus {
-  if (sourceKind === 'url' && isRetryableUrlFailure(error)) {
+  if (sourceKind === 'url' && classifyUrlFailure(error).retryable) {
     return 'failed_retryable'
   }
 
   return 'failed_terminal'
-}
-
-function isRetryableUrlFailure(error: unknown): boolean {
-  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
-  const normalizedMessage = message.toLowerCase()
-  const retryableFragments = [
-    'timeout',
-    'timed out',
-    'aborterror',
-    'fetch failed',
-    'network error',
-    'networkerror',
-    'econnreset',
-    'enotfound',
-    'eai_again',
-    'socket hang up',
-  ]
-
-  if (retryableFragments.some((fragment) => normalizedMessage.includes(fragment))) {
-    return true
-  }
-
-  const statusMatch = normalizedMessage.match(/failed to fetch url source:\s*(\d{3})\b/)
-  if (!statusMatch) {
-    return false
-  }
-
-  const statusCode = Number(statusMatch[1])
-  return statusCode === 408 || statusCode === 425 || statusCode === 429 || statusCode >= 500
-}
-
-async function fetchCleanedUrlContent(url: string, timeoutMs: number): Promise<CleanedUrlContent> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(timeoutMs),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch URL source: ${response.status} ${response.statusText}`)
-  }
-
-  const body = await response.text()
-  const title = decodeHtmlEntities(body.match(/<title[^>]*>(.*?)<\/title>/i)?.[1]?.trim() ?? url)
-
-  return {
-    title,
-    body: htmlToReadableText(body),
-  }
-}
-
-function htmlToReadableText(value: string): string {
-  return decodeHtmlEntities(
-    value
-      .replace(/<script[\s\S]*?<\/script>/gi, '\n')
-      .replace(/<style[\s\S]*?<\/style>/gi, '\n')
-      .replace(/<noscript[\s\S]*?<\/noscript>/gi, '\n')
-      .replace(/<(?:br|\/p|\/div|\/section|\/article|\/main|\/header|\/footer|\/nav|\/aside|\/ul|\/ol|\/li|\/table|\/thead|\/tbody|\/tfoot|\/tr|\/td|\/th|\/blockquote|\/pre|\/h[1-6])\b[^>]*>/gi, '\n')
-      .replace(/<(?:p|div|section|article|main|header|footer|nav|aside|ul|ol|li|table|thead|tbody|tfoot|tr|td|th|blockquote|pre|h[1-6])\b[^>]*>/gi, '\n')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\r\n?/g, '\n')
-      .split('\n')
-      .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-      .filter(Boolean)
-      .join('\n'),
-  )
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
 }

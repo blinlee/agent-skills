@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { access, link, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { StoredSynthesisSuggestion } from './query.js'
+import { normalizeStoredSuggestion, type RawStoredSynthesisSuggestion } from './synthesis-normalization.js'
 import { appendWikiLog, updateWikiIndex } from '../wiki/index-log.js'
 
 export type SaveSynthesisCommandInput = {
@@ -17,29 +18,6 @@ export type SaveSynthesisCommandResult = {
   indexPath: string
   logPath: string
 }
-
-type LegacyIngestSuggestion = {
-  id?: unknown
-  type?: unknown
-  status?: unknown
-  question?: unknown
-  title?: unknown
-  slug?: unknown
-  answer?: unknown
-  citations?: unknown
-  relatedPages?: unknown
-  relatedPageSlugs?: unknown
-  markdown?: unknown
-  body?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-  reviewedAt?: unknown
-  reviewer?: unknown
-  promotedAt?: unknown
-  pagePath?: unknown
-}
-
-const SAFE_SYNTHESIS_SLUG_PATTERN = /^[a-z0-9-]+$/
 
 export async function runSaveSynthesis(input: SaveSynthesisCommandInput): Promise<SaveSynthesisCommandResult> {
   const root = path.resolve(input.knowledgeRoot)
@@ -136,87 +114,8 @@ function appendSectionEntry(markdown: string, heading: string, entry: string): s
 
 async function readSuggestion(suggestionPath: string): Promise<StoredSynthesisSuggestion> {
   const raw = await readFile(suggestionPath, 'utf8')
-  const parsed = JSON.parse(raw) as LegacyIngestSuggestion
+  const parsed = JSON.parse(raw) as RawStoredSynthesisSuggestion
   return normalizeStoredSuggestion(parsed)
-}
-
-function normalizeStoredSuggestion(raw: LegacyIngestSuggestion): StoredSynthesisSuggestion {
-  const now = new Date().toISOString()
-  const id = typeof raw.id === 'string' && raw.id.trim().length > 0 ? raw.id : null
-  const title = typeof raw.title === 'string' && raw.title.trim().length > 0 ? raw.title : null
-  const slug = typeof raw.slug === 'string' && raw.slug.trim().length > 0 ? raw.slug : null
-  const markdown = typeof raw.markdown === 'string' && raw.markdown.trim().length > 0
-    ? ensureTrailingNewline(raw.markdown)
-    : typeof raw.body === 'string' && raw.body.trim().length > 0
-      ? ensureTrailingNewline(raw.body)
-      : null
-
-  if (!id || !title || !slug || !markdown) {
-    throw new Error(`Synthesis suggestion is not in a promotable format: required fields are missing for suggestion ${String(raw.id ?? 'unknown')}.`)
-  }
-
-  validateSynthesisSlug(slug)
-
-  const citations = Array.isArray(raw.citations)
-    ? raw.citations.filter(isQueryCitation)
-    : []
-  const relatedPages = Array.isArray(raw.relatedPages)
-    ? raw.relatedPages.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-    : normalizeLegacyRelatedPageSlugs(raw.relatedPageSlugs)
-
-  return {
-    id,
-    type: raw.type === 'synthesis-suggestion' || raw.type === 'merge-candidate' ? raw.type : 'merge-candidate',
-    status: raw.status === 'reviewed' || raw.status === 'promoted' ? raw.status : 'suggested',
-    question: typeof raw.question === 'string' && raw.question.trim().length > 0
-      ? raw.question
-      : `Promote ingest-generated synthesis suggestion “${title}”.`,
-    title,
-    slug,
-    answer: typeof raw.answer === 'string' && raw.answer.trim().length > 0
-      ? raw.answer
-      : compactMarkdown(markdown),
-    citations,
-    relatedPages,
-    markdown,
-    createdAt: typeof raw.createdAt === 'string' && raw.createdAt.trim().length > 0 ? raw.createdAt : now,
-    updatedAt: typeof raw.updatedAt === 'string' && raw.updatedAt.trim().length > 0 ? raw.updatedAt : now,
-    reviewedAt: typeof raw.reviewedAt === 'string' ? raw.reviewedAt : undefined,
-    reviewer: typeof raw.reviewer === 'string' ? raw.reviewer : undefined,
-    promotedAt: typeof raw.promotedAt === 'string' ? raw.promotedAt : undefined,
-    pagePath: typeof raw.pagePath === 'string' ? raw.pagePath : undefined,
-  }
-}
-
-function validateSynthesisSlug(slug: string): void {
-  if (!SAFE_SYNTHESIS_SLUG_PATTERN.test(slug)) {
-    throw new Error(`Invalid synthesis slug: ${slug}`)
-  }
-}
-
-function normalizeLegacyRelatedPageSlugs(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  const [sourceSlug, entitySlug, conceptSlug] = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-  return [
-    sourceSlug ? `sources/${sourceSlug}` : null,
-    entitySlug ? `entities/${entitySlug}` : null,
-    conceptSlug ? `concepts/${conceptSlug}` : null,
-  ].filter((target): target is string => Boolean(target))
-}
-
-function isQueryCitation(value: unknown): value is StoredSynthesisSuggestion['citations'][number] {
-  return typeof value === 'object' && value !== null
-    && typeof (value as { target?: unknown }).target === 'string'
-    && typeof (value as { title?: unknown }).title === 'string'
-    && typeof (value as { filePath?: unknown }).filePath === 'string'
-    && typeof (value as { excerpt?: unknown }).excerpt === 'string'
-}
-
-function compactMarkdown(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
 }
 
 function ensureTrailingNewline(value: string): string {
@@ -282,10 +181,17 @@ async function pageBelongsToSuggestion(pagePath: string, suggestionId: string): 
 }
 
 function buildPromotedMarkdown(suggestion: StoredSynthesisSuggestion): string {
+  const groundingMeta = [
+    `- Answerability: ${suggestion.grounding.answerability}`,
+    `- Selected citations: ${suggestion.grounding.selectedCitationCount}`,
+    `- Potential conflicts: ${suggestion.grounding.conflictCount}`,
+    `- Claim-level citations: ${suggestion.grounding.claims.length}`,
+  ].join('\n')
   const promotedMeta = [
     `- Promotion source: ${suggestion.id}`,
     `- Promotion status: ${suggestion.status === 'reviewed' ? 'reviewed' : 'confirmed'}`,
     `- Original question: ${suggestion.question}`,
+    groundingMeta,
   ].join('\n')
 
   return suggestion.markdown.replace(/(^# .*\n\n)/, `$1${promotedMeta}\n\n`)

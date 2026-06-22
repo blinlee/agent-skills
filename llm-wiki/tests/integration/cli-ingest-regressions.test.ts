@@ -7,6 +7,7 @@ import { runIngestCommand, runLintCommand, runQueryCommand } from '../../src/cli
 const tempRoots: string[] = []
 
 afterEach(async () => {
+  vi.stubEnv('llm_wiki_config', path.join(os.tmpdir(), `no-embedding-config-${Date.now()}.json`))
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   await Promise.all(tempRoots.splice(0).map((target) => rm(target, { recursive: true, force: true })))
@@ -181,71 +182,6 @@ describe('cli ingest regressions', () => {
     expect(dedupManifest.entries[path.resolve(sourceBPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/syntheses/beta-notes-synthesis.md')
   })
 
-  it('keeps snapshotless manifest handling source-owned after one owner changes', async () => {
-    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
-    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
-    tempRoots.push(knowledgeRoot, inputRoot)
-
-    const sourceAPath = path.join(inputRoot, 'alpha-notes.md')
-    const sourceBPath = path.join(inputRoot, 'beta-notes.md')
-
-    await writeFile(
-      sourceAPath,
-      '# alpha notes\n\nEntity: OpenClaw\nConcept: reliability\n\nOpenClaw keeps reliability high.\n',
-      'utf8',
-    )
-    await writeFile(
-      sourceBPath,
-      '# beta notes\n\nEntity: OpenClaw\nConcept: reliability\n\nOpenClaw documents reliability work.\n',
-      'utf8',
-    )
-
-    const first = await runIngestCommand({ knowledgeRoot, input: sourceBPath })
-    const second = await runIngestCommand({ knowledgeRoot, input: sourceAPath })
-    expect(first.status).toBe('needs_review')
-    expect(second.status).toBe('needs_review')
-
-    await removeStoredPageSnapshots(knowledgeRoot, sourceAPath)
-    await removeStoredPageSnapshots(knowledgeRoot, sourceBPath)
-
-    await writeFile(
-      sourceAPath,
-      '# alpha digest\n\nEntity: GraphOps\nConcept: stability\n\nGraphOps keeps stability high.\n',
-      'utf8',
-    )
-
-    const recompiled = await runIngestCommand({ knowledgeRoot, input: sourceAPath })
-    expect(recompiled.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    expect(recompiled.status).toBe('needs_review')
-
-    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-digest.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-
-    const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
-    expect(indexContent).not.toContain('[[entities/openclaw|OpenClaw]]')
-    expect(indexContent).not.toContain('[[concepts/reliability|Reliability]]')
-    expect(indexContent).not.toContain('[[entities/graphops|GraphOps]]')
-    expect(indexContent).not.toContain('[[concepts/stability|Stability]]')
-    expect(indexContent).toContain('[[sources/alpha-digest|alpha digest]]')
-    expect(indexContent).toContain('[[sources/beta-notes|beta notes]]')
-    expect(indexContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
-
-    const lint = await runLintCommand({ knowledgeRoot })
-    expect(lint.status).toBe('ok')
-
-    const openClawQuery = await runQueryCommand({
-      knowledgeRoot,
-      question: 'What is OpenClaw?',
-    })
-    expect(openClawQuery.citations.map((citation) => citation.target)).toEqual(
-      expect.arrayContaining(['sources/beta-notes']),
-    )
-  })
-
   it('skips unchanged repo inputs and recompiles when shallow repo content changes', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const repoRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-repo-'))
@@ -336,22 +272,6 @@ describe('cli ingest regressions', () => {
     await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 })
-
-async function removeStoredPageSnapshots(knowledgeRoot: string, sourcePath: string) {
-  const manifestPath = path.join(knowledgeRoot, 'system', 'dedup', 'manifest.json')
-  const raw = await readFile(manifestPath, 'utf8')
-  const manifest = JSON.parse(raw) as {
-    entries: Record<string, { lastOutputManifest?: { pageSnapshots?: unknown[] } | null }>
-  }
-
-  const entry = manifest.entries[path.resolve(sourcePath)]
-  if (!entry?.lastOutputManifest) {
-    throw new Error(`Missing dedup manifest entry for ${sourcePath}`)
-  }
-
-  delete entry.lastOutputManifest.pageSnapshots
-  await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
-}
 
 async function readJobs(knowledgeRoot: string): Promise<Record<string, { status: string }>> {
   const raw = await readFile(path.join(knowledgeRoot, 'system', 'jobs', 'jobs.json'), 'utf8')

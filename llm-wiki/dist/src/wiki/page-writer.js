@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { appendWikiLog, updateWikiIndex } from './index-log.js';
+import { appendPageHistoryEntries, removePageHistoryForWikiFile } from './page-history.js';
 export async function writeKnowledgeChanges(input) {
     const root = path.resolve(input.knowledgeRoot);
     const writtenFiles = [];
@@ -22,6 +23,7 @@ export async function writeKnowledgeChanges(input) {
         removeEntries: input.previousOutputManifest?.indexEntries.filter((entry) => !outputManifest.indexEntries.includes(entry) && isSourceOwnedIndexEntry(entry)) ?? [],
     }));
     writtenFiles.push(await appendWikiLog(root, input.logEntry));
+    writtenFiles.push(...await appendPageHistoryEntries(root, buildPageHistoryEntries(input), input.logEntry));
     return {
         writtenFiles,
         outputManifest,
@@ -63,7 +65,10 @@ async function writeWikiPage(knowledgeRoot, section, page) {
 }
 async function removeStalePages(knowledgeRoot, previousOutputManifest, currentOutputManifest) {
     const stalePageFiles = previousOutputManifest?.pageFiles.filter((filePath) => !currentOutputManifest.pageFiles.includes(filePath) && isSourceOwnedPageFile(filePath)) ?? [];
-    await Promise.all(stalePageFiles.map((filePath) => rm(path.join(knowledgeRoot, filePath), { force: true })));
+    await Promise.all(stalePageFiles.map(async (filePath) => {
+        await rm(path.join(knowledgeRoot, filePath), { force: true });
+        await removePageHistoryForWikiFile(knowledgeRoot, filePath);
+    }));
 }
 // Stale cleanup is scoped to source-owned pages so shared or manually-created
 // semantic pages are not deleted during a source recompile.
@@ -102,6 +107,13 @@ function buildPageSnapshots(input, currentPageFiles) {
             indexEntry,
         };
     }).filter((snapshot) => currentPageFiles.includes(snapshot.filePath));
+}
+function buildPageHistoryEntries(input) {
+    return [
+        { section: 'sources', slug: input.sourcePage.slug, title: input.sourcePage.title },
+        ...input.entityPages.map((page) => ({ section: 'entities', slug: page.slug, title: page.title })),
+        ...input.conceptPages.map((page) => ({ section: 'concepts', slug: page.slug, title: page.title })),
+    ];
 }
 function buildIndexEntry(section, page) {
     return `- [[${section}/${page.slug}|${page.title}]]`;

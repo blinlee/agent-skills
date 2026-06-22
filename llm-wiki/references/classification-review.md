@@ -6,6 +6,22 @@ Load this reference whenever routing, profile boundary, taxonomy placement, brid
 
 Do not run `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-complete`, `intake-park`, or `intake-reject` until the user explicitly approves the proposed action. High confidence, a strong CLI score, or a good-looking classification package is still only a proposal.
 
+## Classification Principles
+
+Use model judgment inside this controlled organization frame:
+
+1. **Wiki boundary = concept scheme.** A wiki is a governance/retrieval boundary, not a folder. Split only when terminology, source standards, retrieval intent, review habits, expected corpus growth, and pollution risk justify an isolated scheme. Otherwise keep the material in one wiki and classify internally.
+2. **Primary ownership is singular by default.** Route each source to one primary wiki. Cross-domain sources can list secondary wikis and bridge links, but do not duplicate canonical pages across wikis unless the user explicitly approves duplication.
+3. **Categories are curated hierarchy, not free tags.** Place pages in the most specific fitting category path. Do not also attach redundant parent categories. Category edges must be acyclic and mean a real broader/narrower, part/whole, instance/type, location/time, agent/work, or other declared relation.
+4. **Facets handle multi-axis meaning.** Use controlled facet tags for dimensions that should combine freely: method, object/entity, application, source type, evidence status, time/place, and review state.
+5. **Second/third levels require a stable division principle.** A subcategory needs a clear parent relation, reusable name, scope note, examples, out-of-scope counterexamples, and expected future use.
+6. **Intersection categories are exceptional.** A compound category may combine at most two important criteria when the intersection is repeatedly useful. Otherwise express intersections through facets/search/indexes.
+7. **Controlled vocabulary beats synonym drift.** Keep one preferred label per concept, record aliases, and use redirects/disambiguation for competing terms.
+8. **Never force weak matches.** If no profile/category fits strongly, propose a bounded new wiki/profile/category, park for later, reject/convert the source, or ask for a user override. Do not silently broaden an existing profile.
+9. **New profile/category proposals need evidence.** Show mismatch evidence, creation criteria, proposed parent/related concepts, aliases, scope notes, boundary risks, and concrete review questions.
+10. **Links are semantic relationships, not classification shortcuts.** Use wikilinks/backlinks for concept relationships, citations, contrasts, dependencies, applications, and evidence trails. Use cross-wiki `llm-wiki://...` links for bridges between schemes.
+11. **Historical decisions calibrate future classification.** Use accepted/rejected routes, taxonomy decisions, aliases, and `profile-review` to suggest boundary repairs, but never let profiles or category graphs drift automatically.
+
 ## Review Inputs
 
 For each source, collect:
@@ -75,6 +91,35 @@ Recommended human decision:
 ```
 
 Keep the command actionable but pending. If the user approves a different action, run that approved action instead.
+
+For `/llm-wiki inbox`, use this simpler human-facing batch shape in Chinese by default:
+
+```text
+Material:
+- <source or item being reviewed>
+
+Content judgment:
+- <what it is about in plain language>
+
+Suggested home:
+- <target wiki, section, category path, or note that a new boundary may be needed>
+
+Suggested cross-links:
+- <existing pages or wikis that should be connected, or "none">
+
+Uncertainty:
+- <boundary risk, weak evidence, or "none">
+
+Decision needed:
+- <accept / reject / park / override with one short sentence>
+```
+
+Translate internal workflow nouns before showing them to the user:
+
+- `route proposal` -> suggested home
+- `profile proposal` -> new or adjusted boundary may be needed
+- `taxonomy proposal` -> suggested category structure
+- `bridge proposal` -> suggested cross-link
 
 ## Anti-Patterns
 

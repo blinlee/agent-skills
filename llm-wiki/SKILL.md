@@ -1,9 +1,9 @@
 ---
 name: llm-wiki
-description: Build, ingest, organize, query, lint, repair, govern, and promote an llm-wiki knowledge root through the llm-wiki CLI. Use this whenever the user asks to create or maintain an Obsidian-compatible AI wiki, ingest raw sources or raw/inbox, classify or approve knowledge placement, manage backlinks/indexes/taxonomy, detect raw-source drift, answer questions from a wiki, promote syntheses, audit wiki health, or work with llm-wiki/karpathy/Hermes-style wiki workflows. Supports the user-facing triggers /llm-wiki setup, /llm-wiki inbox, /llm-wiki query, /llm-wiki maintain, and /llm-wiki govern. For PDFs, images, Word, PowerPoint, Excel, EPUB/HTML, ZIPs, audio, or other non-.md/.txt documents, first invoke the installed /anything2md skill to create a Markdown derivative, then continue the normal llm-wiki ingest flow. Do not use for generic markdown editing unless an llm-wiki knowledge root or layout is involved.
+description: Operate an llm-wiki knowledge root or atlas registry through the llm-wiki CLI. Use this skill whenever the user asks to set up, ingest into, query, maintain, govern, route, classify, search, or answer from an llm-wiki/wiki/atlas knowledge base, even if they do not write `/llm-wiki`. Use for raw inbox processing, RAG/source-reading queries, root sharing across agents, embedding/index maintenance, taxonomy/profile/bridge governance, and synthesis promotion. Non-Markdown documents must be decoded through /anything2md before llm-wiki ingest/route. Do not use for generic Markdown editing outside an llm-wiki root.
 license: MIT
 metadata:
-  version: 0.4.0
+  version: 0.4.1
   platforms: [linux, macos, windows]
   tags: [wiki, knowledge-base, markdown, obsidian, compiler, cli, raw-evidence]
   category: research
@@ -11,257 +11,123 @@ metadata:
 
 # llm-wiki Skill
 
-Use this skill to operate an llm-wiki knowledge root through the repo CLI. The CLI/core is the mutation surface; choose the right command, preserve approval gates, and report validation evidence.
+Use this skill to operate an llm-wiki knowledge root or atlas registry through the package CLI. The CLI/core is the mutation surface; the agent chooses the right workflow, preserves approval gates, and reports validation evidence.
 
-## Resolve the local wiki root first
+## Resolve Root First
 
-Before any llm-wiki command, identify the local root for this run. This may be a single **knowledge root** for `init`, `ingest`, `query`, `lint`, `index`, and taxonomy commands, or a **registry root** for atlas commands such as `intake-scan`, `route-inbox`, `registry-list`, and `query-registry`.
+Before any llm-wiki command, identify the local root for this run:
+
+- **knowledge root**: one wiki, used by `init`, `ingest`, `query`, `lint`, `index`, taxonomy commands, and most per-wiki maintenance.
+- **registry root**: atlas of wikis, used by `registry-*`, `intake-*`, `route-*`, `bridge-*`, `profile-*`, and `query-registry`.
 
 Resolution order:
 
-1. Use the root explicitly provided in the user's request.
-2. Otherwise use `llm_wiki_root` when it is set in the current environment.
-3. Otherwise read the host-local default with `python3 scripts/root_config.py show --strict --require-existing`.
-4. If no root is available, stop before running llm-wiki commands and ask the user to provide the local wiki/registry root. When the user provides a root, save it back to host-local config before continuing unless the user explicitly says not to save it.
+1. Use the root explicitly provided by the user.
+2. Otherwise use `llm_wiki_root` from the current environment.
+3. Otherwise read the host-local default:
 
-When saving a default, write only to host-local config, never to this repo or the skill directory:
+```bash
+python3 scripts/root_config.py show --strict --require-existing
+```
+
+4. If no root is available, stop before running llm-wiki commands and ask for the local wiki/registry root. When the user provides one, save it back to host-local config unless they explicitly say not to:
 
 ```bash
 python3 scripts/root_config.py set <root> --kind <knowledge|registry|unknown>
 ```
 
-The default config is agent-shared host-local state. `scripts/root_config.py set` writes to `$llm_wiki_config` only when that explicit override is set; otherwise it writes the canonical user config path such as `~/.config/llm-wiki/config.json` on Unix/macOS or `%APPDATA%/llm-wiki/config.json` on Windows. `show` reads the explicit override, the canonical user config, `$XDG_CONFIG_HOME/llm-wiki/config.json`, and macOS Application Support for compatibility. Do not commit or document a personal absolute root as the skill default. If the saved default points to a missing path, report that and ask for a replacement instead of guessing.
+The saved default is shared host-local state for Codex, Claude, OpenClaw, and other agents on the same machine. Never commit a personal absolute root into this skill or the repo.
 
-## User-facing workflow triggers
+## Public Workflows
 
-Treat these command-like phrases as stable workflow entrypoints. Resolve the local root first for all five.
+Resolve the root first for all five workflows.
 
-- `/llm-wiki setup` → connect or create a root. Use explicit path, saved default, or `llm_wiki_root`; if no root is available, ask for one and whether to save it. Use `init`/`status` for one wiki, or `registry-init`/`registry-list` for an atlas registry.
-- `/llm-wiki inbox` → process new raw material end to end: inspect `raw/inbox`, decode non-Markdown files with `/anything2md`, run normal ingest or atlas intake/routing, present this batch's placement/linking decisions in user-facing terms, and execute only the human-approved accept/reject/park/override operation. A completed inbox pass leaves the new batch accepted, rejected, or explicitly parked.
-- `/llm-wiki query <question>` → answer from the current wiki or registry with citations. Use `query` for one wiki and `query-registry` for an atlas. Do not fabricate when no evidence matches, and do not run `save-synthesis` without explicit approval.
-- `/llm-wiki maintain` → run health and freshness checks such as `status`, `lint`, and `index` when appropriate. Report broken links, raw drift, low-confidence/contested pages, unresolved proposal state, stale indexes, and scale risks. Do not perform broad repairs unless the user asked for repair.
-- `/llm-wiki govern` → manage the knowledge organization layer: registry membership, profile boundaries, taxonomy/category decisions, bridge links, and routing policy review. Use `registry-*`, `profile-*`, `taxonomy-*`, and `bridge-*` commands while preserving human approval gates.
+- `/llm-wiki setup` -> connect or create a root. Use `init`/`status` for one wiki, or `registry-init`/`registry-list` for an atlas.
+- `/llm-wiki inbox` -> process new raw material end to end. Inspect `raw/inbox`, decode non-Markdown files with `/anything2md`, route or ingest through the CLI, present the batch's placement/linking decisions in user-facing terms, and execute only the human-approved accept/reject/park/override operation. A completed inbox pass leaves the new batch accepted, rejected, or explicitly parked.
+- `/llm-wiki query <question>` -> run the retrieval workflow before answering. Start with `python3 scripts/query_handoff.py "<question>" --json`, execute the returned `recommendedCommand`, and answer only from the returned source-reading pack. Follow `references/rag-query-workflow.md`.
+- `/llm-wiki maintain` -> refresh derived maintenance artifacts and health/freshness state. Run `maintain <knowledgeRootOrRegistryRoot>` plus focused `status`, `lint`, `index`, or `query-readiness` checks when relevant. Report problems; do not perform broad repair unless asked.
+- `/llm-wiki govern` -> manage knowledge organization: registry membership, profile boundaries, taxonomy/category decisions, bridge links, and routing policy review. Use governance commands while preserving approval gates.
 
-## First orient yourself
+## Command Map
 
-For existing roots, inspect these before mutation when useful:
+Run commands from the package root and keep JSON stdout clean with `npm run --silent cli -- ...`.
 
-1. `wiki/SCHEMA.md` — local conventions, review policy, page thresholds.
-2. `wiki/index.md` — durable page catalog.
-3. `wiki/log.md` — recent mutations and query history.
-4. `review/queue/` and `taxonomy/proposals/` — internal unresolved proposal state.
+For exact commands and subcommand details, read `references/command-map.md` when you need to execute anything beyond the short workflow bullets above.
 
-Distinguish the **package root** where `npm run --silent cli -- ...` runs from the **knowledge root** passed to the CLI.
+Core command families:
 
-The package CLI runs through the checked-in compiled entrypoint `dist/src/cli.js`; do not require a global `tsx` for normal skill use. Use `npm install` / `npm run build` only for development or when intentionally rebuilding the checked-in runtime output.
+- setup/status: `init`, `status`, `registry-init`, `registry-list`, `registry-add`
+- ingest/inbox: `ingest`, `ingest-inbox`, `intake-scan`, `intake-status`, `intake-next`, `route`, `route-inbox`, `route-accept`
+- query: `query`, `query-registry`, `query-readiness`, `save-synthesis`
+- maintenance: `maintain`, `lint`, `index`, `wiki-overview`, `embed-index`, `dedup *`
+- governance: `taxonomy-*`, `profile-*`, `bridge-*`
+- packaging/interchange: `export-bundle`, `ingest --okf`
 
-## Task map
+For any mutation, run the requested command, then the smallest useful validation. Normally use `lint`; add `index` when retrieval/graph freshness matters, `status` for setup/readiness questions, and `query-readiness` for query substrate concerns. For ingest/route acceptance, inspect returned index and embedding summaries first.
 
-- **Create/setup wiki** → `init`, then `status`.
-- **Create/setup atlas registry** → `registry-init <registryRoot>`, then `registry-list <registryRoot>`.
-- **Register an isolated wiki** → `registry-add <registryRoot> [knowledgeRoot] --id <wikiId> --scope <terms>`; omit `knowledgeRoot` to create `wikis/<wikiId>` under the atlas. Prefer concise seed profiles; let later profile proposals refine boundaries.
-- **Route source for a personal atlas** → first inspect atlas `raw/inbox` drops. Markdown/text drops can proceed to `intake-scan <registryRoot>` / `intake-next <registryRoot>`, then `route <registryRoot> <sourcePathOrUrl>` or `route-inbox <registryRoot>`. Non-Markdown document drops must be decoded with `/anything2md` before any intake/route command touches them; archive the original under `raw/objects`, route only the decoded Markdown derivative, and run the agent semantic classification audit before returning an approval-ready recommendation.
-- **Accept route** → after human approval, run `route-accept <registryRoot> <proposalId> [--wiki <wikiId>] [--reviewer <name>]`, then lint/index the accepted target wiki; close, park, or reject the intake item only when that follow-up decision is approved or clearly part of the approved operation.
-- **Profile boundary work** → `profile-suggest`, `profile-accept`, `profile-reject`, and `profile-review`; profiles evolve through explicit proposals, never silent drift.
-- **Govern cross-wiki bridges** → `bridge-list`, then `bridge-accept` or `bridge-reject`; accepted bridges append explicit `llm-wiki://<wikiId>/<section>/<slug>` links to generated wiki pages. Run `bridge-index` after bridge edits.
-- **Decode a non-Markdown document** → verify the installed `/anything2md` skill exists, then run `scripts/decoder_handoff.py` to plan llm-wiki-owned output paths. If `/anything2md` is missing, stop before ingest and report the missing required decoder skill. Do not pass `--knowledge-root` to anything2md from llm-wiki; it creates a top-level `anything2md/` operational corpus that does not belong in an llm-wiki root. Archive originals, decoder metadata, assets, and decoded derivatives under `raw/objects`.
-- **Ingest one source into a known target wiki** → if the source is already Markdown/text, run `ingest <root> <sourcePathOrUrl>`, then `lint`. If the source is a non-Markdown document, first decode it with `/anything2md`, then run `ingest <root> <decodedMarkdownPath>` and `lint`.
-- **Ingest dropped files into a known wiki** → if the user says files are in a specific wiki root's `raw/inbox`, ingest Markdown/text drops normally. For non-Markdown document drops, decode each document first with the llm-wiki decoder handoff, then ingest the decoded Markdown so the later archive/stage/review/taxonomy flow stays the normal llm-wiki flow. For atlas-level unclassified drops, decode first, route the decoded Markdown, and keep the original out of the input queue.
-- **Ask/search one wiki** → `query <root> <question>`; answer from returned citations and say when no evidence matched.
-- **Ask/search an atlas** → `query-registry <registryRoot> <question>`; report which wikis were searched and preserve per-wiki citations.
-- **Promote reusable answer** → run `query`, then `save-synthesis <root> <suggestionId> --confirm` only when the returned answer is worth durable write-back and the user clearly approves promotion.
-- **Build retrieval/graph substrate** → `index <root>` after ingest or repair to write page/chunk/link/backlink indexes.
-- **Audit/repair health** → `lint`; fix generated layers (`wiki/`, `review/`, `taxonomy/`, `system/`) as appropriate; rerun `lint`.
-- **Govern classification** → run `taxonomy-list <root>`, return the proposed operation summary, and ask whether to accept, reject, or edit the plan. Run `taxonomy-accept` or `taxonomy-reject` only after approval. Accepted taxonomy topics materialize durable concept pages; repeated accept is idempotent and must not overwrite human-edited concept pages. Rejected topics close proposal state. Cleanup of already-polluted historical roots is repair/migration work, not the normal new-ingest path.
+## Query Hard Gate
 
-## Classification principles
+Never answer an llm-wiki question from source inspection, README reading, architecture memory, or implementation recall alone. Retrieval comes first.
 
-When classification is involved, use model judgment inside a controlled knowledge-organization frame:
+Default query output is intentionally compact:
 
-1. **Wiki boundary = concept scheme.** A wiki is a governance/retrieval boundary, not a folder. Split only when terminology, source standards, retrieval intent, review habits, expected corpus growth, and pollution risk justify an isolated scheme. Otherwise keep the material in one wiki and classify internally.
-2. **Primary ownership is singular by default.** Route each source to one primary wiki. Cross-domain sources can list secondary wikis and bridge links, but do not duplicate canonical pages across wikis unless the user explicitly approves duplication.
-3. **Categories are curated hierarchy, not free tags.** Place pages in the most specific fitting category path(s); do not also attach redundant parent categories. Category edges must be acyclic and must mean a real broader/narrower, part/whole, instance/type, location/time, agent/work, or other declared relation.
-4. **Facets handle multi-axis meaning.** Use controlled facet tags for dimensions that should combine freely, such as method, object/entity, application, source type, evidence status, time/place, and review state. Prefer facets over inventing deep compound categories.
-5. **Second/third levels require a stable division principle.** A subcategory needs a clear parent relation, reusable name, scope note, examples, out-of-scope counterexamples, and expected future use. Do not create one-off leaves or arbitrary depth just because a source mentions a phrase.
-6. **Intersection categories are exceptional.** A compound category may combine at most two important criteria when the intersection is repeatedly useful. Otherwise express intersections through facets/search/indexes.
-7. **Controlled vocabulary beats synonym drift.** Keep one preferred label per concept, record aliases, and use redirects/disambiguation for competing terms. Do not create parallel categories for synonyms.
-8. **Never force weak matches.** If no profile/category fits strongly, propose a bounded new wiki/profile/category, park for later, reject/convert the source, or ask for a user override. Do not silently broaden an existing profile.
-9. **New profile/category proposals need evidence.** Show existing mismatch evidence, satisfied creation criteria, proposed parent/related concepts, aliases, scope notes, risks of too broad/too narrow boundaries, and concrete review questions.
-10. **Links are semantic relationships, not classification shortcuts.** Use wikilinks/backlinks for concept relationships, citations, contrasts, dependencies, applications, and evidence trails. Use cross-wiki `llm-wiki://...` links for bridges between schemes.
-11. **Historical decisions calibrate future classification.** Use accepted/rejected routes, taxonomy decisions, aliases, and `profile-review` to suggest boundary repairs, but never let profiles or category graphs drift automatically.
+- `question`
+- `answerability`
+- `readiness`
+- `sourceReadingPack`
 
-Standard atlas inbox flow: `intake-scan` → `intake-next` → `route`/`route-inbox` → agent reads enough source material to understand it → agent audits the route/profile/classification package against the principles above and `references/classification-review.md` → return an audited recommendation with the pending command → ask the user to approve one next operation → run the approved `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-park`, or `intake-reject`. Do not skip the approval step for approval-gated operations.
+Use `sourceReadingPack.passages[]` as the factual reading payload. If `sourceReadingPack.readingMode === "document"`, use `sourceReadingPack.documents[]` as the concise original-document reading list for survey/framework/landscape questions. Use `--full` only for diagnostics.
 
-The CLI route result is a candidate generator and durable proposal record, not semantic proof. The agent must review the material itself before recommending route acceptance, override, new profile creation, bridge review, park, reject, or conversion.
+Final RAG evidence for agents must be original source text or exact original-source fragments whenever raw-backed evidence exists. `wiki-overview`, `key_info`, taxonomy, graph, review, and ledger artifacts are routing/context layers, not final factual passages.
 
-Route proposals may include `routingAssessment`: use `ownershipDecision` for the conservative mutation class, and `relationshipHint`/`novelty` as non-binding review aids. In particular, `possible_child_profile` and `adjacent_family` mean "related, inspect boundaries", not "accept into the nearest wiki".
+## Classification And Governance Gates
 
-Ingested semantic candidates follow the same proposal-first rule. The CLI may detect entities, concepts, relation hints, topic proposals, or synthesis opportunities, but ingest does not approve them. Until a human accepts them, they must live in `review/`, `taxonomy/proposals/`, or other proposal state, not as durable `wiki/entities/*`, `wiki/concepts/*`, source-page candidate tags, source-page semantic wikilinks, backlinks, or synthesis pages.
+Classification is semantic judgment plus auditable CLI state. The CLI route result is a candidate generator, not proof.
 
-When a new source matches an already accepted taxonomy topic, the CLI must preserve that as pending evidence proposal state rather than silently mutating the accepted concept page. Treat accepted concept pages as curated retrieval objects; ordinary ingest and repeated accept commands must not overwrite them.
+For atlas routing, profile boundaries, taxonomy/category placement, bridge decisions, or disputed classification, read `references/classification-review.md` before recommending an approval action.
 
-Use this concise audit shape for atlas routing:
+Hard gate: do not run `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-complete`, `intake-park`, `intake-reject`, `dedup decide`, `dedup merge`, or `save-synthesis --confirm` until the user explicitly approves the proposed action.
 
-```text
-Source understanding:
-- Domain:
-- Main subject:
-- Source type:
-- Evidence read:
+Use user-facing terms in Chinese by default for inbox/govern reports:
 
-CLI proposal audit:
-- Proposed route:
-- What the CLI got right:
-- What needs correction:
+- suggested home, not `route proposal`
+- new or adjusted boundary, not `profile proposal`
+- suggested category structure, not `taxonomy proposal`
+- suggested cross-link, not `bridge proposal`
 
-Boundary review:
-- Best existing wiki fit:
-- Fit strength:
-- Why not the other candidates:
-- Pollution risk:
+Keep proposal ids and exact commands in a short operator note only when needed.
 
-Recommended human decision:
-- Action:
-- Target wiki/profile:
-- Category path or facets, if relevant:
-- Bridges, if relevant:
-- Command after approval:
-```
+## Non-Markdown Input
 
-## Inbox approval report shape
-
-`/llm-wiki inbox` includes the approval surface for newly processed material. It is not an internal queue dump. Default to this report shape for each batch item that needs a human decision:
-
-```text
-Material:
-- <source or item being reviewed>
-
-Content judgment:
-- <what it is about in plain language>
-
-Suggested home:
-- <target wiki, section, category path, or note that a new boundary may be needed>
-
-Suggested cross-links:
-- <existing pages or wikis that should be connected, or "none">
-
-Uncertainty:
-- <boundary risk, weak evidence, or "none">
-
-Decision needed:
-- <accept / reject / park / override with one short sentence>
-```
-
-Translate internal workflow nouns before showing them to the user:
-
-- `route proposal` -> suggested home
-- `profile proposal` -> new or adjusted boundary may be needed
-- `taxonomy proposal` -> suggested category structure
-- `bridge proposal` -> suggested cross-link
-
-Keep proposal ids, queue names, and concrete commands in a short operator note only when needed for execution or when the user explicitly asks for the internal details.
-
-## Mandatory deterministic steps
-
-Run commands from the package root and keep JSON stdout clean:
-
-```bash
-npm run --silent cli -- init <knowledgeRoot>
-npm run --silent cli -- ingest <knowledgeRoot> [sourcePathOrUrl]
-npm run --silent cli -- ingest-inbox <knowledgeRoot>
-npm run --silent cli -- query <knowledgeRoot> <question>
-npm run --silent cli -- lint <knowledgeRoot>
-npm run --silent cli -- index <knowledgeRoot>
-npm run --silent cli -- taxonomy-list <knowledgeRoot>
-npm run --silent cli -- taxonomy-accept <knowledgeRoot> <proposalSlug> --reviewer <name>
-npm run --silent cli -- taxonomy-reject <knowledgeRoot> <proposalSlug> --reviewer <name> [--reason <reason>]
-npm run --silent cli -- status <knowledgeRoot>
-npm run --silent cli -- save-synthesis <knowledgeRoot> <suggestionId> --confirm
-npm run --silent cli -- registry-init <registryRoot>
-npm run --silent cli -- registry-add <registryRoot> [knowledgeRoot] --id <wikiId> [--title <title>] [--scope <csv>] [--scope-core <csv>] [--scope-adjacent <csv>] [--out-of-scope <csv>] [--alias <csv>]
-npm run --silent cli -- registry-list <registryRoot>
-npm run --silent cli -- intake-scan <registryRoot>
-npm run --silent cli -- intake-status <registryRoot>
-npm run --silent cli -- intake-next <registryRoot>
-npm run --silent cli -- route <registryRoot> <sourcePathOrUrl>
-npm run --silent cli -- route-inbox <registryRoot>
-npm run --silent cli -- route-accept <registryRoot> <proposalId> [--wiki <wikiId>] [--reviewer <name>]
-npm run --silent cli -- intake-complete <registryRoot> <itemId> [--reviewer <name>]
-npm run --silent cli -- intake-reject <registryRoot> <itemId> --reviewer <name> --reason <reason>
-npm run --silent cli -- intake-park <registryRoot> <itemId> --reviewer <name> --reason <reason>
-npm run --silent cli -- profile-suggest <registryRoot> [--from <itemId>] [--source <pathOrUrl>] [--id <wikiId>] [--title <title>]
-npm run --silent cli -- profile-accept <registryRoot> <proposalId> --reviewer <name> [--reason <reason>]
-npm run --silent cli -- profile-reject <registryRoot> <proposalId> --reviewer <name> --reason <reason>
-npm run --silent cli -- profile-review <registryRoot>
-npm run --silent cli -- bridge-list <registryRoot>
-npm run --silent cli -- bridge-accept <registryRoot> <proposalId> --reviewer <name> [--reason <reason>]
-npm run --silent cli -- bridge-reject <registryRoot> <proposalId> --reviewer <name> --reason <reason>
-npm run --silent cli -- bridge-index <registryRoot>
-npm run --silent cli -- query-registry <registryRoot> <question>
-```
-
-For non-Markdown local document sources, `/anything2md` is a required upstream skill. Before decoding, verify the installed skill exists with the portable discovery helper:
+Non-Markdown local documents are not direct llm-wiki ingest inputs. Verify `/anything2md` exists, then use `scripts/decoder_handoff.py` to archive the original under `raw/objects` and create a decoded Markdown derivative. Route/ingest only the decoded Markdown.
 
 ```bash
 python3 scripts/skill_discovery.py anything2md --json
-```
-
-If that check fails, stop and report that `/anything2md` is unavailable; do not create a placeholder Markdown file and do not run llm-wiki ingest, intake, or route commands on the original non-Markdown file. When it exists, plan the decode with the llm-wiki handoff helper. The helper creates a command that archives the original under `raw/objects/<sha-prefix>/<sha>/`, writes decoded Markdown under that same raw object, and keeps decoder metadata/assets under `raw/objects/<sha-prefix>/<sha>/decoder/`. This keeps the root free of tool-specific top-level directories while preserving both the original source and Markdown derivative as raw evidence.
-
-```bash
 python3 scripts/decoder_handoff.py <resolvedRoot> <sourcePath> --anything2md-root <anything2mdSkillRoot>
-# run the returned shellCommand
-npm run --silent cli -- ingest <knowledgeRoot> <decodedMarkdownPath>
-npm run --silent cli -- lint <knowledgeRoot>
 ```
 
-The decode step is preparation, not a separate knowledge workflow. Once the `.md` derivative exists, all later llm-wiki behavior remains the same, including ingest/route review, staging/archive, review files, taxonomy proposals, lint, and index updates. Decoder metadata, extracted assets, and archived original binaries are raw operational artifacts under `raw/objects`; llm-wiki must not index them as ordinary knowledge pages.
+If `/anything2md` is missing, stop and report that dependency. Do not create placeholder Markdown and do not run ingest/intake/route on the original PDF/DOCX/etc.
 
-For any mutation (`init`, `registry-add`, `intake-scan`, `route-inbox`, `route-accept`, `intake-complete`, `intake-park`, `intake-reject`, `profile-accept`, `profile-reject`, `taxonomy-accept`, `taxonomy-reject`, `ingest`, `ingest-inbox`, `save-synthesis`, `index`, manual repair):
+## Optional Retrieval Substrates
 
-1. Run the requested operation.
-2. Run the smallest useful validation, normally `lint`; add `index` when retrieval/graph freshness matters and `status` for setup/readiness questions.
-3. Report changed files, review gates, and validation result.
+Embedding, HyDE, rerank, query expansion, key-info extraction, entity extraction, and wiki overview are optional host-local or derived substrates. They improve retrieval but do not replace source evidence or approval gates.
 
-## Governance rules
-
-- Per-wiki `raw/inbox` is a known-target dropzone; atlas-level `raw/inbox` is only an unclassified source dropzone and should stay nearly empty. `intake-scan` moves atlas drops into sharded `raw/objects/<sha-prefix>/<sha>/...` and records sha256/status/object path in `system/intake/items/<itemId>.json` so scheduled agents can find pending work from the ledger and exit silently when none exists. Managed per-wiki `raw/staged`, `raw/archive`, and `raw/rejected` are also sharded immutable evidence areas with sha256 frontmatter and manifest tracking.
-- Do not directly edit managed raw files. Corrections, notes, synthesis, and repair belong in generated `wiki/`, `review/`, `taxonomy/`, or `system/` layers.
-- Model-generated source categories, wiki routing, topics, tags, target folders, entity/concept assignments, bridge links, merges, and backlinks are proposals until approved. Return the proposal summary and planned command, then wait for explicit approval before executing accept/reject/promote commands.
-- Ingest writes durable source evidence summaries plus review/taxonomy proposal artifacts. It must not write unapproved generated entity/concept pages, unapproved semantic backlinks, candidate tags, or ingest-seeded synthesis pages into the final wiki.
-- `taxonomy-accept` is a materialization step: it promotes the accepted topic proposal into durable wiki semantics with source evidence. It is not a page regeneration command; do not use it to overwrite accepted concept pages.
-- New evidence for an already accepted topic belongs in pending evidence proposal state until explicitly reviewed.
-- `taxonomy-reject` is a proposal closure step for new ingests; do not rely on reject cleanup as the normal way to remove generated semantic residue.
-- Default retrieval should stay knowledge-first: query/index should focus on `wiki/sources/*` and accepted durable pages, while `review/`, `taxonomy/proposals/`, `taxonomy/evidence-proposals/`, `system/`, decoder metadata, and eval workspaces are audit/operations state unless the user asks about governance.
-- High confidence is not approval; high model confidence is still only a proposal signal.
-- Query outputs are not durable wiki knowledge unless promoted. Promote only answers with durable reuse value: cross-source insight, sufficient citations, novelty beyond a transient chat answer, clear source coverage, and explicit human approval.
-- Backlink maintenance is not an ingest-time repair task. Ingest must not scan the wiki to add semantic backlinks. Lint, index, bridge-index, and approved promotion flows own graph freshness; `save-synthesis` may add narrow, auditable backlinks to cited related pages after confirmation, and large roots may defer broad backlink repair to lint/index workflows.
-- For broad personal encyclopedia use, prefer multiple bounded wiki roots plus a registry. Do not silently ingest unrelated domains into one large wiki just because the source is parseable.
-
-For deeper rationale and risk controls, read `references/governance.md` only when working on review policy, raw integrity, classification, or audit behavior. For atlas routing, profile boundary, category/facet, bridge, or disputed classification work, read `references/classification-review.md` and follow its output contract.
+Read `references/embedding-provider.md` before configuring or claiming embedding contribution. A successful `embed-index` alone is not proof query used embeddings; verify query result signals.
 
 ## Gotchas
 
 - Always include `--silent`; npm banner text can corrupt machine-readable JSON output.
-- Resolve the local wiki/registry root before commands. Do not infer a personal absolute path from examples, prior sessions, or repository history.
-- `ingest <root>` with no source means ingest the root's `raw/inbox`.
-- Non-Markdown document files are not directly supported by the llm-wiki parser surface; decode them with the installed `/anything2md` skill before ingest.
-- `/anything2md` is a hard dependency for non-Markdown ingest. If it is not installed in a known skill directory, stop and report the missing skill instead of falling back to stale local decoder code.
-- Do not expect `ingest` to create `wiki/entities/*` or `wiki/concepts/*` from candidate extraction. Those are approval products, not ingest products.
-- If a candidate appears obvious, still present it as review/proposal state. Confidence can prioritize review, but cannot bypass acceptance.
-- If a concept page already exists after acceptance, preserve it. Do not rerun accept as a way to refresh generated prose.
-- Do not confuse source paths with wiki page slugs; let the CLI resolve slugs and collisions.
-- Do not fix raw drift by editing the raw file to match expectations; preserve raw and repair downstream generated knowledge.
-- Bare wikilinks can become ambiguous; prefer qualified links like `[[sources/foo|Foo]]`.
-- A polished page is not necessarily verified; check `confidence`, `contested`, review records, and citations.
-- Do not promote a query answer just because it reads well. If citations are weak, the answer is single-source paraphrase, the insight is temporary, or the user has not approved durable write-back, leave it in review/chat rather than running `save-synthesis`.
-- Large roots need retrieval discipline: use `query`/search and heed lint scale warnings instead of reading only `wiki/index.md`.
-- Registry routing, intake ledger state, and taxonomy listing are deterministic and auditable in the MVP; they are review aids, not proof that the classification is correct. The agent must read source evidence and audit the proposal before recommending acceptance.
-- Cross-wiki links must be explicit `llm-wiki://<wikiId>/<section>/<slug>` bridge links; do not pretend they are local Obsidian links.
+- Distinguish the package root from the knowledge/registry root passed to the CLI.
+- Do not infer personal paths from examples, prior sessions, or repo history.
+- `ingest <root>` with no source means ingest that root's `raw/inbox`.
+- `route-accept` on an intake item now closes the successful inbox item; remaining taxonomy/bridge/profile proposals belong to govern/maintain surfaces.
+- Do not edit managed raw files to fix drift. Preserve raw evidence and repair generated layers.
+- Do not expect ingest to create durable entity/concept pages from candidates; approval creates durable semantic pages.
+- Do not promote a query answer just because it reads well. Promotion needs source-backed evidence, durable reuse value, and explicit user approval.
+- Embedding caches are rebuildable retrieval artifacts under `system/index/embeddings/`; they are not canonical knowledge and are not required for basic query.
+- Cross-wiki links must be explicit `llm-wiki://<wikiId>/<section>/<slug>` bridge links.
 
-## Report format
-
-Use this concise structure after work:
+## Report Format
 
 ```text
 Command(s): <commands run>
@@ -269,7 +135,7 @@ Knowledge root: <path>
 Result: <what changed or what was answered>
 Files: <created/updated/review files, if available>
 Review gates: <pending proposals, review items, or none>
-Validation: <lint/status/build result with evidence>
+Validation: <lint/status/build/query-readiness result with evidence>
 Remaining risks: <only material gaps>
 ```
 

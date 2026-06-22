@@ -2,7 +2,7 @@
 
 面向 CLI 的 Markdown 知识库编译器，用来构建**有人审、有证据、兼容 Obsidian** 的 llm-wiki 知识库。
 
-llm-wiki 适合这样的人：想把来源材料沉淀成耐久知识层，但又不想把所有内容都粗暴塞进一个没人审核的大杂烩笔记库里。它会把可读输入转成结构化 Markdown Wiki，同时保留原始材料证据、review 面、taxonomy proposal、可查询页面，以及可选的多 wiki registry 管理能力。
+llm-wiki 适合这样的人：想把来源材料沉淀成耐久知识层，但又不想把所有内容都粗暴塞进一个没人审核的大杂烩笔记库里。它会把可读输入转成结构化 Markdown Wiki，同时保留原始材料证据、内部 review 面、taxonomy proposal、可查询页面，以及可选的多 wiki registry 管理能力。
 
 ## 它解决什么问题
 
@@ -20,7 +20,7 @@ llm-wiki 反过来做：
 
 ## 这个仓库包含什么
 
-- **CLI 编译器**：初始化、摄入、查询、lint、建索引、review wiki root
+- **CLI 编译器**：初始化、摄入、查询、lint、建索引、维护 wiki root
 - **Registry 工作流**：在一个 registry 下管理多个彼此隔离的 wiki
 - **人工审核面**：taxonomy、route、profile creation、bridge decision 都是可审核 proposal
 - **OpenClaw skill 合同层**：位于根目录 `SKILL.md`
@@ -35,7 +35,7 @@ knowledge root 是通过 `init` 创建出来的一个有边界的 wiki 工作区
 
 - wiki 页面与 schema 文件
 - 原始材料 intake 和 manifest
-- review / taxonomy 状态
+- 内部 review / taxonomy proposal 状态
 - system index 与日志
 
 ### Registry root
@@ -44,7 +44,7 @@ registry root 用来管理多个有边界的 wiki，而不是强迫所有内容�
 
 ### Human-governed proposals
 
-llm-wiki 默认把模型生成的分类建议、路由建议、profile 建议都视为 **proposal**，而不是自动真理。要由人来审和决定接不接受。
+llm-wiki 默认把模型生成的分类建议、路由建议、taxonomy 变更、bridge link、profile 建议都视为 **proposal**，而不是自动真理。Inbox / govern 工作流负责把这些决策提交给人审；不存在一个会悄悄物化 proposal 的独立公开 review pass。
 
 ## 环境要求
 
@@ -84,7 +84,7 @@ npm test
 | --- | --- |
 | `/llm-wiki setup` | 连接或初始化本地 knowledge root / registry root。若没有已知 root，agent 需要询问路径，并可按用户确认保存为本机默认。 |
 | `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再摄入或路由新材料，当场给出本批次的归档/连接决策，并只执行已批准的接受、拒绝、暂存或改派动作。 |
-| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。 |
+| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。skill 会先跑 `scripts/query_handoff.py`，再执行返回的 `query` 或 `query-registry` 命令。 |
 | `/llm-wiki maintain` | 运行 `status`、`lint`、`index` 等健康与新鲜度检查。 |
 | `/llm-wiki govern` | 管理 registry 成员、profile 边界、taxonomy、bridge 和 routing policy。 |
 
@@ -187,7 +187,7 @@ llm-wiki skill 在摄入或路由非 Markdown 投递物前执行这个流程：
 1. 用 `python3 scripts/skill_discovery.py anything2md --json` 验证 `/anything2md` 已安装
 2. 运行 `python3 scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
 3. 执行返回的 `shellCommand`，该命令不会向 anything2md 传 `--knowledge-root`
-4. 使用返回的 `decodedMarkdown` 继续正常的 llm-wiki ingest、route、review、lint、index 流程
+4. 使用返回的 `decodedMarkdown` 继续正常的 llm-wiki ingest/route、审批、lint、index 流程
 
 handoff 命令会把原始二进制、解码 Markdown、转换器 metadata 和抽取资产都放在 `raw/objects/<sha-prefix>/<sha>/...` 下。不要在 llm-wiki root 里创建或使用顶层 `<root>/anything2md/` 目录；那是 anything2md 独立归档模式的布局，不属于 llm-wiki。
 

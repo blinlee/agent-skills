@@ -1,0 +1,48 @@
+import path from 'node:path';
+export const REGISTRY_DIRECTORIES = [
+    'registry',
+    'registry/profiles',
+    'registry/profiles/proposals',
+    'registry/profiles/decisions',
+    'registry/classification/packages',
+    'registry/routing/proposals',
+    'registry/routing/decisions',
+    'registry/bridges',
+    'registry/bridges/proposals',
+    'registry/bridges/decisions',
+    'raw/inbox',
+    'raw/objects',
+    'wikis',
+    'system/intake/items',
+    'system/intake/spool',
+    'system/intake/locks',
+    'system/index',
+    'system/rag',
+];
+export function resolveRegistryPaths(registryRoot) {
+    const root = path.resolve(registryRoot);
+    return {
+        root,
+        registryDirectory: path.join(root, 'registry'),
+        registryFile: path.join(root, 'registry', 'wikis.json'),
+        profilesDirectory: path.join(root, 'registry', 'profiles'),
+        profileProposalsDirectory: path.join(root, 'registry', 'profiles', 'proposals'),
+        profileDecisionsDirectory: path.join(root, 'registry', 'profiles', 'decisions'),
+        classificationPackagesDirectory: path.join(root, 'registry', 'classification', 'packages'),
+        routingProposalsDirectory: path.join(root, 'registry', 'routing', 'proposals'),
+        routingDecisionsDirectory: path.join(root, 'registry', 'routing', 'decisions'),
+        bridgesDirectory: path.join(root, 'registry', 'bridges'),
+        bridgeProposalsDirectory: path.join(root, 'registry', 'bridges', 'proposals'),
+        bridgeDecisionsDirectory: path.join(root, 'registry', 'bridges', 'decisions'),
+        wikisDirectory: path.join(root, 'wikis'),
+        inboxDirectory: path.join(root, 'raw', 'inbox'),
+        rawObjectsDirectory: path.join(root, 'raw', 'objects'),
+        intakeItemsDirectory: path.join(root, 'system', 'intake', 'items'),
+        intakeSpoolDirectory: path.join(root, 'system', 'intake', 'spool'),
+        intakeEvents: path.join(root, 'system', 'intake', 'events.jsonl'),
+        intakeLocksDirectory: path.join(root, 'system', 'intake', 'locks'),
+        atlasIndexDirectory: path.join(root, 'system', 'index'),
+        ragDirectory: path.join(root, 'system', 'rag'),
+        queryLog: path.join(root, 'registry', 'query-log.jsonl'),
+    };
+}

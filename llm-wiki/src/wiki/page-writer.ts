@@ -4,11 +4,12 @@ import path from 'node:path'
 import type { KnowledgePagePayload, SynthesisSuggestionPayload } from '../compile/generation.js'
 import type { OutputPageSnapshot } from '../intake/dedup-store.js'
 import { appendWikiLog, updateWikiIndex } from './index-log.js'
+import { appendPageHistoryEntries, removePageHistoryForWikiFile, type PageHistoryEntry } from './page-history.js'
 
 export type KnowledgeOutputManifest = {
   pageFiles: string[]
   indexEntries: string[]
-  pageSnapshots?: OutputPageSnapshot[]
+  pageSnapshots: OutputPageSnapshot[]
 }
 
 export type BuildKnowledgeOutputManifestInput = {
@@ -59,6 +60,7 @@ export async function writeKnowledgeChanges(input: WriteKnowledgeChangesInput): 
     }),
   )
   writtenFiles.push(await appendWikiLog(root, input.logEntry))
+  writtenFiles.push(...await appendPageHistoryEntries(root, buildPageHistoryEntries(input), input.logEntry))
 
   return {
     writtenFiles,
@@ -130,7 +132,10 @@ async function removeStalePages(
     (filePath) => !currentOutputManifest.pageFiles.includes(filePath) && isSourceOwnedPageFile(filePath),
   ) ?? []
 
-  await Promise.all(stalePageFiles.map((filePath) => rm(path.join(knowledgeRoot, filePath), { force: true })))
+  await Promise.all(stalePageFiles.map(async (filePath) => {
+    await rm(path.join(knowledgeRoot, filePath), { force: true })
+    await removePageHistoryForWikiFile(knowledgeRoot, filePath)
+  }))
 }
 
 // Stale cleanup is scoped to source-owned pages so shared or manually-created
@@ -178,6 +183,14 @@ function buildPageSnapshots(
       indexEntry,
     }
   }).filter((snapshot) => currentPageFiles.includes(snapshot.filePath))
+}
+
+function buildPageHistoryEntries(input: BuildKnowledgeOutputManifestInput): PageHistoryEntry[] {
+  return [
+    { section: 'sources', slug: input.sourcePage.slug, title: input.sourcePage.title },
+    ...input.entityPages.map((page) => ({ section: 'entities' as const, slug: page.slug, title: page.title })),
+    ...input.conceptPages.map((page) => ({ section: 'concepts' as const, slug: page.slug, title: page.title })),
+  ]
 }
 
 function buildIndexEntry(

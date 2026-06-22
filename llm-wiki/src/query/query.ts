@@ -2,10 +2,17 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { appendWikiLog } from '../wiki/index-log.js'
-import { parseWikiPageTarget, type WikiSection, wikiSectionRank } from '../wiki/sections.js'
+import { writeJsonFile } from '../shared/fs.js'
+import { buildLayeredContextPack, type LayeredContextPack } from '../retrieval/context-builder.js'
+import { buildGroundingDiagnostics } from './grounding.js'
+import { buildSourceReadingPack } from './source-reading-pack.js'
+import { retrieveChunks } from '../retrieval/retrieval.js'
+import { buildKnowledgeQueryReadiness, type KnowledgeQueryReadinessReport } from '../retrieval/readiness.js'
+import { tokenize } from '../retrieval/tokenize.js'
+import { comparePageOrder, loadIndexedPages, parseWikiLinks, resolveWikiLink, type IndexedPage, type WikiLink, type WikiLinkResolution } from '../wiki/links.js'
+import type { EvidenceBudget } from '../retrieval/context-budget.js'
+import type { RetrievalResult, RetrievalScore, RetrievalSignalSummary } from '../retrieval/types.js'
 
-const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'for', 'to', 'of', 'and', 'in', 'on', 'from', 'with', 'about', 'summarize', 'summary', 'new'])
-const WIKI_LINK_RE = /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g
 const OVERVIEW_PATTERNS = [
   /summari[sz]e\s+what\s+has\s+been\s+(?:ingested|indexed|imported)/i,
   /what\s+has\s+been\s+(?:ingested|indexed|imported)/i,
@@ -14,24 +21,14 @@ const OVERVIEW_PATTERNS = [
   /what\s+is\s+in\s+the\s+wiki/i,
 ] as const
 
-type IndexedPage = {
-  section: WikiSection
-  slug: string
-  title: string
-  target: string
-  filePath: string
-}
-
-type WikiLink = {
-  rawTarget: string
-  title: string
-}
-
 type QuerySelectionMode = 'matched' | 'overview' | 'no-match'
 
 type SelectedPage = {
   page: IndexedPage
   content: string
+  heading?: string
+  startLine?: number
+  endLine?: number
 }
 
 type QuerySelectionResult = {
@@ -39,14 +36,15 @@ type QuerySelectionResult = {
   pages: SelectedPage[]
 }
 
-export type WikiLinkResolution =
-  | { status: 'resolved'; page: IndexedPage }
-  | { status: 'ambiguous'; matches: IndexedPage[] }
-  | { status: 'missing' }
+export { loadIndexedPages, parseIndexedTarget, parseWikiLinks, resolveWikiLink } from '../wiki/links.js'
+export type { IndexedPage, WikiLink, WikiLinkResolution }
 
 export type QueryCommandInput = {
   knowledgeRoot: string
   question: string
+  includeReview?: boolean
+  disableHyde?: boolean
+  retrieval?: RetrievalResult
 }
 
 export type QueryCitation = {
@@ -54,6 +52,18 @@ export type QueryCitation = {
   title: string
   filePath: string
   excerpt: string
+  chunkId?: string
+  pageTarget?: string
+  heading?: string
+  headingPath?: string[]
+  startLine?: number
+  endLine?: number
+  sourceRef?: string | null
+  rawPath?: string | null
+  artifactId?: string | null
+  evidenceKind?: 'raw' | 'wiki'
+  retrievalScore?: RetrievalScore
+  retrievalReasons?: string[]
 }
 
 export type QuerySynthesisSuggestion = {
@@ -64,10 +74,134 @@ export type QuerySynthesisSuggestion = {
   filePath: string
 }
 
+export type QueryRetrievalDiagnostics = {
+  mode: RetrievalResult['mode']
+  messages: string[]
+  signalSummary: RetrievalSignalSummary
+}
+
+export type QueryGroundedClaim = {
+  text: string
+  supportingCitations: number[]
+  citationIndexes: number[]
+  chunkIds: string[]
+  confidence: number
+  reason: string
+  supportLevel: 'strong' | 'partial' | 'weak'
+  matchedTerms: string[]
+  citationCoverage: number
+  validation: {
+    status: 'supported' | 'weakly-supported'
+    matchedTerms: string[]
+    citationCoverage: number
+    supportLevel: QueryGroundedClaim['supportLevel']
+  }
+}
+
+export type QueryConflictEvidence = {
+  citationIndex: number
+  target: string
+  chunkId?: string
+  excerpt: string
+  matchedText?: string
+}
+
+export type QueryConflictSignal = {
+  citationIndex: number
+  target: string
+  chunkId?: string
+  kind: 'conflict' | 'stale' | 'uncertain' | 'contradictory'
+  severity: 'high' | 'medium' | 'low'
+  reason: string
+  matchedText: string
+  excerpt: string
+  evidencePair: [QueryConflictEvidence, QueryConflictEvidence | null]
+  evidence: QueryConflictEvidence[]
+  targets: string[]
+  chunkIds: string[]
+}
+
+export type QueryContradictionTableEntry = {
+  issueId: string
+  kind: QueryConflictSignal['kind']
+  severity: QueryConflictSignal['severity']
+  summary: string
+  evidence: QueryConflictEvidence[]
+  targets: string[]
+  chunkIds: string[]
+  freshness: 'stale-signal' | 'current-conflict' | 'unknown'
+  recommendation: string
+}
+
+export type QueryGroundingDiagnostics = {
+  answerability: 'answered' | 'insufficient-evidence'
+  evidenceBudget: number
+  selectedCitationCount: number
+  conflictCount: number
+  citedChunkIds: string[]
+  claims: QueryGroundedClaim[]
+  conflicts: QueryConflictSignal[]
+  contradictionTable: QueryContradictionTableEntry[]
+}
+
+export type QueryAgentReadingPack = {
+  answerability: QueryGroundingDiagnostics['answerability']
+  retrievalMode: RetrievalResult['mode']
+  embeddingUsed: boolean
+  citationCount: number
+  mustReadFurther: boolean
+  citationsToRead: Array<{
+    citationIndex: number
+    target: string
+    title: string
+    filePath: string
+    heading?: string
+    startLine?: number
+    endLine?: number
+    sourceRef?: string | null
+    rawPath?: string | null
+    artifactId?: string | null
+    evidenceKind?: 'raw' | 'wiki'
+    chunkId?: string
+  }>
+  contextLayers: LayeredContextPack
+  diagnostics: string[]
+}
+
+export type QuerySourceReadingPassage = {
+  citationIndex: number
+  wikiId?: string
+  wikiTitle?: string
+  sourceTitle: string
+  sourceRef?: string | null
+  rawPath?: string | null
+  filePath: string
+  evidenceKind?: 'raw' | 'wiki'
+  headingPath?: string[]
+  heading?: string
+  startLine?: number
+  endLine?: number
+  text: string
+  truncated: boolean
+  stitchedFromChunkIds: string[]
+}
+
+export type QuerySourceReadingPack = {
+  answerability: QueryGroundingDiagnostics['answerability']
+  readingMode: 'passage' | 'document'
+  passageCount: number
+  passages: QuerySourceReadingPassage[]
+}
+
 export type QueryCommandResult = {
   question: string
   answer: string
   citations: QueryCitation[]
+  readiness: KnowledgeQueryReadinessReport
+  retrieval: QueryRetrievalDiagnostics
+  grounding: QueryGroundingDiagnostics
+  sourceReadingPack: QuerySourceReadingPack
+  agentReadingPack: QueryAgentReadingPack
   synthesisSuggestion: QuerySynthesisSuggestion | null
 }
 
@@ -84,6 +218,7 @@ export type StoredSynthesisSuggestion = {
   markdown: string
   createdAt: string
   updatedAt: string
+  grounding: QueryGroundingDiagnostics
   reviewedAt?: string
   reviewer?: string
   promotedAt?: string
@@ -98,21 +233,68 @@ export async function runQuery(input: QueryCommandInput): Promise<QueryCommandRe
     throw new Error(`Cannot query ${root}: wiki/index.md has no indexed pages.`)
   }
 
-  const selection = await selectRelevantPages(root, input.question, indexedPages)
-  const citations = selection.pages.map(({ page, content }) => ({
-    target: page.target,
-    title: page.title,
-    filePath: page.filePath,
-    excerpt: buildExcerpt(content),
-  }))
+  const readiness = await buildKnowledgeQueryReadiness({ knowledgeRoot: root })
+  const retrieval = input.retrieval ?? await retrieveChunks({
+    knowledgeRoot: root,
+    question: input.question,
+    includeReview: input.includeReview,
+    disableHyde: input.disableHyde,
+  })
+  const selection = retrieval.mode === 'fallback'
+    ? await selectRelevantPages(root, input.question, indexedPages)
+    : selectionFromRetrieval(retrieval)
+  const citations = retrieval.mode === 'fallback'
+    ? selection.pages.map(({ page, content }) => ({
+        target: page.target,
+        title: page.title,
+        filePath: page.filePath,
+        excerpt: buildExcerpt(content),
+      }))
+    : retrieval.hits.map((hit) => ({
+        target: hit.citation.pageTarget,
+        title: hit.citation.pageTitle,
+        filePath: hit.citation.filePath,
+        excerpt: hit.citation.excerpt,
+        chunkId: hit.citation.chunkId,
+        pageTarget: hit.citation.pageTarget,
+        heading: hit.citation.heading,
+        headingPath: hit.citation.headingPath,
+        startLine: hit.citation.startLine,
+        endLine: hit.citation.endLine,
+        sourceRef: hit.citation.sourceRef,
+        rawPath: hit.citation.rawPath ?? null,
+        artifactId: hit.citation.artifactId ?? null,
+        evidenceKind: hit.citation.evidenceKind ?? (hit.citation.rawPath ? 'raw' : 'wiki'),
+        retrievalScore: hit.score,
+        retrievalReasons: hit.reasons,
+      }))
 
-  const answer = buildAnswer(input.question, selection)
-  const suggestion = selection.mode === 'matched' && selection.pages[0]
+  const contextLayers = await buildLayeredContextPack({
+    knowledgeRoot: root,
+    citations,
+  })
+  const redactor = createSensitiveRedactor(input.question)
+  const displayQuestion = redactor(input.question)
+  const groundedCitations = redactCitations(compressCitations(
+    citations,
+    retrieval.signalSummary.evidenceBudget,
+  ), redactor)
+  const lowConfidenceRefusal = retrieval.signalSummary.confidence.lowConfidence
+  const grounding = buildGroundingDiagnostics(
+    displayQuestion,
+    selection,
+    groundedCitations,
+    retrieval.signalSummary.evidenceBudget,
+    lowConfidenceRefusal,
+  )
+  const answer = redactor(buildGroundedAnswer(displayQuestion, selection, groundedCitations, grounding))
+  const suggestion = selection.mode === 'matched' && selection.pages[0] && grounding.answerability === 'answered'
     ? await persistSynthesisSuggestion({
         knowledgeRoot: root,
-        question: input.question,
+        question: displayQuestion,
         answer,
-        citations,
+        citations: groundedCitations,
+        grounding,
         primaryPage: selection.pages[0].page,
       })
     : null
@@ -120,82 +302,88 @@ export async function runQuery(input: QueryCommandInput): Promise<QueryCommandRe
   await appendWikiLog(
     root,
     `query\t${JSON.stringify({
-      question: input.question,
+      question: displayQuestion,
       selectionMode: selection.mode,
       suggestionId: suggestion?.id ?? null,
-      citationCount: citations.length,
+      citationCount: groundedCitations.length,
+      answerability: grounding.answerability,
+      conflictCount: grounding.conflictCount,
+      retrievalSignals: retrieval.signalSummary.signalCounts,
+      retrievalSources: retrieval.signalSummary.sourceCounts,
     })}`,
   )
 
+  const retrievalDiagnostics = {
+    mode: retrieval.mode,
+    messages: retrieval.diagnostics,
+    signalSummary: retrieval.signalSummary,
+  }
+
   return {
-    question: input.question,
+    question: displayQuestion,
     answer,
-    citations,
+    citations: groundedCitations,
+    readiness,
+    retrieval: retrievalDiagnostics,
+    grounding,
+    sourceReadingPack: await buildSourceReadingPack(root, grounding.answerability, groundedCitations, redactor),
+    agentReadingPack: buildAgentReadingPack(retrievalDiagnostics, grounding, groundedCitations, contextLayers),
     synthesisSuggestion: suggestion,
   }
 }
 
-export async function loadIndexedPages(knowledgeRoot: string): Promise<IndexedPage[]> {
-  const indexPath = path.join(path.resolve(knowledgeRoot), 'wiki', 'index.md')
-  const rawIndex = await readFile(indexPath, 'utf8')
-  const pages: IndexedPage[] = []
-  const seenTargets = new Set<string>()
-
-  for (const link of parseWikiLinks(rawIndex)) {
-    const resolved = parseIndexedTarget(link.rawTarget)
-    if (!resolved || seenTargets.has(resolved.target)) {
-      continue
-    }
-
-    seenTargets.add(resolved.target)
-    pages.push({
-      section: resolved.section,
-      slug: resolved.slug,
-      title: link.title,
-      target: resolved.target,
-      filePath: path.join(path.resolve(knowledgeRoot), 'wiki', resolved.section, `${resolved.slug}.md`),
-    })
+function buildAgentReadingPack(
+  retrieval: QueryRetrievalDiagnostics,
+  grounding: QueryGroundingDiagnostics,
+  citations: QueryCitation[],
+  contextLayers: LayeredContextPack,
+): QueryAgentReadingPack {
+  return {
+    answerability: grounding.answerability,
+    retrievalMode: retrieval.mode,
+    embeddingUsed: retrieval.signalSummary.signalCounts.embedding > 0,
+    citationCount: citations.length,
+    mustReadFurther: grounding.answerability === 'answered' && citations.length > 0,
+    citationsToRead: citations.map((citation, index) => ({
+      citationIndex: index + 1,
+      target: citation.target,
+      title: citation.title,
+      filePath: citation.filePath,
+      heading: citation.heading,
+      startLine: citation.startLine,
+      endLine: citation.endLine,
+      sourceRef: citation.sourceRef,
+      rawPath: citation.rawPath,
+      artifactId: citation.artifactId,
+      evidenceKind: citation.evidenceKind,
+      chunkId: citation.chunkId,
+    })),
+    contextLayers,
+    diagnostics: retrieval.messages,
   }
-
-  return pages
 }
 
-export function parseWikiLinks(markdown: string): WikiLink[] {
-  return [...markdown.matchAll(WIKI_LINK_RE)].map((match) => ({
-    rawTarget: (match[1] ?? '').trim(),
-    title: (match[2] ?? match[1] ?? '').trim(),
-  })).filter((link) => link.rawTarget.length > 0)
-}
-
-export function parseIndexedTarget(rawTarget: string): { section: WikiSection; slug: string; target: string } | null {
-  return parseWikiPageTarget(rawTarget)
-}
-
-export function resolveWikiLink(rawTarget: string, indexedPages: IndexedPage[]): WikiLinkResolution {
-  const indexedTarget = parseIndexedTarget(rawTarget)
-  if (indexedTarget) {
-    const page = indexedPages.find((candidate) => candidate.target === indexedTarget.target)
-    return page ? { status: 'resolved', page } : { status: 'missing' }
+function selectionFromRetrieval(retrieval: RetrievalResult): QuerySelectionResult {
+  if (retrieval.hits.length === 0) {
+    return { mode: 'no-match', pages: [] }
   }
 
-  const normalizedTarget = rawTarget.trim().toLowerCase()
-  if (!normalizedTarget) {
-    return { status: 'missing' }
+  return {
+    mode: retrieval.mode === 'overview' ? 'overview' : 'matched',
+    pages: retrieval.hits.map((hit) => ({
+      page: {
+        section: hit.chunk.metadata.section,
+        slug: hit.chunk.metadata.slug,
+        title: hit.chunk.pageTitle,
+        target: hit.chunk.pageTarget,
+        filePath: hit.chunk.filePath,
+      },
+      content: hit.chunk.text,
+      heading: hit.chunk.heading,
+      startLine: hit.chunk.startLine,
+      endLine: hit.chunk.endLine,
+    })),
   }
-
-  const matches = indexedPages
-    .filter((page) => page.slug === normalizedTarget)
-    .sort((left, right) => comparePageOrder(left, right) || left.target.localeCompare(right.target))
-
-  if (matches.length === 1) {
-    return { status: 'resolved', page: matches[0] }
-  }
-
-  if (matches.length > 1) {
-    return { status: 'ambiguous', matches }
-  }
-
-  return { status: 'missing' }
 }
 
 async function selectRelevantPages(
@@ -313,7 +501,7 @@ async function readWikiPageContentIfPresent(knowledgeRoot: string, page: Indexed
 function scorePage(question: string, page: IndexedPage, content: string): number {
   const questionTokens = tokenize(question)
   const titleTokens = new Set(tokenize(`${page.title} ${page.slug.replace(/-/g, ' ')}`))
-  const contentTokens = new Set(tokenize(content))
+  const contentTokens = new Set(tokenize(toSearchablePageContent(content)))
   let score = 0
 
   for (const token of questionTokens) {
@@ -331,16 +519,27 @@ function scorePage(question: string, page: IndexedPage, content: string): number
   return score
 }
 
-function comparePageOrder(left: IndexedPage, right: IndexedPage): number {
-  return wikiSectionRank(left.section) - wikiSectionRank(right.section)
+
+function toSearchablePageContent(markdown: string): string {
+  return markdown
+    .replace(/^---\n[\s\S]*?\n---\n?/m, '')
+    .split('\n')
+    .filter((line) => !isQueryMetadataLine(line))
+    .join('\n')
 }
 
-function tokenize(value: string): string[] {
-  return value
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 3 && !STOP_WORDS.has(token))
+function isQueryMetadataLine(line: string): boolean {
+  const trimmed = line.trim()
+  return [
+    '- Artifact ID:',
+    '- Source kind:',
+    '- Source ref:',
+    '- Analysis confidence:',
+    '- 资料 ID:',
+    '- 来源类型:',
+    '- 来源引用:',
+    '- 分析置信度:',
+  ].some((prefix) => trimmed.startsWith(prefix))
 }
 
 function isOverviewQuestion(question: string): boolean {
@@ -363,11 +562,108 @@ function buildAnswer(question: string, selection: QuerySelectionResult): string 
   const primary = selection.pages[0]
   const related = selection.pages.slice(1)
   const summary = primary ? extractSummary(primary.content) : '没有索引页面匹配这个问题。'
+  const evidenceScope = primary?.heading
+    ? `（${primary.heading}，第 ${primary.startLine}-${primary.endLine} 行）`
+    : ''
   const relatedLead = related.length > 0
-    ? ` 相关页面：${related.map(({ page }) => page.title).join('、')}。`
+    ? ` 相关证据：${related.map(({ page, heading }) => heading ? `${page.title}/${heading}` : page.title).join('、')}。`
     : ''
 
-  return `${primary?.page.title ?? '这个 wiki'} 对“${question}”的回答是：${summary}。${relatedLead}`.replace(/。。/g, '。')
+  return `${primary?.page.title ?? '这个 wiki'}${evidenceScope} 对“${question}”的回答是：${summary}。${relatedLead}`.replace(/。。/g, '。')
+}
+
+function compressCitations(citations: QueryCitation[], budget: EvidenceBudget): QueryCitation[] {
+  const seen = new Set<string>()
+  const selected: QueryCitation[] = []
+  let usedChars = 0
+  for (const citation of citations) {
+    if (selected.length >= budget.citationLimit || usedChars >= budget.contextCharCap) break
+    const key = citation.sourceRef
+      ? `source:${citation.sourceRef}:${citation.startLine}:${citation.endLine}`
+      : `target:${citation.target}:${citation.chunkId ?? citation.excerpt}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const remainingChars = budget.contextCharCap - usedChars
+    const excerpt = compressCitationExcerpt(citation.excerpt, remainingChars)
+    if (!excerpt) continue
+    usedChars += excerpt.length
+    selected.push({
+      ...citation,
+      excerpt,
+    })
+  }
+  return selected
+}
+
+function compressCitationExcerpt(excerpt: string, maxChars: number): string {
+  if (maxChars <= 0) {
+    return ''
+  }
+  return compact(excerpt).slice(0, Math.min(360, maxChars))
+}
+
+function redactCitations(citations: QueryCitation[], redactor: (text: string) => string): QueryCitation[] {
+  return citations.map((citation) => ({
+    ...citation,
+    title: redactor(citation.title),
+    excerpt: redactor(citation.excerpt),
+    heading: citation.heading ? redactor(citation.heading) : citation.heading,
+    headingPath: citation.headingPath?.map((heading) => redactor(heading)),
+  }))
+}
+
+export function createSensitiveRedactor(seedText: string): (text: string) => string {
+  const explicitSecrets = new Set<string>()
+  const secretPatterns = [
+    /\b(?:sk|pk|ghp|github_pat|xox[baprs]?|ya29|AIza)[A-Za-z0-9_\-]{8,}\b/g,
+    /\b[A-Z][A-Z0-9_]{11,}\b/g,
+    /\b[A-Za-z0-9_\-]{24,}\.[A-Za-z0-9_\-]{6,}\.[A-Za-z0-9_\-]{12,}\b/g,
+  ] as const
+
+  for (const pattern of secretPatterns) {
+    for (const match of seedText.matchAll(pattern)) {
+      if (match[0]) explicitSecrets.add(match[0])
+    }
+  }
+
+  return (text: string): string => {
+    let redacted = text
+    for (const secret of explicitSecrets) {
+      redacted = redacted.split(secret).join('[REDACTED]')
+    }
+    for (const pattern of secretPatterns) {
+      redacted = redacted.replace(pattern, '[REDACTED]')
+    }
+    return redacted
+  }
+}
+
+function buildGroundedAnswer(
+  question: string,
+  selection: QuerySelectionResult,
+  citations: QueryCitation[],
+  grounding: QueryGroundingDiagnostics,
+): string {
+  if (grounding.answerability === 'insufficient-evidence') {
+    return `我没有在当前索引的 wiki 中找到足够证据来回答“${question}”。可以换用已知页面标题重问，或先摄入更多来源材料。`
+  }
+
+  const base = buildAnswer(question, selection)
+  const claimLines = grounding.claims.length > 0
+    ? ` 关键证据：${grounding.claims.map((claim) => `${claim.text} [${claim.citationIndexes.join(',')}; conf=${claim.confidence}]`).join('；')}。`
+    : ''
+  const evidenceLines = citations
+    .map((citation, index) => {
+      const span = citation.startLine && citation.endLine ? `第 ${citation.startLine}-${citation.endLine} 行` : '页面级证据'
+      const heading = citation.heading ? ` / ${citation.heading}` : ''
+      return `[${index + 1}] ${citation.title}${heading}（${span}）`
+    })
+    .join('；')
+  const conflictNote = grounding.conflictCount > 0
+    ? ` 检索证据中有 ${grounding.conflictCount} 条疑似冲突/过时信号，结论需人工复核：${grounding.contradictionTable.map((entry) => `${entry.issueId} ${entry.recommendation}`).join('；') || '请比较来源时间、适用范围和原始材料'}。`
+    : ''
+
+  return `${base}${claimLines} 证据范围：${evidenceLines}。${conflictNote}`.replace(/。。/g, '。')
 }
 
 function extractSummary(markdown: string): string {
@@ -407,6 +703,7 @@ async function persistSynthesisSuggestion(input: {
   question: string
   answer: string
   citations: QueryCitation[]
+  grounding: QueryGroundingDiagnostics
   primaryPage: IndexedPage
 }): Promise<QuerySynthesisSuggestion> {
   const id = `synthesis-${randomUUID()}`
@@ -420,6 +717,7 @@ async function persistSynthesisSuggestion(input: {
     question: input.question,
     answer: input.answer,
     citations: input.citations,
+    grounding: input.grounding,
     suggestionId: id,
     createdAt,
   })
@@ -434,6 +732,7 @@ async function persistSynthesisSuggestion(input: {
     answer: input.answer,
     citations: input.citations,
     relatedPages: input.citations.map((citation) => citation.target),
+    grounding: input.grounding,
     markdown,
     createdAt,
     updatedAt: createdAt,
@@ -458,16 +757,48 @@ function buildSuggestionSlug(primarySlug: string, suggestionId: string): string 
   return `${primarySlug}-query-synthesis-${uniqueSuffix}`
 }
 
+
+function formatGroundedClaims(grounding: QueryGroundingDiagnostics): string[] {
+  return grounding.claims.length > 0
+    ? grounding.claims.map((claim) => `- ${claim.text} [${claim.supportingCitations.join(', ')}] confidence=${claim.confidence} support=${claim.supportLevel} coverage=${claim.citationCoverage} matched=${claim.matchedTerms.join(', ') || 'none'} reason=${claim.reason}`)
+    : ['- No claim-level citations captured.']
+}
+
+function formatConflictSignals(grounding: QueryGroundingDiagnostics): string[] {
+  return grounding.conflicts.length > 0
+    ? [
+        '| Kind | Severity | Reason | Evidence pair | Targets | Chunk IDs |',
+        '|---|---|---|---|---|---|',
+        ...grounding.conflicts.map((signal) => `| ${signal.kind} | ${signal.severity} | ${signal.reason} | ${signal.evidence.map((entry) => `${entry.citationIndex}:${entry.matchedText ?? 'excerpt'}`).join('<br>')} | ${signal.targets.join('<br>')} | ${signal.chunkIds.join('<br>')} |`),
+      ]
+    : ['- No conflict signals detected.']
+}
+
+function formatContradictionTable(grounding: QueryGroundingDiagnostics): string[] {
+  return grounding.contradictionTable.length > 0
+    ? [
+        '| Issue | Severity | Summary | Recommendation | Evidence |',
+        '|---|---|---|---|---|',
+        ...grounding.contradictionTable.map((entry) => `| ${entry.issueId} | ${entry.severity} | ${entry.summary} | ${entry.recommendation} | ${entry.evidence.map((item) => `#${item.citationIndex} ${item.target}`).join('<br>')} |`),
+      ]
+    : ['- No structured contradiction table entries.']
+}
+
 function buildSuggestionMarkdown(input: {
   title: string
   question: string
   answer: string
   citations: QueryCitation[]
+  grounding: QueryGroundingDiagnostics
   suggestionId: string
   createdAt: string
 }): string {
   const citationLines = input.citations.length > 0
-    ? input.citations.map((citation) => `- [[${citation.target}|${citation.title}]] — ${citation.excerpt}`)
+    ? input.citations.map((citation) => {
+        const span = citation.startLine && citation.endLine ? `:${citation.startLine}-${citation.endLine}` : ''
+        const heading = citation.heading ? ` / ${citation.heading}` : ''
+        return `- [[${citation.target}|${citation.title}]]${heading}${span} — ${citation.excerpt}`
+      })
     : ['- 未捕获到支撑引用。']
 
   return [
@@ -482,12 +813,22 @@ function buildSuggestionMarkdown(input: {
     '## 综合回答',
     input.answer,
     '',
+    '## 证据约束',
+    `- Answerability: ${input.grounding.answerability}`,
+    `- Evidence budget: ${input.grounding.evidenceBudget}`,
+    `- Selected citations: ${input.grounding.selectedCitationCount}`,
+    `- Potential conflicts: ${input.grounding.conflictCount}`,
+    '',
+    '## Claim-level citations',
+    ...formatGroundedClaims(input.grounding),
+    '',
+    '## Conflict signals',
+    ...formatConflictSignals(input.grounding),
+    '',
+    '## Structured contradiction table',
+    ...formatContradictionTable(input.grounding),
+    '',
     '## 引用',
     ...citationLines,
   ].join('\n').trimEnd() + '\n'
-}
-
-async function writeJsonFile(targetPath: string, value: unknown): Promise<void> {
-  await mkdir(path.dirname(targetPath), { recursive: true })
-  await writeFile(targetPath, JSON.stringify(value, null, 2), 'utf8')
 }

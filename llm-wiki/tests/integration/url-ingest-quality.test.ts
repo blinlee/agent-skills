@@ -7,6 +7,7 @@ import { runIngestCommand } from '../../src/cli.js'
 const tempRoots: string[] = []
 
 afterEach(async () => {
+  vi.stubEnv('llm_wiki_config', path.join(os.tmpdir(), `no-embedding-config-${Date.now()}.json`))
   vi.unstubAllGlobals()
   await Promise.all(tempRoots.splice(0).map((target) => rm(target, { recursive: true, force: true })))
 })

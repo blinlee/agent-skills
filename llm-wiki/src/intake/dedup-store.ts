@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { SourceKind } from '../types.js'
+import { normalizeDedupEntry, normalizeSourceOutputManifest } from './manifest-migration.js'
 
 export type OutputPageSnapshot = {
   filePath: string
@@ -14,7 +15,7 @@ export type SourceOutputManifest = {
   pageFiles: string[]
   indexEntries: string[]
   reviewFiles?: string[]
-  pageSnapshots?: OutputPageSnapshot[]
+  pageSnapshots: OutputPageSnapshot[]
 }
 
 export type DedupEntry = {
@@ -31,8 +32,15 @@ type DedupManifest = {
 }
 
 export type DedupDecision = {
-  action: 'compile' | 'skip' | 'recompile'
-  reason: 'first-seen' | 'unchanged' | 'changed'
+  action: 'compile' | 'skip' | 'recompile' | 'pending'
+  reason:
+    | 'first-seen'
+    | 'unchanged'
+    | 'changed'
+    | 'content-exact-hash'
+    | 'content-semantic-high'
+    | 'content-dedup-confirmation'
+    | 'content-dedup-user-skip'
 }
 
 export type DedupStore = {
@@ -57,16 +65,7 @@ async function readManifest(manifestPath: string): Promise<DedupManifest> {
       entries: Object.fromEntries(
         Object.entries(parsed.entries ?? {}).map(([identity, entry]) => [
           identity,
-          {
-            ...entry,
-            lastOutputManifest: entry?.lastOutputManifest
-              ? {
-                  ...entry.lastOutputManifest,
-                  reviewFiles: entry.lastOutputManifest.reviewFiles ?? [],
-                  pageSnapshots: entry.lastOutputManifest.pageSnapshots ?? [],
-                }
-              : null,
-          },
+          normalizeDedupEntry(entry as DedupEntry),
         ]),
       ),
     }
@@ -147,11 +146,7 @@ export function createDedupStore(manifestPath: string): DedupStore {
           lastSuccessfulJobId: input.jobId,
           lastCompiledAt: input.compiledAt ?? new Date().toISOString(),
           lastOutputManifest: input.outputManifest
-            ? {
-                ...input.outputManifest,
-                reviewFiles: input.outputManifest.reviewFiles ?? [],
-                pageSnapshots: input.outputManifest.pageSnapshots ?? [],
-              }
+            ? normalizeSourceOutputManifest(input.outputManifest)
             : null,
         }
 

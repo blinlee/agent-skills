@@ -1,253 +1,220 @@
 # llm-wiki
 
-CLI-first markdown knowledge-base compiler for building human-governed, Obsidian-compatible llm-wiki knowledge bases.
+CLI-first markdown knowledge-base compiler for source-grounded, human-governed LLM wikis.
 
-llm-wiki is for people who want a durable knowledge layer from source material without collapsing everything into one giant unreviewed notebook. It turns readable inputs into a structured markdown wiki with raw-source evidence, review surfaces, taxonomy proposals, queryable pages, and optional multi-wiki registry management.
+llm-wiki turns source material into a durable Markdown wiki with preserved raw evidence, reviewable classification proposals, retrieval indexes, source-reading query output, and optional multi-wiki registry management. It is both a TypeScript CLI package and an agent skill backend.
 
-## What problem it solves
+## What It Provides
 
-Most “AI knowledge base” workflows fail in one of two ways:
+- Knowledge-root setup, ingest, query, lint, index, maintenance, and OKF export/import.
+- Registry-root workflows for multiple bounded wikis under one atlas.
+- Inbox routing with explicit human approval for accept, reject, park, profile, taxonomy, and bridge decisions.
+- Raw-backed RAG retrieval that gives agents original source passages or concise original-document reading packs.
+- Optional embedding, HyDE, query expansion, rerank, entity graph, key-info, wiki overview, and SQLite-backed cache/state surfaces.
+- Deduplication workflows for exact, semantic, pending-decision, merge, stats, scan, and historical backfill cases.
+- Host-local root configuration shared by Codex, Claude, OpenClaw, and other agents on the same machine.
 
-1. they are too loose, so generated notes drift away from source evidence
-2. they are too monolithic, so every topic gets dumped into one polluted vault
+## Core Concepts
 
-llm-wiki takes the opposite stance:
+### Knowledge Root
 
-- raw sources are preserved as evidence
-- generated structure stays reviewable
-- taxonomy and routing decisions remain human-governed
-- one giant vault is optional, not required
+A knowledge root is one bounded wiki workspace. It contains wiki pages, raw evidence, manifests, review/proposal state, logs, schemas, and system indexes.
 
-## What this repository contains
+### Registry Root
 
-- **CLI compiler** for initializing, ingesting, querying, linting, indexing, and reviewing wiki roots
-- **Registry workflow** for managing multiple isolated wikis under one registry
-- **Human review surfaces** for taxonomy, routing, profile creation, and bridge decisions
-- **OpenClaw-facing skill contract** at `SKILL.md`
-- **TypeScript implementation and tests** for the durable core
-- **`AGENTS.md` contributor guidance** for agent-assisted development workflows
+A registry root is an atlas that manages multiple knowledge roots. Use it when topics should stay isolated but still be discoverable through one query and governance surface.
 
-## Core concepts
+### Source Evidence
 
-### Knowledge root
+Raw files and decoded originals stay under `raw/`. Generated wiki pages, overviews, indexes, graph context, and proposal ledgers help route and organize knowledge; final query evidence should come from original source text or raw-backed source fragments whenever available.
 
-A knowledge root is a bounded wiki workspace created by `init`. It includes:
+### Human-Governed Proposals
 
-- wiki pages and schema files
-- raw source intake and manifests
-- review and taxonomy state
-- system indexes and logs
+Model-generated routing, taxonomy, profile, bridge, dedup, and synthesis decisions are proposals until a human approves them. Approval-gated commands require explicit user approval.
 
-### Registry root
+## Requirements
 
-A registry root lets you manage multiple bounded wikis instead of forcing everything into one vault. This is useful when topics should stay isolated but still be queryable through a shared operating layer.
+| Tool | Requirement |
+| --- | --- |
+| Node.js | >= 22 |
+| npm | Used for install, build, test, and CLI wrappers |
+| Git | Recommended for source and generated-wiki history |
+| Python 3 | Used by skill helper scripts |
 
-### Human-governed proposals
+The core CLI uses local files and SQLite. It does not require a hosted database, vector service, or Obsidian installation.
 
-llm-wiki intentionally treats model-generated classifications, routing suggestions, and profile suggestions as **proposals**, not automatic truth. A human reviews and accepts or rejects them.
-
-## Environment requirements
-
-| Item | Version / expectation | Why |
-| --- | --- | --- |
-| Node.js | >= 22 | required for the TypeScript CLI and test toolchain |
-| npm | recent version recommended | used for install, build, and test commands |
-| Git | recommended | useful for versioning generated wiki roots and project changes |
-
-No database service, vector store, or Obsidian install is required to run the core CLI.
-
-## Install
+## Install And Build
 
 ```bash
 npm install
-```
-
-## Build
-
-```bash
 npm run build
 ```
 
-## Test
-
-```bash
-npm test
-```
-
-## Quick start
-
-### Agent workflow triggers
-
-When used as a skill from this repository root, llm-wiki exposes five stable user-facing workflows:
-
-| Trigger | Use it for |
-| --- | --- |
-| `/llm-wiki setup` | Connect to or initialize a local knowledge root or registry root. If no root is known, the agent asks for one and can save it as a host-local default. |
-| `/llm-wiki inbox` | Inspect `raw/inbox`, decode non-Markdown drops, ingest or route new material, present placement/linking decisions for that batch, and execute only approved accept/reject/park/override actions. |
-| `/llm-wiki query <question>` | Ask the current wiki or registry with citation-grounded answers. |
-| `/llm-wiki maintain` | Run health and freshness checks such as `status`, `lint`, and `index`. |
-| `/llm-wiki govern` | Manage registry membership, profile boundaries, taxonomy, bridges, and routing policy. |
-
-These are skill-level workflow contracts over the CLI commands below, not separate TypeScript subcommands.
-
-The runtime CLI uses the checked-in compiled entrypoint at `dist/src/cli.js`. `npm run --silent cli -- ...`
-therefore does not require global `tsx`; install Node dependencies only when developing, rebuilding, or running tests.
-
-The skill resolves the local target root in this order:
-
-1. an explicit path in the request
-2. `llm_wiki_root`
-3. a host-local config managed by `scripts/root_config.py`
-4. if none exists, ask the user for the root and whether to save it locally
-
-Saved defaults are agent-shared host-local state. `scripts/root_config.py set` writes to `$llm_wiki_config` only when that explicit override is set; otherwise it writes the canonical user config path such as `~/.config/llm-wiki/config.json` on Unix/macOS or `%APPDATA%/llm-wiki/config.json` on Windows. `show` also reads `$XDG_CONFIG_HOME/llm-wiki/config.json` and macOS Application Support as compatibility fallbacks. Defaults are not committed to this repository.
-
-### 1. Initialize a knowledge root
-
-```bash
-npm run --silent cli -- init ./knowledge
-```
-
-### 2. Ingest a source
-
-```bash
-npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md
-```
-
-Or ingest everything currently waiting in the inbox:
-
-```bash
-npm run --silent cli -- ingest-inbox ./knowledge
-```
-
-### 3. Query the wiki
-
-```bash
-npm run --silent cli -- query ./knowledge "What is Compiler Notes?"
-```
-
-### 4. Lint the wiki
-
-```bash
-npm run --silent cli -- lint ./knowledge
-```
-
-### 5. Build the local index
-
-```bash
-npm run --silent cli -- index ./knowledge
-```
-
-### 6. Inspect readiness and job state
-
-```bash
-npm run --silent cli -- status ./knowledge
-```
-
-## Multi-wiki registry workflow
-
-If you want multiple isolated wikis under one shared operating layer:
-
-### Initialize a registry
-
-```bash
-npm run --silent cli -- registry-init ~/my-wikis
-```
-
-### Add a wiki profile
-
-```bash
-npm run --silent cli -- registry-add ~/my-wikis --id ai --title "AI Wiki" --scope "llm,agent,rag,deep learning"
-```
-
-### List registered wikis
-
-```bash
-npm run --silent cli -- registry-list ~/my-wikis
-```
-
-### Route a new source into the right wiki
-
-```bash
-npm run --silent cli -- route ~/my-wikis ~/Downloads/article.md
-```
-
-### Ask across registered wikis
-
-```bash
-npm run --silent cli -- query-registry ~/my-wikis "What do my notes say about LoRA?"
-```
-
-## Non-Markdown documents
-
-The core llm-wiki CLI ingests Markdown/text-like sources. For PDFs, images, Word, PowerPoint, Excel, EPUB/HTML, ZIPs, audio, notebooks, or other document-like formats, use the installed `/anything2md` skill first to produce a Markdown derivative.
-
-The llm-wiki skill enforces this before ingesting or routing non-Markdown drops:
-
-1. verify `/anything2md` is installed with `python3 scripts/skill_discovery.py anything2md --json`
-2. run `python3 scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>`
-3. run the returned `shellCommand`, which decodes the source without passing `--knowledge-root`
-4. continue with the normal llm-wiki ingest, route, review, lint, and index workflow using the returned `decodedMarkdown`
-
-The handoff command stores the original binary, decoded Markdown, converter metadata, and extracted assets under `raw/objects/<sha-prefix>/<sha>/...`. Do not create or use a top-level `<root>/anything2md/` directory inside an llm-wiki root; that layout belongs to standalone anything2md archive mode, not to llm-wiki.
-
-## Command surface
-
-The CLI currently exposes these main command groups:
-
-### Knowledge-root commands
-
-- `init`
-- `ingest`
-- `ingest-inbox`
-- `query`
-- `lint`
-- `index`
-- `taxonomy-list`
-- `taxonomy-accept`
-- `taxonomy-reject`
-- `status`
-- `save-synthesis`
-
-### Registry commands
-
-- `registry-init`
-- `registry-add`
-- `registry-list`
-- `intake-scan`
-- `intake-status`
-- `intake-next`
-- `route`
-- `route-inbox`
-- `route-accept`
-- `intake-complete`
-- `intake-park`
-- `intake-reject`
-- `profile-suggest`
-- `profile-accept`
-- `profile-reject`
-- `profile-review`
-- `bridge-list`
-- `bridge-accept`
-- `bridge-reject`
-- `bridge-index`
-- `query-registry`
-
-Run commands through:
+The runtime CLI entrypoint is checked in at `dist/src/cli.js`:
 
 ```bash
 npm run --silent cli -- <command> ...args
 ```
 
-`--silent` is recommended because the CLI emits JSON-oriented output and npm prefix noise can interfere with parsing.
+Use `--silent` for JSON-oriented output.
 
-## Repository layout
+## Skill Workflows
+
+The agent skill exposes five public workflows:
+
+| Workflow | Purpose |
+| --- | --- |
+| `/llm-wiki setup` | Resolve, save, initialize, or inspect a knowledge root or registry root. |
+| `/llm-wiki inbox` | Process new raw drops, decode non-Markdown sources, route or ingest material, present placement/linking decisions, and execute approved actions. |
+| `/llm-wiki query <question>` | Run `scripts/query_handoff.py`, execute the recommended query command, and answer from the returned source-reading pack. |
+| `/llm-wiki maintain` | Refresh indexes, overviews, readiness, embedding state, lint/status, and derived maintenance artifacts. |
+| `/llm-wiki govern` | Manage registry membership, wiki profiles, taxonomy, bridge links, routing policy, and approval queues. |
+
+The active skill contract is [SKILL.md](SKILL.md). Detailed operator references live in:
+
+- [references/command-map.md](references/command-map.md)
+- [references/rag-query-workflow.md](references/rag-query-workflow.md)
+- [references/classification-review.md](references/classification-review.md)
+- [references/embedding-provider.md](references/embedding-provider.md)
+- [references/governance.md](references/governance.md)
+
+## Root Resolution
+
+Agent workflows resolve the target root in this order:
+
+1. Explicit root path from the user.
+2. `llm_wiki_root`.
+3. Host-local config via `scripts/root_config.py`.
+4. User-provided path saved back to host-local config when approved.
+
+```bash
+python3 scripts/root_config.py show --strict --require-existing
+python3 scripts/root_config.py set <root> --kind <knowledge|registry|unknown>
+```
+
+Host-local root config is machine state, not repository state.
+
+## Quick Start
+
+Create and query one wiki:
+
+```bash
+npm run --silent cli -- init ./knowledge
+npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md
+npm run --silent cli -- query ./knowledge "What is Compiler Notes?"
+npm run --silent cli -- lint ./knowledge
+```
+
+Process a wiki inbox:
+
+```bash
+npm run --silent cli -- ingest-inbox ./knowledge
+npm run --silent cli -- maintain ./knowledge
+```
+
+Create and query a registry:
+
+```bash
+npm run --silent cli -- registry-init ./atlas
+npm run --silent cli -- registry-add ./atlas --id ai --title "AI Wiki" --scope "llm,agent,rag"
+npm run --silent cli -- route ./atlas ./notes/article.md
+npm run --silent cli -- query-registry ./atlas "What do my notes say about LoRA?"
+```
+
+## Command Surface
+
+### Setup And Status
+
+- `init`
+- `status`
+- `registry-init`
+- `registry-add`
+- `registry-list`
+
+### Ingest And Inbox
+
+- `ingest`
+- `ingest-inbox`
+- `intake-scan`
+- `intake-status`
+- `intake-next`
+- `intake-complete`
+- `intake-park`
+- `intake-reject`
+- `route`
+- `route-inbox`
+- `route-accept`
+
+### Query And Synthesis
+
+- `query`
+- `query-registry`
+- `query-readiness`
+- `save-synthesis`
+
+Default query output is compact and source-reading oriented. Use `--full` for diagnostics.
+
+### Maintenance And Indexing
+
+- `maintain`
+- `lint`
+- `index`
+- `wiki-overview`
+- `embed-index`
+
+### Deduplication
+
+- `dedup check`
+- `dedup pending`
+- `dedup decide`
+- `dedup merge`
+- `dedup stats`
+- `dedup scan`
+- `dedup backfill`
+
+### Governance
+
+- `taxonomy-list`
+- `taxonomy-accept`
+- `taxonomy-reject`
+- `profile-suggest`
+- `profile-accept`
+- `profile-reject`
+- `profile-review`
+- `bridge-list`
+- `bridge-index`
+- `bridge-accept`
+- `bridge-reject`
+
+### Packaging And Interchange
+
+- `export-bundle --okf`
+- `ingest --okf`
+
+## Non-Markdown Documents
+
+The CLI ingests Markdown/text-like sources. PDFs, images, Word, PowerPoint, Excel, EPUB/HTML, ZIPs, audio, notebooks, and similar document formats should be decoded through the installed `/anything2md` skill before ingest or route.
+
+```bash
+python3 scripts/skill_discovery.py anything2md --json
+python3 scripts/decoder_handoff.py <root> <source> --anything2md-root <anything2mdSkillRoot>
+```
+
+The decoder handoff preserves the original object under `raw/objects/<sha-prefix>/<sha>/...` and returns a Markdown derivative for llm-wiki ingest or routing.
+
+## Retrieval And Embeddings
+
+Retrieval uses Markdown/wiki indexes, raw-backed chunks, lexical signals, optional embeddings, optional HyDE, optional query expansion, optional rerank, graph context, and domain/profile calibration. Embedding caches live under `system/index/embeddings/` and are rebuildable.
+
+For survey/framework questions, query output can use document-reading mode and return a concise set of original documents. For precise questions, query output returns stitched original-source passages.
+
+## Repository Layout
 
 ```text
 llm-wiki/
-├── README.md
-├── LICENSE
 ├── SKILL.md
+├── README.md
+├── README.zh-CN.md
 ├── package.json
 ├── scripts/
 ├── references/
@@ -257,52 +224,27 @@ llm-wiki/
 └── dist/
 ```
 
-Notes:
+`dist/` is checked-in runtime output for the package CLI. Rebuild it after TypeScript changes.
 
-- `dist/` is checked-in runtime output for the package CLI; rebuild it with `npm run build` after TypeScript changes
-- `node_modules/` is git-ignored
-- `SKILL.md`, `scripts/`, and `references/` are the root-level skill surface
-- `vendor/`, `.worktrees/`, `.omx/`, local `knowledge-*`, and `review/` are git-ignored local or reference surfaces
-
-## Design stance
-
-llm-wiki is opinionated about a few things:
-
-- source evidence matters
-- generated structure should stay inspectable
-- routing and taxonomy should remain reviewable
-- multiple bounded wikis are often better than one giant wiki
-- the durable CLI/core should own state mutation, not a thin agent wrapper
-
-## OpenClaw skill boundary
-
-This repository includes a host-neutral skill contract at `SKILL.md`.
-
-The skill layer is intentionally thin. The durable logic lives in the TypeScript CLI/core. That keeps the repo usable both as a direct CLI project and as a skill backend.
-
-The skill is also where the six `/llm-wiki ...` workflows, `/anything2md` handoff, host-local root default, and human approval gates are documented for agents.
-
-`AGENTS.md` is maintainer guidance for agent-assisted contributors. Regular CLI users can ignore it.
-
-## Typical developer workflow
+## Development
 
 ```bash
 npm install
-npm test
 npm run build
-npm run --silent cli -- init /tmp/knowledge-demo
-npm run --silent cli -- ingest /tmp/knowledge-demo ./tests/fixtures/inputs/sample.md
-npm run --silent cli -- query /tmp/knowledge-demo "What is Compiler Notes?"
+npm test
+npm run --silent test:unit
+npm run --silent test:query
+npm run --silent test:registry
+npm run --silent test:embedding
+npm run --silent test:smoke
+node scripts/main_workflow_smoke.mjs --output /tmp/llm-wiki-main-workflow-smoke.json
 ```
 
-## What this repository is not
+`scripts/main_workflow_smoke.mjs` exercises setup, inbox, query, maintain, and govern on temporary local roots.
 
-llm-wiki is not:
+## Boundaries
 
-- a hosted SaaS product
-- an automatic approval system for model-generated classifications
-- a replacement for human curation
-- a promise that every knowledge workflow belongs in one shared vault
+llm-wiki is not a hosted service, automatic approval system, or replacement for human curation. It is a local, source-preserving knowledge workflow for agents and people who need auditable evidence, controlled organization, and reusable retrieval context.
 
 ## License
 

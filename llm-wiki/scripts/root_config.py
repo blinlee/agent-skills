@@ -158,6 +158,47 @@ def set_default(args: argparse.Namespace) -> int:
     return 0
 
 
+def set_embedding(args: argparse.Namespace) -> int:
+    path = write_config_path()
+    data = read_config(path)
+    if "_error" in data:
+        write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
+        return 2
+
+    embedding = {
+        "provider": args.provider,
+        "endpoint": args.endpoint,
+        "model": args.model,
+    }
+    if args.dimensions is not None:
+        embedding["dimensions"] = args.dimensions
+    if args.timeout_ms is not None:
+        embedding["timeoutMs"] = args.timeout_ms
+    if args.format is not None:
+        embedding["format"] = args.format
+    data["embeddingProvider"] = embedding
+    data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    write_json({"status": "saved", "embeddingProvider": embedding, "configPath": str(path)})
+    return 0
+
+
+def clear_embedding(_: argparse.Namespace) -> int:
+    path = write_config_path()
+    data = read_config(path)
+    if "_error" in data:
+        write_json({"status": "error", "error": data["_error"], "configPath": str(path)})
+        return 2
+    data.pop("embeddingProvider", None)
+    data.pop("embedding", None)
+    data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    write_json({"status": "cleared", "configPath": str(path)})
+    return 0
+
+
 def clear_default(_: argparse.Namespace) -> int:
     path = write_config_path()
     data = read_config(path)
@@ -186,6 +227,18 @@ def main() -> int:
     set_parser.add_argument("root", help="Knowledge root or registry root to save as the local default.")
     set_parser.add_argument("--kind", choices=["knowledge", "registry", "unknown"], default="unknown")
     set_parser.set_defaults(func=set_default)
+
+    embedding_parser = subparsers.add_parser("embedding-set", help="Save a host-local embedding provider config.")
+    embedding_parser.add_argument("--provider", choices=["local-http", "ollama", "lm-studio", "custom-endpoint"], default="ollama")
+    embedding_parser.add_argument("--endpoint", required=True)
+    embedding_parser.add_argument("--model", required=True)
+    embedding_parser.add_argument("--dimensions", type=int)
+    embedding_parser.add_argument("--timeout-ms", type=int)
+    embedding_parser.add_argument("--format", choices=["ollama-embed", "ollama-embeddings", "openai-compatible"])
+    embedding_parser.set_defaults(func=set_embedding)
+
+    embedding_clear_parser = subparsers.add_parser("embedding-clear", help="Remove the saved host-local embedding provider config.")
+    embedding_clear_parser.set_defaults(func=clear_embedding)
 
     clear_parser = subparsers.add_parser("clear", help="Remove the saved host-local default root.")
     clear_parser.set_defaults(func=clear_default)

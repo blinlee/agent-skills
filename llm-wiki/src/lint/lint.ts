@@ -1,9 +1,10 @@
-import { access, readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { hashRawBody, parseManagedRawFile, readRawManifest } from '../intake/raw-store.js'
 import { defaultKnowledgeLayout, requiredKnowledgeFiles, resolveKnowledgePaths } from '../paths.js'
-import { loadIndexedPages, parseWikiLinks, parseIndexedTarget, resolveWikiLink } from '../query/query.js'
+import { loadIndexedPages, parseWikiLinks, parseIndexedTarget, resolveWikiLink } from '../wiki/links.js'
 import { wikiSectionOrder } from '../wiki/sections.js'
+import { exists, readJsonFile } from '../shared/fs.js'
 
 export type LintCommandInput = {
   knowledgeRoot: string
@@ -261,17 +262,6 @@ function findDirectedCycle(edges: ReadonlyArray<readonly [string, string]>): str
 
 function findRedirectCycle(redirects: Record<string, string>): string[] {
   return findDirectedCycle(Object.entries(redirects))
-}
-
-async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    return JSON.parse(await readFile(filePath, 'utf8')) as T
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return fallback
-    }
-    throw error
-  }
 }
 
 async function lintRawIntegrity(root: string): Promise<{ checkedFiles: string[]; errors: LintMessage[]; warnings: LintMessage[] }> {
@@ -625,13 +615,4 @@ async function collectWikiMarkdownFiles(root: string): Promise<string[]> {
   }
 
   return results.sort((left, right) => left.localeCompare(right))
-}
-
-async function exists(targetPath: string): Promise<boolean> {
-  try {
-    await access(targetPath)
-    return true
-  } catch {
-    return false
-  }
 }

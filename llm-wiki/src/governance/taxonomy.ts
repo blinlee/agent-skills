@@ -3,6 +3,7 @@ import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { ensureKnowledgeRootLayout } from '../paths.js'
 import { updateWikiIndex } from '../wiki/index-log.js'
+import { ensureJsonFile, readJsonFile, writeJsonFile } from '../shared/fs.js'
 
 export type TopicProposalInput = {
   name: string
@@ -580,36 +581,6 @@ function formatAcceptedConceptPage(proposal: MaterializedProposal): string {
     '## Source evidence',
     sourceLinks,
   ].join('\n').trimEnd() + '\n'
-}
-
-async function readJsonFile<T>(targetPath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await readFile(targetPath, 'utf8')
-    return JSON.parse(raw) as T
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return fallback
-    }
-
-    throw error
-  }
-}
-
-async function ensureJsonFile(targetPath: string, fallback: unknown): Promise<void> {
-  try {
-    await readFile(targetPath, 'utf8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error
-    }
-
-    await writeJsonFile(targetPath, fallback)
-  }
-}
-
-async function writeJsonFile(targetPath: string, value: unknown): Promise<void> {
-  await mkdir(path.dirname(targetPath), { recursive: true })
-  await writeFile(targetPath, JSON.stringify(value, null, 2), 'utf8')
 }
 
 function slugify(value: string): string {

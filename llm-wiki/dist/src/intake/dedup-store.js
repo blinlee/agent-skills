@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { normalizeDedupEntry, normalizeSourceOutputManifest } from './manifest-migration.js';
 async function readManifest(manifestPath) {
     try {
         const raw = await readFile(manifestPath, 'utf8');
@@ -8,16 +9,7 @@ async function readManifest(manifestPath) {
         return {
             entries: Object.fromEntries(Object.entries(parsed.entries ?? {}).map(([identity, entry]) => [
                 identity,
-                {
-                    ...entry,
-                    lastOutputManifest: entry?.lastOutputManifest
-                        ? {
-                            ...entry.lastOutputManifest,
-                            reviewFiles: entry.lastOutputManifest.reviewFiles ?? [],
-                            pageSnapshots: entry.lastOutputManifest.pageSnapshots ?? [],
-                        }
-                        : null,
-                },
+                normalizeDedupEntry(entry),
             ])),
         };
     }
@@ -86,11 +78,7 @@ export function createDedupStore(manifestPath) {
                     lastSuccessfulJobId: input.jobId,
                     lastCompiledAt: input.compiledAt ?? new Date().toISOString(),
                     lastOutputManifest: input.outputManifest
-                        ? {
-                            ...input.outputManifest,
-                            reviewFiles: input.outputManifest.reviewFiles ?? [],
-                            pageSnapshots: input.outputManifest.pageSnapshots ?? [],
-                        }
+                        ? normalizeSourceOutputManifest(input.outputManifest)
                         : null,
                 };
                 manifest.entries[input.identity] = nextEntry;

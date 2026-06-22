@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ensureKnowledgeRootLayout } from '../paths.js';
 import { updateWikiIndex } from '../wiki/index-log.js';
+import { ensureJsonFile, readJsonFile, writeJsonFile } from '../shared/fs.js';
 export async function listTaxonomyProposals(root) {
     const paths = await ensureKnowledgeRootLayout(root);
     const proposalDirectory = path.join(paths.taxonomyDirectory, 'proposals');
@@ -375,33 +376,6 @@ function formatAcceptedConceptPage(proposal) {
         '## Source evidence',
         sourceLinks,
     ].join('\n').trimEnd() + '\n';
-}
-async function readJsonFile(targetPath, fallback) {
-    try {
-        const raw = await readFile(targetPath, 'utf8');
-        return JSON.parse(raw);
-    }
-    catch (error) {
-        if (error.code === 'ENOENT') {
-            return fallback;
-        }
-        throw error;
-    }
-}
-async function ensureJsonFile(targetPath, fallback) {
-    try {
-        await readFile(targetPath, 'utf8');
-    }
-    catch (error) {
-        if (error.code !== 'ENOENT') {
-            throw error;
-        }
-        await writeJsonFile(targetPath, fallback);
-    }
-}
-async function writeJsonFile(targetPath, value) {
-    await mkdir(path.dirname(targetPath), { recursive: true });
-    await writeFile(targetPath, JSON.stringify(value, null, 2), 'utf8');
 }
 function slugify(value) {
     const normalized = value

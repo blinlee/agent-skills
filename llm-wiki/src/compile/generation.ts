@@ -14,7 +14,6 @@ export type SynthesisSuggestionPayload = {
   title: string
   body: string
   rationale: string
-  relatedPageSlugs: string[]
 }
 
 export type FileMutationInstruction = {

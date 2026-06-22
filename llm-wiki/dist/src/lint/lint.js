@@ -1,9 +1,10 @@
-import { access, readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { hashRawBody, parseManagedRawFile, readRawManifest } from '../intake/raw-store.js';
 import { defaultKnowledgeLayout, requiredKnowledgeFiles, resolveKnowledgePaths } from '../paths.js';
-import { loadIndexedPages, parseWikiLinks, parseIndexedTarget, resolveWikiLink } from '../query/query.js';
+import { loadIndexedPages, parseWikiLinks, parseIndexedTarget, resolveWikiLink } from '../wiki/links.js';
 import { wikiSectionOrder } from '../wiki/sections.js';
+import { exists, readJsonFile } from '../shared/fs.js';
 export async function runLint(input) {
     const root = path.resolve(input.knowledgeRoot);
     const errors = [];
@@ -217,17 +218,6 @@ function findDirectedCycle(edges) {
 }
 function findRedirectCycle(redirects) {
     return findDirectedCycle(Object.entries(redirects));
-}
-async function readJsonFile(filePath, fallback) {
-    try {
-        return JSON.parse(await readFile(filePath, 'utf8'));
-    }
-    catch (error) {
-        if (error.code === 'ENOENT') {
-            return fallback;
-        }
-        throw error;
-    }
 }
 async function lintRawIntegrity(root) {
     const errors = [];
@@ -538,13 +528,4 @@ async function collectWikiMarkdownFiles(root) {
         }
     }
     return results.sort((left, right) => left.localeCompare(right));
-}
-async function exists(targetPath) {
-    try {
-        await access(targetPath);
-        return true;
-    }
-    catch {
-        return false;
-    }
 }

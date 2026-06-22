@@ -1,7 +1,9 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { runCliFromArgv } from '../../src/cli.js'
 import { appendWikiLog, updateWikiIndex } from '../../src/wiki/index-log.js'
 import { writeKnowledgeChanges } from '../../src/wiki/page-writer.js'
 
@@ -9,6 +11,7 @@ const testRoots: string[] = []
 
 afterEach(async () => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
   await Promise.all(testRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
 })
 
@@ -52,6 +55,15 @@ describe('wiki writes', () => {
     const logLines = readLogDataLines(logContent)
     expect(logLines).toHaveLength(1)
     expect(parseLogLineMessage(logLines[0])).toBe('ingested compiler-notes')
+
+    const sourceHistory = await readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes', 'log.md'), 'utf8')
+    const entityHistory = await readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw', 'log.md'), 'utf8')
+    const conceptHistory = await readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation', 'log.md'), 'utf8')
+    expect(sourceHistory).toContain('# Page Log')
+    expect(sourceHistory).toContain('"target":"sources/compiler-notes"')
+    expect(sourceHistory).toContain('"message":"ingested compiler-notes"')
+    expect(entityHistory).toContain('"target":"entities/openclaw"')
+    expect(conceptHistory).toContain('"target":"concepts/compilation"')
   })
 
   it('groups qualified wiki index entries by page type for Obsidian-style navigation', async () => {
@@ -164,6 +176,245 @@ describe('wiki writes', () => {
     const logLines = readLogDataLines(await readFile(path.join(knowledgeRoot, 'wiki', 'log.md'), 'utf8'))
     expect(logLines).toHaveLength(logMessages.length)
     expect(logLines.map(parseLogLineMessage).sort()).toEqual([...logMessages].sort())
+  })
+
+  it('exports wiki pages as an OKF bundle with frontmatter and progressive indexes', async () => {
+    const knowledgeRoot = await createTestRoot()
+    const outputDir = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-okf-export-'))
+    testRoots.push(outputDir)
+
+    await writeKnowledgeChanges({
+      knowledgeRoot,
+      sourcePage: {
+        slug: 'compiler-notes',
+        title: 'Compiler Notes',
+        body: '# Compiler Notes\n\nCompiler Notes explains deterministic build evidence.\n',
+        topics: ['compiler'],
+        artifactId: 'raw/compiler-notes.md',
+      },
+      entityPages: [],
+      conceptPages: [],
+      synthesisSuggestions: [],
+      logEntry: 'ingested compiler-notes',
+      indexEntries: ['- [[sources/compiler-notes|Compiler Notes]]'],
+    })
+
+    const result = await runCliFromArgv(['export-bundle', knowledgeRoot, '--okf', outputDir]) as {
+      conceptCount: number
+      indexFileCount: number
+      archiveFile: string
+      archiveEntryCount: number
+      files: string[]
+    }
+    testRoots.push(result.archiveFile)
+    const exported = await readFile(path.join(outputDir, 'sources', 'compiler-notes.md'), 'utf8')
+    const rootIndex = await readFile(path.join(outputDir, 'index.md'), 'utf8')
+    const sourcesIndex = await readFile(path.join(outputDir, 'sources', 'index.md'), 'utf8')
+    const pageLog = await readFile(path.join(outputDir, 'sources', 'compiler-notes', 'log.md'), 'utf8')
+    const log = await readFile(path.join(outputDir, 'log.md'), 'utf8')
+    const archiveContent = gunzipSync(await readFile(result.archiveFile)).toString('utf8')
+
+    expect(result.conceptCount).toBe(1)
+    expect(result.indexFileCount).toBe(2)
+    expect(result.archiveFile).toBe(`${outputDir}.tar.gz`)
+    expect(result.archiveEntryCount).toBe(6)
+    expect(result.files).toEqual(expect.arrayContaining([
+      path.join(outputDir, '.llm-wiki-okf-export.json'),
+      path.join(outputDir, 'sources', 'compiler-notes.md'),
+      path.join(outputDir, 'sources', 'compiler-notes', 'log.md'),
+      path.join(outputDir, 'index.md'),
+      path.join(outputDir, 'sources', 'index.md'),
+    ]))
+    expect(exported).toContain('type: "source"\n')
+    expect(exported).toContain('title: "Compiler Notes"\n')
+    expect(exported).toContain('description: "Compiler Notes explains deterministic build evidence."\n')
+    expect(exported).toContain('resource: "raw/compiler-notes.md"\n')
+    expect(exported).toContain('tags: ["compiler"]\n')
+    expect(exported).toContain('x-llmwiki-target: "sources/compiler-notes"\n')
+    expect(exported).toContain('# Compiler Notes\n\nCompiler Notes explains deterministic build evidence.')
+    expect(rootIndex).toContain('type: "directory-index"\n')
+    expect(rootIndex).toContain('title: "OKF Bundle Index"\n')
+    expect(rootIndex).toContain('description: "Directory index for the OKF bundle."\n')
+    expect(rootIndex).toContain('resource: ""\n')
+    expect(rootIndex).toContain('tags: ["okf-index"]\n')
+    expect(rootIndex).toContain('timestamp: ')
+    expect(sourcesIndex).toContain('type: "directory-index"\n')
+    expect(sourcesIndex).toContain('title: "sources Index"\n')
+    expect(rootIndex).toContain('* [Compiler Notes](sources/compiler-notes.md) - Compiler Notes explains deterministic build evidence.')
+    expect(sourcesIndex).toContain('* [Compiler Notes](compiler-notes.md) - Compiler Notes explains deterministic build evidence.')
+    expect(pageLog).toContain('"target":"sources/compiler-notes"')
+    expect(log).toContain('ingested compiler-notes')
+    expect(archiveContent).toContain('sources/compiler-notes.md')
+    expect(archiveContent).toContain('sources/compiler-notes/log.md')
+    expect(archiveContent).toContain('sources/index.md')
+    expect(archiveContent).toContain('log.md')
+    expect(archiveContent).toContain('.llm-wiki-okf-export.json')
+  })
+
+  it('refuses to export over unsafe or non-OKF directories', async () => {
+    const knowledgeRoot = await createTestRoot()
+    const outputDir = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-okf-unsafe-'))
+    testRoots.push(outputDir)
+    const sentinelPath = path.join(outputDir, 'sentinel.txt')
+    await writeFile(sentinelPath, 'do not delete', 'utf8')
+
+    await expect(runCliFromArgv(['export-bundle', knowledgeRoot, '--okf', knowledgeRoot]))
+      .rejects.toThrow(/overlapping the knowledge root/)
+    await expect(runCliFromArgv(['export-bundle', knowledgeRoot, '--okf', outputDir]))
+      .rejects.toThrow(/Refusing to delete non-OKF output directory/)
+    await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('do not delete')
+  })
+
+  it('imports an OKF bundle as source pages and can auto-build the retrieval index', async () => {
+    vi.stubEnv('llm_wiki_config', path.join(os.tmpdir(), `missing-llm-wiki-config-${Date.now()}.json`))
+    const knowledgeRoot = await createTestRoot()
+    const bundleDir = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-okf-import-'))
+    testRoots.push(bundleDir)
+    await mkdir(path.join(bundleDir, 'tables'), { recursive: true })
+    await writeFile(path.join(bundleDir, 'index.md'), '# Bundle Index\n\n* [Orders](tables/orders.md) - completed orders.\n', 'utf8')
+    await writeFile(path.join(bundleDir, 'log.md'), '# Directory Update Log\n\n## 2026-06-18\n* **Creation**: Started bundle.\n', 'utf8')
+    await writeFile(path.join(bundleDir, 'tables', 'index.md'), '# Tables\n\n* [Orders](orders.md) - completed orders.\n', 'utf8')
+    await writeFile(path.join(bundleDir, 'tables', 'orders.md'), [
+      '---',
+      'type: "BigQuery Table"',
+      'title: "Orders"',
+      'description: "One row per completed order."',
+      'resource: "https://example.com/orders"',
+      'tags:',
+      '  - sales',
+      '  - orders',
+      'timestamp: "2026-06-18T00:00:00.000Z"',
+      '---',
+      '# Orders',
+      '',
+      'Orders stores completed sales facts.',
+      '',
+    ].join('\n'), 'utf8')
+
+    const result = await runCliFromArgv(['ingest', knowledgeRoot, '--okf', bundleDir, '--auto-index']) as {
+      importedCount: number
+      importedPages: Array<{ pageTarget: string; okfPath: string; isDirectoryIndex: boolean }>
+      index: { chunkCount: number } | null
+      embedding: { status: string; reason?: string; error?: string } | null
+    }
+
+    const conceptPage = await readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'okf-tables-orders.md'), 'utf8')
+    const rootIndexPage = await readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'okf-index.md'), 'utf8')
+    const wikiIndex = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
+    const chunks = await readFile(path.join(knowledgeRoot, 'system', 'index', 'chunks.json'), 'utf8')
+
+    expect(result.importedCount).toBe(3)
+    expect(result.importedPages.map((page) => page.pageTarget).sort()).toEqual([
+      'sources/okf-index',
+      'sources/okf-tables-index',
+      'sources/okf-tables-orders',
+    ])
+    expect(result.importedPages.filter((page) => page.isDirectoryIndex)).toHaveLength(2)
+    expect(result.index?.chunkCount).toBeGreaterThan(0)
+    expect(result.embedding).toEqual(expect.objectContaining({
+      status: 'skipped',
+      reason: expect.stringContaining('Embedding provider is not configured'),
+    }))
+    expect(conceptPage).toContain('importedFrom: "okf"\n')
+    expect(conceptPage).toContain('okfVersion: "0.1"\n')
+    expect(conceptPage).toContain('okfType: "BigQuery Table"\n')
+    expect(conceptPage).toContain('sources: ["https://example.com/orders"]\n')
+    expect(conceptPage).toContain('# Orders\n\nOrders stores completed sales facts.')
+    expect(rootIndexPage).toContain('okfDirectoryIndex: true\n')
+    expect(rootIndexPage).toContain('# Bundle Index')
+    expect(wikiIndex).toContain('[[sources/okf-tables-orders|Orders]]')
+    expect(chunks).toContain('okf-tables-orders')
+  })
+
+  it('imports OKF pages without overwriting existing source pages', async () => {
+    const knowledgeRoot = await createTestRoot()
+    const bundleDir = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-okf-import-collision-'))
+    testRoots.push(bundleDir)
+    await mkdir(path.join(bundleDir, 'tables'), { recursive: true })
+    await mkdir(path.join(knowledgeRoot, 'wiki', 'sources'), { recursive: true })
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'sources', 'okf-tables-orders.md'),
+      '# Existing Orders\n\nThis page must not be overwritten.\n',
+      'utf8',
+    )
+    await writeFile(path.join(bundleDir, 'tables', 'orders.md'), [
+      '---',
+      'type: "BigQuery Table"',
+      'title: "Orders"',
+      'description: "One row per completed order."',
+      '---',
+      '# Orders',
+      '',
+      'Imported orders content.',
+      '',
+    ].join('\n'), 'utf8')
+
+    const result = await runCliFromArgv(['ingest', knowledgeRoot, '--okf', bundleDir]) as {
+      importedPages: Array<{ pageTarget: string }>
+    }
+
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'okf-tables-orders.md'), 'utf8'))
+      .resolves.toContain('This page must not be overwritten.')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'okf-tables-orders-2.md'), 'utf8'))
+      .resolves.toContain('Imported orders content.')
+    expect(result.importedPages.map((page) => page.pageTarget)).toContain('sources/okf-tables-orders-2')
+  })
+
+  it('maintains OKF directory indexes without adding them to the retrieval catalog', async () => {
+    const knowledgeRoot = await createTestRoot()
+
+    await writeKnowledgeChanges({
+      knowledgeRoot,
+      sourcePage: {
+        slug: 'compiler-notes',
+        title: 'Compiler Notes',
+        body: '# Compiler Notes\n\nCompiler Notes explains deterministic build evidence.\n',
+      },
+      entityPages: [{ slug: 'openclaw', title: 'OpenClaw', body: '# OpenClaw\n\nOpenClaw runs local agent workflows.\n' }],
+      conceptPages: [],
+      synthesisSuggestions: [],
+      logEntry: 'ingested compiler-notes',
+      indexEntries: [
+        '- [[sources/compiler-notes|Compiler Notes]]',
+        '- [[entities/openclaw|OpenClaw]]',
+      ],
+    })
+
+    const result = await runCliFromArgv(['maintain', knowledgeRoot]) as {
+      okfDirectoryIndexes: {
+        generatedCount: number
+        indexedPageCount: number
+        files: Array<{ directory: string; entryCount: number }>
+      }
+      index: { pageCount: number; chunkCount: number }
+    }
+
+    const sourceIndex = await readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'index.md'), 'utf8')
+    const entityIndex = await readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'index.md'), 'utf8')
+    const rootIndex = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
+    const pages = await readFile(path.join(knowledgeRoot, 'system', 'index', 'pages.json'), 'utf8')
+
+    expect(result.okfDirectoryIndexes.generatedCount).toBe(2)
+    expect(result.okfDirectoryIndexes.indexedPageCount).toBe(2)
+    expect(result.okfDirectoryIndexes.files).toEqual(expect.arrayContaining([
+      expect.objectContaining({ directory: 'sources', entryCount: 1 }),
+      expect.objectContaining({ directory: 'entities', entryCount: 1 }),
+    ]))
+    expect(result.index.pageCount).toBe(2)
+    expect(result.index.chunkCount).toBeGreaterThan(0)
+    expect(sourceIndex).toContain('type: "directory-index"\n')
+    expect(sourceIndex).toContain('title: "Sources Index"\n')
+    expect(sourceIndex).toContain('description: "Directory index for sources."\n')
+    expect(sourceIndex).toContain('resource: ""\n')
+    expect(sourceIndex).toContain('tags: ["okf-index"]\n')
+    expect(sourceIndex).toContain('timestamp: ')
+    expect(sourceIndex).toContain('* [Compiler Notes](compiler-notes.md) - Compiler Notes explains deterministic build evidence.')
+    expect(entityIndex).toContain('type: "directory-index"\n')
+    expect(entityIndex).toContain('* [OpenClaw](openclaw.md) - OpenClaw runs local agent workflows.')
+    expect(rootIndex).not.toContain('[[sources/index')
+    expect(rootIndex).not.toContain('[[entities/index')
+    expect(pages).not.toContain('"target": "sources/index"')
+    expect(pages).not.toContain('"target": "entities/index"')
   })
 
   it('rejects unsafe slugs before writing outside the wiki section', async () => {

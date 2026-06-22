@@ -17,6 +17,11 @@
     "cli:dev": "tsx src/cli.ts",
     "pretest": "npm run build",
     "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:query": "vitest run tests/unit/query-intent.test.ts tests/integration/query-readiness.test.ts tests/integration/query-source-evidence.test.ts tests/integration/query-grounding-diagnostics.test.ts tests/integration/lint-status.test.ts tests/integration/save-synthesis.test.ts",
+    "test:registry": "vitest run tests/integration/registry-query-routing.test.ts tests/integration/registry-intake-profile.test.ts tests/integration/registry-bridge-workflow.test.ts tests/integration/rag-governance-eval.test.ts",
+    "test:embedding": "vitest run tests/integration/embedding-cache-provider.test.ts tests/integration/retrieval-ranking.test.ts tests/integration/query-expansion-entity.test.ts",
+    "test:smoke": "vitest run tests/smoke.test.ts",
     "test:watch": "vitest",
     "lint:plan": "vitest run"
   },
@@ -29,9 +34,13 @@
     "cli"
   ],
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1"
   }
 }

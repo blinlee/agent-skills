@@ -1,10 +1,12 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { ensureKnowledgeRootLayout } from '../paths.js';
+import { writeJsonFile } from '../shared/fs.js';
 const REVIEW_GROUP_DIRECTORY = {
     'low-confidence': 'low-confidence',
     conflict: 'conflicts',
     'merge-candidate': 'merge-candidates',
+    'source-metadata-mismatch': 'conflicts',
 };
 const REVIEW_GROUP_DIRECTORIES = Object.values(REVIEW_GROUP_DIRECTORY);
 export async function persistReviewItems(root, items) {
@@ -62,8 +64,4 @@ async function removeStaleGroupedReviewCopies(root, reviewId, currentGroupDirect
             }
         }
     }));
-}
-async function writeJsonFile(targetPath, value) {
-    await mkdir(path.dirname(targetPath), { recursive: true });
-    await writeFile(targetPath, JSON.stringify(value, null, 2), 'utf8');
 }

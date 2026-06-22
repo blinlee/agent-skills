@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`src/` contains the TypeScript CLI and durable core modules. `tests/` contains smoke, unit, and integration coverage. The repository root is the host-neutral skill root: `SKILL.md` is the active skill contract, with bundled resources in `scripts/`, `references/`, and `evals/`. `legacy/` is archival only and must not be treated as an active skill surface. Build output belongs in `dist/` and should not be edited by hand.
+`src/` contains the TypeScript CLI and durable core modules. `tests/` contains smoke, unit, and integration coverage. The repository root is the host-neutral skill root: `SKILL.md` is the active skill contract, with bundled resources in `scripts/`, `references/`, and `evals/`. Build output belongs in `dist/` and should not be edited by hand.
 
 ## Build, Test, and Development Commands
 
