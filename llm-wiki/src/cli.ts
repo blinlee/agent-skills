@@ -13,7 +13,6 @@ import {
 import { runIngestJob, type IngestJobResult } from './jobs/job-runner.js'
 import {
   runDedupCommand,
-  runDedupFromArgv,
   runDedupPendingCommand,
   runDedupCheckCommand,
   runDedupStatsCommand,
@@ -54,10 +53,20 @@ import {
   type GenerateOkfDirectoryIndexesResult,
 } from './okf/directory-index.js'
 import {
+  backfillIncompleteWikiAssets,
+  type BackfillWikiAssetsResult,
+} from './maintenance/wiki-assets.js'
+import {
+  refreshSemanticOverviews,
+  type RefreshSemanticOverviewsResult,
+} from './wiki/semantic-overviews.js'
+import {
   runBridgeIndex,
   runBridgeAccept,
+  runBridgeCreateLanding,
   runBridgeList,
   runBridgeReject,
+  runBridgeTargets,
   runIntakeComplete,
   runIntakeNext,
   runIntakePark,
@@ -76,9 +85,12 @@ import {
   runRouteAccept,
   runRouteInbox,
   type BridgeIndexResult,
+  type BridgeCreateLandingInput,
   type BridgeDecisionInput,
   type BridgeDecisionResult,
   type BridgeListResult,
+  type BridgeTargetsInput,
+  type BridgeTargetsResult,
   type IntakeCompleteInput,
   type IntakeDecisionResult,
   type IntakeNextResult,
@@ -105,6 +117,7 @@ import {
   type RouteResult,
 } from './registry/registry.js'
 import { exists } from './shared/fs.js'
+import { createRunCliFromArgv, formatCliResult } from './cli/argv.js'
 export {
   runDedupPendingCommand,
   runDedupCheckCommand,
@@ -167,7 +180,9 @@ type CliCommandName =
   | 'route-accept'
   | 'bridge-index'
   | 'bridge-list'
+  | 'bridge-targets'
   | 'bridge-accept'
+  | 'bridge-create-landing'
   | 'bridge-reject'
   | 'query-registry'
   | 'intake-scan'
@@ -198,8 +213,11 @@ export type InitCommandResult = {
 export type IngestCommandInput = {
   knowledgeRoot: string
   input: string
+  qualityPath?: string
+  curationPath?: string
   extractEntities?: boolean
   extractKeyInfo?: boolean
+  forceRecompile?: boolean
 }
 
 export type IngestInboxCommandInput = {
@@ -239,6 +257,8 @@ export type MaintainCommandInput = {
 export type MaintainKnowledgeCommandResult = {
   kind: 'knowledge'
   knowledgeRoot: string
+  wikiAssets: BackfillWikiAssetsResult
+  semanticOverviews: RefreshSemanticOverviewsResult
   okfDirectoryIndexes: GenerateOkfDirectoryIndexesResult
   index: BuildIndexResult
 }
@@ -247,6 +267,8 @@ export type MaintainRegistryWikiResult = {
   wikiId: string
   title: string
   knowledgeRoot: string
+  wikiAssets: BackfillWikiAssetsResult | null
+  semanticOverviews: RefreshSemanticOverviewsResult | null
   okfDirectoryIndexes: GenerateOkfDirectoryIndexesResult | null
   index: BuildIndexResult | null
   error: string | null
@@ -286,6 +308,7 @@ export async function runIngestInboxCommand(input: IngestInboxCommandInput): Pro
   const entries = await readdir(inboxPath, { withFileTypes: true })
   const ingestTargets = entries
     .filter((entry) => entry.isFile() || entry.isDirectory())
+    .filter((entry) => !isInboxControlSidecarName(entry.name))
     .map((entry) => path.join(inboxPath, entry.name))
     .sort((left, right) => left.localeCompare(right))
   const results: IngestJobResult[] = []
@@ -299,6 +322,10 @@ export async function runIngestInboxCommand(input: IngestInboxCommandInput): Pro
     inboxPath,
     results,
   }
+}
+
+function isInboxControlSidecarName(name: string): boolean {
+  return name.endsWith('.curation.json') || name.endsWith('.quality.json')
 }
 
 export async function runImportOkfBundleCommand(input: ImportOkfBundleInput): Promise<ImportOkfBundleResult> {
@@ -339,12 +366,16 @@ export async function runMaintainCommand(input: MaintainCommandInput): Promise<M
 }
 
 async function runMaintainKnowledgeRoot(knowledgeRoot: string): Promise<MaintainKnowledgeCommandResult> {
+  const wikiAssets = await backfillIncompleteWikiAssets({ knowledgeRoot })
+  const semanticOverviews = await refreshSemanticOverviews({ knowledgeRoot })
   const okfDirectoryIndexes = await generateOkfDirectoryIndexes({ knowledgeRoot })
   const index = await runBuildIndex({ knowledgeRoot })
 
   return {
     kind: 'knowledge',
     knowledgeRoot,
+    wikiAssets,
+    semanticOverviews,
     okfDirectoryIndexes,
     index,
   }
@@ -361,6 +392,8 @@ async function runMaintainRegistryCommand(registryRoot: string): Promise<Maintai
         wikiId: wiki.id,
         title: wiki.title,
         knowledgeRoot: wiki.knowledgeRoot,
+        wikiAssets: maintained.wikiAssets,
+        semanticOverviews: maintained.semanticOverviews,
         okfDirectoryIndexes: maintained.okfDirectoryIndexes,
         index: maintained.index,
         error: null,
@@ -370,6 +403,8 @@ async function runMaintainRegistryCommand(registryRoot: string): Promise<Maintai
         wikiId: wiki.id,
         title: wiki.title,
         knowledgeRoot: wiki.knowledgeRoot,
+        wikiAssets: null,
+        semanticOverviews: null,
         okfDirectoryIndexes: null,
         index: null,
         error: error instanceof Error ? error.message : String(error),
@@ -452,8 +487,16 @@ export async function runBridgeListCommand(input: RegistryCommandInput): Promise
   return runBridgeList(input)
 }
 
+export async function runBridgeTargetsCommand(input: BridgeTargetsInput): Promise<BridgeTargetsResult> {
+  return runBridgeTargets(input)
+}
+
 export async function runBridgeAcceptCommand(input: BridgeDecisionInput): Promise<BridgeDecisionResult> {
   return runBridgeAccept(input)
+}
+
+export async function runBridgeCreateLandingCommand(input: BridgeCreateLandingInput): Promise<BridgeDecisionResult> {
+  return runBridgeCreateLanding(input)
 }
 
 export async function runBridgeRejectCommand(input: BridgeDecisionInput): Promise<BridgeDecisionResult> {
@@ -550,7 +593,9 @@ const CLI_COMMAND_SPECS: CliCommandSpec[] = [
   { name: 'route-accept', runObjectArgs: (args) => runRouteAcceptCommand(args as RouteAcceptInput) },
   { name: 'bridge-index', runObjectArgs: (args) => runBridgeIndexCommand(args as RegistryCommandInput) },
   { name: 'bridge-list', runObjectArgs: (args) => runBridgeListCommand(args as RegistryCommandInput) },
+  { name: 'bridge-targets', runObjectArgs: (args) => runBridgeTargetsCommand(args as BridgeTargetsInput) },
   { name: 'bridge-accept', runObjectArgs: (args) => runBridgeAcceptCommand(args as BridgeDecisionInput) },
+  { name: 'bridge-create-landing', runObjectArgs: (args) => runBridgeCreateLandingCommand(args as BridgeCreateLandingInput) },
   { name: 'bridge-reject', runObjectArgs: (args) => runBridgeRejectCommand(args as BridgeDecisionInput) },
   { name: 'query-registry', runObjectArgs: (args) => runQueryRegistryCommand(args as QueryRegistryInput) },
   { name: 'intake-scan', runObjectArgs: (args) => runIntakeScanCommand(args as RegistryCommandInput) },
@@ -582,410 +627,63 @@ function runIngestOrInboxCommand(input: Partial<IngestCommandInput> & IngestInbo
     ? runIngestCommand({
         knowledgeRoot: input.knowledgeRoot,
         input: input.input,
+        qualityPath: input.qualityPath,
+        curationPath: input.curationPath,
         extractEntities: Boolean(input.extractEntities),
         extractKeyInfo: Boolean(input.extractKeyInfo),
+        forceRecompile: Boolean(input.forceRecompile),
       })
     : runIngestInboxCommand({ knowledgeRoot: input.knowledgeRoot })
 }
 
-export async function runCliFromArgv(argv: string[]): Promise<unknown> {
-  const [command, knowledgeRoot, ...rest] = argv
-
-  if (!command || !knowledgeRoot) {
-    throw new Error(CLI_USAGE)
-  }
-
-  switch (command) {
-    case 'init':
-      return runInitCommand({ knowledgeRoot })
-    case 'ingest': {
-      if (rest[0] === '--okf') {
-        const bundleDir = rest[1]
-        if (!bundleDir || bundleDir.startsWith('--')) {
-          throw new Error('usage: llm-wiki ingest <knowledgeRoot> --okf <bundleDir> [--auto-index]')
-        }
-        const remaining = rest.slice(2)
-        const autoIndex = remaining.includes('--auto-index')
-        const unknownFlags = remaining.filter((arg) => arg !== '--auto-index')
-        if (unknownFlags.length > 0) {
-          throw new Error(`Unknown flag for ingest --okf: ${unknownFlags[0]}`)
-        }
-        return runImportOkfBundleCommand({ knowledgeRoot, bundleDir, autoIndex })
-      }
-      const [input, ...flagArgs] = rest
-      if (!input) {
-        return runIngestInboxCommand({ knowledgeRoot })
-      }
-      const extractEntities = flagArgs.includes('--extract-entities')
-      const extractKeyInfo = flagArgs.includes('--extract-key-info')
-      const unknownFlags = flagArgs.filter((arg) => arg !== '--extract-entities' && arg !== '--extract-key-info')
-      if (unknownFlags.length > 0) {
-        throw new Error(`Unknown flag for ingest: ${unknownFlags[0]}`)
-      }
-      return runIngestCommand({ knowledgeRoot, input, extractEntities, extractKeyInfo })
-    }
-    case 'ingest-inbox':
-      return runIngestInboxCommand({ knowledgeRoot })
-    case 'dedup':
-      return runDedupFromArgv(knowledgeRoot, rest)
-    case 'query': {
-      const queryOptions = parseQueryArgs(rest)
-      if (!queryOptions.question) {
-        throw new Error('usage: llm-wiki query <knowledgeRoot> <question> [--include-review] [--no-hyde] [--full]')
-      }
-      return runQueryCommand({
-        knowledgeRoot,
-        question: queryOptions.question,
-        includeReview: queryOptions.includeReview,
-        disableHyde: queryOptions.disableHyde,
-      })
-    }
-    case 'query-readiness':
-      if (rest.length > 0) {
-        throw new Error(`Unknown flag for query-readiness: ${rest[0]}`)
-      }
-      return runQueryReadinessCommand({ knowledgeRoot })
-    case 'embed-index':
-      return runEmbedIndexCommand({ knowledgeRoot })
-    case 'export-bundle': {
-      const flags = parseCliFlags(rest)
-      const outputDir = firstFlag(flags, 'okf')
-      if (!outputDir) {
-        throw new Error('usage: llm-wiki export-bundle <knowledgeRoot> --okf <outputDir> [--archive <archivePath>]')
-      }
-      return runExportBundleCommand({ knowledgeRoot, outputDir, archivePath: firstFlag(flags, 'archive') })
-    }
-    case 'lint':
-      return runLintCommand({ knowledgeRoot })
-    case 'index':
-      return runBuildIndexCommand({ knowledgeRoot })
-    case 'wiki-overview': {
-      if (rest.length > 0) {
-        throw new Error(`Unknown flag for wiki-overview: ${rest[0]}`)
-      }
-      return runWikiOverviewCommand({ knowledgeRoot })
-    }
-    case 'maintain': {
-      if (rest.length > 0) {
-        throw new Error(`Unknown flag for maintain: ${rest[0]}`)
-      }
-      return runMaintainCommand({ knowledgeRoot })
-    }
-    case 'taxonomy-list':
-      return runTaxonomyListCommand({ knowledgeRoot })
-    case 'taxonomy-accept': {
-      const [slug, ...flagArgs] = rest
-      if (!slug) {
-        throw new Error('usage: llm-wiki taxonomy-accept <knowledgeRoot> <proposalSlug> --reviewer <name>')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      if (!reviewer) {
-        throw new Error('taxonomy-accept requires --reviewer <name> after human confirmation')
-      }
-      return runTaxonomyAcceptCommand({ knowledgeRoot, slug, reviewer })
-    }
-    case 'taxonomy-reject': {
-      const [slug, ...flagArgs] = rest
-      if (!slug) {
-        throw new Error('usage: llm-wiki taxonomy-reject <knowledgeRoot> <proposalSlug> --reviewer <name> [--reason <reason>]')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      if (!reviewer) {
-        throw new Error('taxonomy-reject requires --reviewer <name> after human confirmation')
-      }
-      return runTaxonomyRejectCommand({
-        knowledgeRoot,
-        slug,
-        reviewer,
-        reason: firstFlag(flags, 'reason'),
-      })
-    }
-    case 'status':
-      return runStatusCommand({ knowledgeRoot })
-    case 'save-synthesis': {
-      const [suggestionId, confirmFlag] = rest
-      if (!suggestionId) {
-        throw new Error('usage: llm-wiki save-synthesis <knowledgeRoot> <suggestionId> [--confirm]')
-      }
-      if (confirmFlag && confirmFlag !== '--confirm') {
-        throw new Error(`Unknown flag for save-synthesis: ${confirmFlag}`)
-      }
-      return runSaveSynthesisCommand({
-        knowledgeRoot,
-        suggestionId,
-        confirm: confirmFlag === '--confirm',
-      })
-    }
-    case 'registry-init':
-      return runRegistryInitCommand({ registryRoot: knowledgeRoot })
-    case 'registry-list':
-      return runRegistryListCommand({ registryRoot: knowledgeRoot })
-    case 'registry-add': {
-      const hasExplicitWikiRoot = Boolean(rest[0]) && !rest[0]!.startsWith('--')
-      const wikiRoot = hasExplicitWikiRoot ? rest[0] : undefined
-      const flagArgs = hasExplicitWikiRoot ? rest.slice(1) : rest
-      const flags = parseCliFlags(flagArgs)
-      const id = firstFlag(flags, 'id')
-      if (!id) {
-        throw new Error('registry-add requires --id <wikiId>')
-      }
-      return runRegistryAddCommand({
-        registryRoot: knowledgeRoot,
-        knowledgeRoot: wikiRoot,
-        id,
-        title: firstFlag(flags, 'title'),
-        scope: flags.scope ?? [],
-        scopeCore: flags['scope-core'] ?? [],
-        scopeAdjacent: flags['scope-adjacent'] ?? [],
-        outOfScope: flags['out-of-scope'] ?? [],
-        aliases: [...(flags.alias ?? []), ...(flags.aliases ?? [])],
-        profileNotes: flags['profile-note'] ?? [],
-      })
-    }
-    case 'route': {
-      const [source] = rest
-      if (!source) {
-        throw new Error('usage: llm-wiki route <registryRoot> <sourcePathOrUrl>')
-      }
-      return runRouteCommand({ registryRoot: knowledgeRoot, source })
-    }
-    case 'route-inbox':
-      return runRouteInboxCommand({ registryRoot: knowledgeRoot })
-    case 'bridge-index':
-      return runBridgeIndexCommand({ registryRoot: knowledgeRoot })
-    case 'bridge-list':
-      return runBridgeListCommand({ registryRoot: knowledgeRoot })
-    case 'bridge-accept': {
-      const [proposalId, ...flagArgs] = rest
-      if (!proposalId) {
-        throw new Error('usage: llm-wiki bridge-accept <registryRoot> <proposalId> --reviewer <name> [--reason <reason>]')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      if (!reviewer) {
-        throw new Error('bridge-accept requires --reviewer <name>')
-      }
-      return runBridgeAcceptCommand({ registryRoot: knowledgeRoot, proposalId, reviewer, reason: firstFlag(flags, 'reason') })
-    }
-    case 'bridge-reject': {
-      const [proposalId, ...flagArgs] = rest
-      if (!proposalId) {
-        throw new Error('usage: llm-wiki bridge-reject <registryRoot> <proposalId> --reviewer <name> --reason <reason>')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      const reason = firstFlag(flags, 'reason')
-      if (!reviewer) {
-        throw new Error('bridge-reject requires --reviewer <name>')
-      }
-      if (!reason) {
-        throw new Error('bridge-reject requires --reason <reason>')
-      }
-      return runBridgeRejectCommand({ registryRoot: knowledgeRoot, proposalId, reviewer, reason })
-    }
-    case 'route-accept': {
-      const [proposalId, ...flagArgs] = rest
-      if (!proposalId) {
-        throw new Error('usage: llm-wiki route-accept <registryRoot> <proposalId> [--wiki <wikiId>] [--reviewer <name>]')
-      }
-      const flags = parseCliFlags(flagArgs)
-      return runRouteAcceptCommand({
-        registryRoot: knowledgeRoot,
-        proposalId,
-        wikiId: firstFlag(flags, 'wiki'),
-        reviewer: firstFlag(flags, 'reviewer'),
-      })
-    }
-    case 'query-registry': {
-      const question = rest.filter((arg) => arg !== '--full').join(' ').trim()
-      if (!question) {
-        throw new Error('usage: llm-wiki query-registry <registryRoot> <question> [--full]')
-      }
-      return runQueryRegistryCommand({ registryRoot: knowledgeRoot, question })
-    }
-    case 'intake-scan':
-      return runIntakeScanCommand({ registryRoot: knowledgeRoot })
-    case 'intake-status':
-      return runIntakeStatusCommand({ registryRoot: knowledgeRoot })
-    case 'intake-next':
-      return runIntakeNextCommand({ registryRoot: knowledgeRoot })
-    case 'intake-complete': {
-      const [itemId, ...flagArgs] = rest
-      if (!itemId) {
-        throw new Error('usage: llm-wiki intake-complete <registryRoot> <itemId> [--reviewer <name>]')
-      }
-      const flags = parseCliFlags(flagArgs)
-      return runIntakeCompleteCommand({ registryRoot: knowledgeRoot, itemId, reviewer: firstFlag(flags, 'reviewer') })
-    }
-    case 'intake-reject': {
-      const [itemId, ...flagArgs] = rest
-      if (!itemId) {
-        throw new Error('usage: llm-wiki intake-reject <registryRoot> <itemId> --reviewer <name> --reason <reason>')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      const reason = firstFlag(flags, 'reason')
-      if (!reviewer) {
-        throw new Error('intake-reject requires --reviewer <name>')
-      }
-      if (!reason) {
-        throw new Error('intake-reject requires --reason <reason>')
-      }
-      return runIntakeRejectCommand({ registryRoot: knowledgeRoot, itemId, reviewer, reason })
-    }
-    case 'intake-park': {
-      const [itemId, ...flagArgs] = rest
-      if (!itemId) {
-        throw new Error('usage: llm-wiki intake-park <registryRoot> <itemId> --reviewer <name> --reason <reason>')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      const reason = firstFlag(flags, 'reason')
-      if (!reviewer) {
-        throw new Error('intake-park requires --reviewer <name>')
-      }
-      if (!reason) {
-        throw new Error('intake-park requires --reason <reason>')
-      }
-      return runIntakeParkCommand({ registryRoot: knowledgeRoot, itemId, reviewer, reason })
-    }
-    case 'profile-suggest': {
-      const flags = parseCliFlags(rest)
-      return runProfileSuggestCommand({
-        registryRoot: knowledgeRoot,
-        intakeItemId: firstFlag(flags, 'from'),
-        source: firstFlag(flags, 'source'),
-        id: firstFlag(flags, 'id'),
-        title: firstFlag(flags, 'title'),
-      })
-    }
-    case 'profile-accept': {
-      const [proposalId, ...flagArgs] = rest
-      if (!proposalId) {
-        throw new Error('usage: llm-wiki profile-accept <registryRoot> <proposalId> --reviewer <name> [--reason <reason>]')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      if (!reviewer) {
-        throw new Error('profile-accept requires --reviewer <name>')
-      }
-      return runProfileAcceptCommand({ registryRoot: knowledgeRoot, proposalId, reviewer, reason: firstFlag(flags, 'reason') })
-    }
-    case 'profile-reject': {
-      const [proposalId, ...flagArgs] = rest
-      if (!proposalId) {
-        throw new Error('usage: llm-wiki profile-reject <registryRoot> <proposalId> --reviewer <name> --reason <reason>')
-      }
-      const flags = parseCliFlags(flagArgs)
-      const reviewer = firstFlag(flags, 'reviewer')
-      const reason = firstFlag(flags, 'reason')
-      if (!reviewer) {
-        throw new Error('profile-reject requires --reviewer <name>')
-      }
-      if (!reason) {
-        throw new Error('profile-reject requires --reason <reason>')
-      }
-      return runProfileRejectCommand({ registryRoot: knowledgeRoot, proposalId, reviewer, reason })
-    }
-    case 'profile-review':
-      return runProfileReviewCommand({ registryRoot: knowledgeRoot })
-    default:
-      throw new Error(`unknown command: ${command}`)
-  }
-}
+export const runCliFromArgv = createRunCliFromArgv({
+  runInitCommand,
+  runIngestCommand: (input) => runIngestCommand(input as IngestCommandInput),
+  runIngestInboxCommand,
+  runImportOkfBundleCommand: (input) => runImportOkfBundleCommand(input as ImportOkfBundleInput),
+  runQueryCommand: (input) => runQueryCommand(input as QueryCommandInput),
+  runQueryReadinessCommand,
+  runEmbedIndexCommand,
+  runExportBundleCommand: (input) => runExportBundleCommand(input as ExportOkfBundleInput),
+  runLintCommand,
+  runBuildIndexCommand,
+  runWikiOverviewCommand,
+  runMaintainCommand,
+  runTaxonomyListCommand,
+  runTaxonomyAcceptCommand: (input) => runTaxonomyAcceptCommand(input as TaxonomyActionCommandInput),
+  runTaxonomyRejectCommand: (input) => runTaxonomyRejectCommand(input as TaxonomyActionCommandInput),
+  runStatusCommand,
+  runSaveSynthesisCommand: (input) => runSaveSynthesisCommand(input as SaveSynthesisCommandInput),
+  runRegistryInitCommand,
+  runRegistryAddCommand: (input) => runRegistryAddCommand(input as RegistryAddInput),
+  runRegistryListCommand,
+  runRouteCommand: (input) => runRouteCommand(input as RouteInput),
+  runRouteInboxCommand,
+  runRouteAcceptCommand: (input) => runRouteAcceptCommand(input as RouteAcceptInput),
+  runBridgeIndexCommand,
+  runBridgeListCommand,
+  runBridgeTargetsCommand: (input) => runBridgeTargetsCommand(input as BridgeTargetsInput),
+  runBridgeAcceptCommand: (input) => runBridgeAcceptCommand(input as BridgeDecisionInput),
+  runBridgeCreateLandingCommand: (input) => runBridgeCreateLandingCommand(input as BridgeCreateLandingInput),
+  runBridgeRejectCommand: (input) => runBridgeRejectCommand(input as BridgeDecisionInput),
+  runQueryRegistryCommand: (input) => runQueryRegistryCommand(input as QueryRegistryInput),
+  runIntakeScanCommand,
+  runIntakeStatusCommand,
+  runIntakeNextCommand,
+  runIntakeCompleteCommand: (input) => runIntakeCompleteCommand(input as IntakeCompleteInput),
+  runIntakeRejectCommand: (input) => runIntakeRejectCommand(input as IntakeRejectInput),
+  runIntakeParkCommand: (input) => runIntakeParkCommand(input as IntakeParkInput),
+  runProfileSuggestCommand: (input) => runProfileSuggestCommand(input as ProfileSuggestInput),
+  runProfileAcceptCommand: (input) => runProfileAcceptCommand(input as ProfileDecisionInput),
+  runProfileRejectCommand: (input) => runProfileRejectCommand(input as ProfileDecisionInput),
+  runProfileReviewCommand,
+}, CLI_USAGE)
 
 export async function runCliMain(argv: string[] = process.argv.slice(2)): Promise<void> {
   const result = await runCliFromArgv(argv)
   process.stdout.write(`${JSON.stringify(formatCliResult(argv, result), null, 2)}\n`)
 }
 
-
-function parseQueryArgs(args: string[]): { question: string; includeReview: boolean; disableHyde: boolean; full: boolean } {
-  const questionParts: string[] = []
-  let includeReview = false
-  let disableHyde = false
-  let full = false
-
-  for (const arg of args) {
-    if (arg === '--include-review') {
-      includeReview = true
-      continue
-    }
-    if (arg === '--no-hyde') {
-      disableHyde = true
-      continue
-    }
-    if (arg === '--full') {
-      full = true
-      continue
-    }
-    questionParts.push(arg)
-  }
-
-  return {
-    question: questionParts.join(' ').trim(),
-    includeReview,
-    disableHyde,
-    full,
-  }
-}
-
-function formatCliResult(argv: string[], result: unknown): unknown {
-  const command = argv[0]
-  const full = argv.includes('--full')
-  if (full) {
-    return result
-  }
-  if (command === 'query' && isQueryCommandResult(result)) {
-    return {
-      question: result.question,
-      answerability: result.sourceReadingPack.answerability,
-      readiness: result.readiness,
-      sourceReadingPack: result.sourceReadingPack,
-    }
-  }
-  if (command === 'query-registry' && isQueryRegistryResult(result)) {
-    return {
-      question: result.question,
-      answerability: result.sourceReadingPack.answerability,
-      readiness: result.diagnostics.readiness,
-      sourceReadingPack: result.sourceReadingPack,
-    }
-  }
-  return result
-}
-
-function isQueryCommandResult(result: unknown): result is QueryCommandResult {
-  return Boolean(result && typeof result === 'object' && 'sourceReadingPack' in result && 'grounding' in result)
-}
-
-function isQueryRegistryResult(result: unknown): result is QueryRegistryResult {
-  return Boolean(result && typeof result === 'object' && 'sourceReadingPack' in result && 'selectedWikis' in result)
-}
-
-function parseCliFlags(args: string[]): Record<string, string[]> {
-  const flags: Record<string, string[]> = {}
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index]
-    if (!arg?.startsWith('--')) {
-      throw new Error(`Unexpected positional argument: ${arg}`)
-    }
-    const key = arg.slice(2)
-    const value = args[index + 1]
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for flag: ${arg}`)
-    }
-    flags[key] = [...(flags[key] ?? []), value]
-    index += 1
-  }
-  return flags
-}
-
-function firstFlag(flags: Record<string, string[]>, key: string): string | undefined {
-  return flags[key]?.[0]
-}
 
 function isDirectCliExecution(): boolean {
   return process.argv[1] ? path.resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false

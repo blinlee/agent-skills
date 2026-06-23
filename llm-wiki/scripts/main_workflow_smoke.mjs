@@ -72,6 +72,51 @@ function summarize(value) {
   return keep
 }
 
+function writeCurationPlan(sourcePath, input = {}) {
+  const title = input.title ?? path.basename(sourcePath)
+  const quote = input.quote
+  if (!quote) {
+    throw new Error(`curation quote is required for ${sourcePath}`)
+  }
+  const curationPath = input.curationPath ?? `${sourcePath}.curation.json`
+  writeFileSync(curationPath, JSON.stringify({
+    schema: 'llm-wiki.semantic-curation.v1',
+    status: 'ready',
+    summary: input.summary ?? `测试语义整理：${title} 已读完，可以入库并生成可浏览知识页。`,
+    entities: input.entities ?? [],
+    concepts: input.concepts ?? [],
+    syntheses: input.syntheses ?? [],
+    notes: input.notes ?? [`测试 curation plan 使用原文证据：${quote}`],
+  }, null, 2), 'utf8')
+  return curationPath
+}
+
+function writeQualityPlan(sourcePath, input = {}) {
+  const title = input.title ?? path.basename(sourcePath)
+  const quote = input.quote
+  if (!quote) {
+    throw new Error(`quality quote is required for ${sourcePath}`)
+  }
+  const qualityPath = input.qualityPath ?? `${sourcePath}.quality.json`
+  writeFileSync(qualityPath, JSON.stringify({
+    schema: 'llm-wiki.inbox-quality.v1',
+    status: 'ready',
+    decision: 'accept',
+    recommendedAction: 'accept',
+    knowledgeValue: input.knowledgeValue ?? 'medium',
+    readability: 'readable',
+    duplicateAssessment: {
+      status: 'new',
+      matchedRefs: [],
+    },
+    sourceType: input.sourceType ?? 'note',
+    reason: input.reason ?? `测试质量判断：${title} 有稳定知识价值，可进入 wiki。`,
+    evidence: [{ quote }],
+    blockers: [],
+  }, null, 2), 'utf8')
+  return qualityPath
+}
+
 function record(results, workflow, step, output, check, assertion) {
   const assertionResult = output.ok && assertion ? assertion(output.json) : { ok: output.ok, message: output.ok ? 'command ok' : 'command failed' }
   results.push({
@@ -104,11 +149,33 @@ record(results, 'setup', 'registry add agent', cli(['registry-add', registryRoot
 record(results, 'setup', 'registry add finance', cli(['registry-add', registryRoot, '--id', 'finance', '--title', 'Finance Wiki', '--scope', 'finance,alpha,factor,trading']), 'creates wikis/finance')
 
 await mkdir(path.join(registryRoot, 'raw', 'inbox'), { recursive: true })
+const agentSource = path.join(registryRoot, 'raw', 'inbox', 'agent-harness.md')
 writeFileSync(
-  path.join(registryRoot, 'raw', 'inbox', 'agent-harness.md'),
+  agentSource,
   '# Agent Harness Note\n\nAgent harness design uses tool calling, evaluation, and long-running supervision for coding agents.\n',
   'utf8',
 )
+const agentCuration = writeCurationPlan(agentSource, {
+  title: 'Agent Harness Note',
+  quote: 'Agent harness design uses tool calling, evaluation, and long-running supervision for coding agents.',
+  entities: [{
+    title: 'Agent Harness',
+    slug: 'agent-harness',
+    kind: 'system',
+    description: 'Agent Harness 是用于组织工具调用、评测和长程监督的编码 agent 运行框架。',
+    evidence: [{ quote: 'Agent harness design uses tool calling, evaluation, and long-running supervision for coding agents.' }],
+  }],
+  concepts: [{
+    title: 'Long-running Supervision',
+    slug: 'long-running-supervision',
+    description: 'Long-running Supervision 指对长时间运行的 agent 任务进行持续观察和控制。',
+    evidence: [{ quote: 'long-running supervision for coding agents' }],
+  }],
+})
+writeQualityPlan(agentSource, {
+  title: 'Agent Harness Note',
+  quote: 'Agent harness design uses tool calling, evaluation, and long-running supervision for coding agents.',
+})
 record(results, 'inbox', 'intake scan', cli(['intake-scan', registryRoot]), 'moves raw/inbox item to raw/objects and ledger')
 record(results, 'inbox', 'route inbox', cli(['route-inbox', registryRoot]), 'creates route proposal without ingesting')
 const routeInbox = results.at(-1).output
@@ -160,12 +227,33 @@ record(results, 'govern', 'profile review', cli(['profile-review', registryRoot]
 
 const crossSource = path.join(sourceDir, 'pinn.md')
 writeFileSync(crossSource, '# Physics-Informed Neural Networks\n\nPINN methods train neural networks with PDE residual losses for physics simulation and differential equations.\n', 'utf8')
+const crossCuration = writeCurationPlan(crossSource, {
+  title: 'Physics-Informed Neural Networks',
+  quote: 'PINN methods train neural networks with PDE residual losses for physics simulation and differential equations.',
+  entities: [{
+    title: 'Physics-Informed Neural Networks',
+    slug: 'physics-informed-neural-networks',
+    kind: 'method',
+    description: 'Physics-Informed Neural Networks 是把 PDE 残差损失纳入神经网络训练的物理仿真方法。',
+    evidence: [{ quote: 'PINN methods train neural networks with PDE residual losses for physics simulation and differential equations.' }],
+  }],
+  concepts: [{
+    title: 'PDE Residual Loss',
+    slug: 'pde-residual-loss',
+    description: 'PDE Residual Loss 是用微分方程残差约束模型训练的损失项。',
+    evidence: [{ quote: 'PDE residual losses' }],
+  }],
+})
+const crossQuality = writeQualityPlan(crossSource, {
+  title: 'Physics-Informed Neural Networks',
+  quote: 'PINN methods train neural networks with PDE residual losses for physics simulation and differential equations.',
+})
 record(results, 'govern', 'registry add physics', cli(['registry-add', registryRoot, '--id', 'physics', '--title', 'Physics Wiki', '--scope', 'physics,pde,differential equations,pinn']), 'prepares bridge target')
 const routeCross = cli(['route', registryRoot, crossSource])
 record(results, 'govern', 'route cross-domain source', routeCross, 'creates reviewable classification package')
 const crossProposal = routeCross.ok ? routeCross.json.proposal?.id : null
 if (crossProposal) {
-  record(results, 'govern', 'accept cross-domain route', cli(['route-accept', registryRoot, crossProposal, '--reviewer', 'smoke']), 'accepts cross-domain route after approval simulation')
+  record(results, 'govern', 'accept cross-domain route', cli(['route-accept', registryRoot, crossProposal, '--reviewer', 'smoke', '--quality', crossQuality, '--curation', crossCuration]), 'accepts cross-domain route after approval simulation')
 }
 record(results, 'govern', 'bridge list', cli(['bridge-list', registryRoot]), 'lists bridge proposals/state')
 record(results, 'govern', 'bridge index', cli(['bridge-index', registryRoot]), 'indexes explicit cross-wiki links')

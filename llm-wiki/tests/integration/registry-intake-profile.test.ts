@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -30,6 +30,7 @@ import {
 } from '../../src/cli.js'
 import { runRegistryHybridRetrieval } from '../../src/retrieval/registry.js'
 import type { Reranker } from '../../src/retrieval/rerank.js'
+import { runRouteAcceptCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -80,7 +81,7 @@ describe('registry intake and profile workflow', () => {
     await expect(readFile(route.proposalFile, 'utf8')).resolves.toContain('humanReviewRequired')
 
     await stubEmbeddingProvider(path.join(registryRoot, 'embedding-config.json'))
-    const accepted = await runRouteAcceptCommand({
+    const accepted = await runRouteAcceptCommandWithCuration({
       registryRoot,
       proposalId: route.proposal.id,
       reviewer: 'tester',
@@ -145,7 +146,7 @@ describe('registry intake and profile workflow', () => {
     ].join('\n'), 'utf8')
 
     const route = await runRouteCommand({ registryRoot, source })
-    const accepted = await runRouteAcceptCommand({
+    const accepted = await runRouteAcceptCommandWithCuration({
       registryRoot,
       proposalId: route.proposal.id,
       wikiId: 'perception',
@@ -154,6 +155,65 @@ describe('registry intake and profile workflow', () => {
 
     expect(['completed', 'needs_review', 'partial']).toContain(accepted.decision.ingestResult.status)
     await expect(readFile(path.join(perceptionRoot, 'wiki', 'sources', 'uni3d-moe.md'), 'utf8')).resolves.toContain('Uni3D-MoE')
+  })
+
+  it('keeps intake blocked when route-accept ingest needs review', async () => {
+    const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
+    const theoryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-theory-'))
+    tempRoots.push(registryRoot, theoryRoot)
+
+    await runRegistryInitCommand({ registryRoot })
+    await runInitCommand({ knowledgeRoot: theoryRoot })
+    await runRegistryAddCommand({
+      registryRoot,
+      knowledgeRoot: theoryRoot,
+      id: 'theory',
+      title: 'Theory Wiki',
+      scope: ['de bruijn', 'coding theory', 'arrays'],
+    })
+    const inbox = path.join(registryRoot, 'raw', 'inbox')
+    await mkdir(inbox, { recursive: true })
+    await writeFile(
+      path.join(inbox, 'RAG_for_AIGC_Survey_2024.md'),
+      '# Pseduo-Random and de Bruijn Array Codes\n\nThis paper studies de Bruijn array codes and pseudo-random arrays for coding theory.\n',
+      'utf8',
+    )
+
+    const routed = await runRouteInboxCommand({ registryRoot })
+    expect(routed.results).toHaveLength(1)
+    const accepted = await runRouteAcceptCommandWithCuration({
+      registryRoot,
+      proposalId: routed.results[0].proposal.id,
+      wikiId: 'theory',
+      reviewer: 'tester',
+    })
+    const acceptedAgain = await runRouteAcceptCommand({
+      registryRoot,
+      proposalId: routed.results[0].proposal.id,
+      wikiId: 'theory',
+      reviewer: 'tester',
+    })
+    const status = await runIntakeStatusCommand({ registryRoot })
+    const proposalAfterBlockedAccept = JSON.parse(
+      await readFile(path.join(registryRoot, 'registry', 'routing', 'proposals', `${routed.results[0].proposal.id}.json`), 'utf8'),
+    ) as { status: string }
+
+    expect(accepted.decision.status).toBe('blocked')
+    expect(accepted.decision.ingestResult.status).toBe('needs_review')
+    expect(accepted.bridgeProposalFiles).toEqual([])
+    expect(proposalAfterBlockedAccept.status).toBe('proposed')
+    expect(acceptedAgain.decision.status).toBe('blocked')
+    expect(acceptedAgain.decision.ingestResult.status).toBe('needs_review')
+    expect(acceptedAgain.decision.ingestResult.dedupDecision).toBeNull()
+    expect(status.items).toEqual([
+      expect.objectContaining({
+        status: 'blocked',
+        reviewRequired: true,
+        completedAt: null,
+        lastError: 'ingest status: needs_review',
+      }),
+    ])
+    expect(status.pendingCount).toBe(1)
   })
 
   it('exposes registry commands through the JSON CLI argv surface', async () => {
@@ -223,7 +283,7 @@ describe('registry intake and profile workflow', () => {
 
     await writeFile(
       path.join(registryRoot, 'raw', 'inbox', 'compiler-note.md'),
-      '# Compiler Routing Note\n\nOpenClaw compiler agent notes.',
+      '# compiler note\n\nEntity: OpenClaw\nConcept: compiler routing\n\nOpenClaw compiler agent notes keep compiler routing visible.',
       'utf8',
     )
 
@@ -249,8 +309,10 @@ describe('registry intake and profile workflow', () => {
 
     const proposed = await runIntakeStatusCommand({ registryRoot })
     expect(proposed.countsByStatus.route_proposed).toBe(1)
+    const nextAfterRoute = await runIntakeNextCommand({ registryRoot })
+    expect(nextAfterRoute.suggestedCommand).toContain('--quality <quality.json> --curation <curation.json>')
 
-    const accepted = await runRouteAcceptCommand({
+    const accepted = await runRouteAcceptCommandWithCuration({
       registryRoot,
       proposalId: routed.results[0].proposal.id,
       reviewer: 'tester',
@@ -269,6 +331,38 @@ describe('registry intake and profile workflow', () => {
 
     const finalStatus = await runIntakeStatusCommand({ registryRoot })
     expect(finalStatus.pendingCount).toBe(0)
+  })
+
+  it('moves quality and curation sidecars with registry inbox sources', async () => {
+    const registryRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-registry-'))
+    tempRoots.push(registryRoot)
+    await runRegistryInitCommand({ registryRoot })
+    const inbox = path.join(registryRoot, 'raw', 'inbox')
+    await writeFile(
+      path.join(inbox, 'article.md'),
+      '# Article\n\nThis is the source material.',
+      'utf8',
+    )
+    await writeFile(
+      path.join(inbox, 'article.md.quality.json'),
+      JSON.stringify({ schema: 'llm-wiki.inbox-quality.v1', status: 'ready' }),
+      'utf8',
+    )
+    await writeFile(
+      path.join(inbox, 'article.md.curation.json'),
+      JSON.stringify({ schema: 'llm-wiki.semantic-curation.v1', status: 'ready' }),
+      'utf8',
+    )
+
+    const scan = await runIntakeScanCommand({ registryRoot })
+
+    expect(scan.newCount).toBe(1)
+    expect(scan.discoveredItems[0].fileName).toBe('article.md')
+    expect(scan.discoveredItems[0].qualityPlanPath).toEqual(expect.stringContaining('article.md.quality.json'))
+    expect(scan.discoveredItems[0].curationPlanPath).toEqual(expect.stringContaining('article.md.curation.json'))
+    await expect(readdir(inbox)).resolves.toEqual([])
+    await expect(access(path.join(registryRoot, scan.discoveredItems[0].qualityPlanPath!))).resolves.toBeUndefined()
+    await expect(access(path.join(registryRoot, scan.discoveredItems[0].curationPlanPath!))).resolves.toBeUndefined()
   })
 
   it('maintains every registered wiki when called with an atlas registry root', async () => {

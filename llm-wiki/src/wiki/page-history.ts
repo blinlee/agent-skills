@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 export type PageHistoryEntry = {
-  section: 'sources' | 'entities' | 'concepts' | 'syntheses'
+  section: 'sources' | 'readings' | 'entities' | 'concepts' | 'syntheses'
   slug: string
   title: string
 }
@@ -98,6 +98,6 @@ function validatePageHistoryEntry(page: PageHistoryEntry): void {
 
 function parseRelativeWikiPagePath(relativeFilePath: string): { section: PageHistoryEntry['section']; slug: string } | null {
   const normalized = relativeFilePath.replace(/\\/g, '/')
-  const match = /^wiki\/(sources|entities|concepts|syntheses)\/([a-z0-9-]+)\.md$/u.exec(normalized)
+  const match = /^wiki\/(sources|readings|entities|concepts|syntheses)\/([a-z0-9-]+)\.md$/u.exec(normalized)
   return match ? { section: match[1] as PageHistoryEntry['section'], slug: match[2]! } : null
 }

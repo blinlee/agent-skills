@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runCliFromArgv } from '../../src/cli.js'
 import { appendWikiLog, updateWikiIndex } from '../../src/wiki/index-log.js'
 import { writeKnowledgeChanges } from '../../src/wiki/page-writer.js'
+import { runCliIngestWithCuration } from '../helpers/curation.js'
 
 const testRoots: string[] = []
 
@@ -22,9 +23,10 @@ describe('wiki writes', () => {
     const result = await writeKnowledgeChanges({
       knowledgeRoot,
       sourcePage: { slug: 'compiler-notes', title: 'Compiler Notes', body: '...' },
+      readingPage: { slug: 'compiler-notes', title: 'Compiler Notes - 完整原文', body: '# Compiler Notes\n\nFull source.' },
       entityPages: [{ slug: 'openclaw', title: 'OpenClaw', body: '...' }],
       conceptPages: [{ slug: 'compilation', title: 'Compilation', body: '...' }],
-      synthesisSuggestions: [],
+      synthesisPages: [],
       logEntry: 'ingested compiler-notes',
       indexEntries: ['[[compiler-notes]]'],
     })
@@ -32,6 +34,7 @@ describe('wiki writes', () => {
     expect(result.writtenFiles).toEqual(
       expect.arrayContaining([
         expect.stringContaining('wiki/sources/compiler-notes.md'),
+        expect.stringContaining('wiki/readings/compiler-notes.md'),
         expect.stringContaining('wiki/entities/openclaw.md'),
         expect.stringContaining('wiki/concepts/compilation.md'),
       ]),
@@ -39,6 +42,8 @@ describe('wiki writes', () => {
 
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8')).resolves.toContain('type: "source"\n')
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8')).resolves.toContain('# Compiler Notes\n\n...\n')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'), 'utf8')).resolves.toContain('type: "reading"\n')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'), 'utf8')).resolves.toContain('# Compiler Notes\n\nFull source.\n')
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8')).resolves.toContain('type: "entity"\n')
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8')).resolves.toContain('# OpenClaw\n\n...\n')
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), 'utf8')).resolves.toContain('type: "concept"\n')
@@ -126,9 +131,10 @@ describe('wiki writes', () => {
     await writeKnowledgeChanges({
       knowledgeRoot,
       sourcePage: { slug: 'compiler-notes', title: 'Compiler Notes', body: '# Compiler Notes\n\nFirst pass.' },
+      readingPage: { slug: 'compiler-notes', title: 'Compiler Notes - 完整原文', body: '# Compiler Notes\n\nFull first pass.' },
       entityPages: [],
       conceptPages: [],
-      synthesisSuggestions: [],
+      synthesisPages: [],
       logEntry: 'ingested compiler-notes',
       indexEntries: ['[[compiler-notes]]'],
     })
@@ -136,9 +142,10 @@ describe('wiki writes', () => {
     await writeKnowledgeChanges({
       knowledgeRoot,
       sourcePage: { slug: 'compiler-notes', title: 'Compiler Notes', body: '# Compiler Notes\n\nSecond pass.' },
+      readingPage: { slug: 'compiler-notes', title: 'Compiler Notes - 完整原文', body: '# Compiler Notes\n\nFull second pass.' },
       entityPages: [],
       conceptPages: [],
-      synthesisSuggestions: [],
+      synthesisPages: [],
       logEntry: 'reingested compiler-notes',
       indexEntries: ['[[compiler-notes]]'],
     })
@@ -152,6 +159,42 @@ describe('wiki writes', () => {
 
     const logLines = readLogDataLines(await readFile(path.join(knowledgeRoot, 'wiki', 'log.md'), 'utf8'))
     expect(logLines).toHaveLength(2)
+  })
+
+  it('removes stale generated semantic pages from the same source when they are unchanged', async () => {
+    const knowledgeRoot = await createTestRoot()
+
+    const firstWrite = await writeKnowledgeChanges({
+      knowledgeRoot,
+      sourcePage: { slug: 'compiler-notes', title: 'Compiler Notes', body: '# Compiler Notes\n\nFirst pass.' },
+      readingPage: { slug: 'compiler-notes', title: 'Compiler Notes - 完整原文', body: '# Compiler Notes\n\nFull first pass.' },
+      entityPages: [{ slug: 'openclaw', title: 'OpenClaw', body: '# OpenClaw\n\nGenerated entity from compiler notes.' }],
+      conceptPages: [],
+      synthesisPages: [],
+      logEntry: 'ingested compiler-notes',
+      indexEntries: [
+        '- [[sources/compiler-notes|Compiler Notes]]',
+        '- [[entities/openclaw|OpenClaw]]',
+      ],
+    })
+
+    await writeKnowledgeChanges({
+      knowledgeRoot,
+      sourcePage: { slug: 'compiler-notes', title: 'Compiler Notes', body: '# Compiler Notes\n\nSecond pass.' },
+      readingPage: { slug: 'compiler-notes', title: 'Compiler Notes - 完整原文', body: '# Compiler Notes\n\nFull second pass.' },
+      entityPages: [],
+      conceptPages: [],
+      synthesisPages: [],
+      logEntry: 'reingested compiler-notes',
+      indexEntries: ['- [[sources/compiler-notes|Compiler Notes]]'],
+      previousOutputManifest: firstWrite.outputManifest,
+    })
+
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' })
+    const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
+    expect(indexContent).toContain('[[sources/compiler-notes|Compiler Notes]]')
+    expect(indexContent).not.toContain('[[entities/openclaw|OpenClaw]]')
   })
 
   it('serializes concurrent index and log updates without throwing or losing entries', async () => {
@@ -192,9 +235,14 @@ describe('wiki writes', () => {
         topics: ['compiler'],
         artifactId: 'raw/compiler-notes.md',
       },
+      readingPage: {
+        slug: 'compiler-notes',
+        title: 'Compiler Notes - 完整原文',
+        body: '# Compiler Notes\n\nFull source for deterministic build evidence.\n',
+      },
       entityPages: [],
       conceptPages: [],
-      synthesisSuggestions: [],
+      synthesisPages: [],
       logEntry: 'ingested compiler-notes',
       indexEntries: ['- [[sources/compiler-notes|Compiler Notes]]'],
     })
@@ -370,9 +418,14 @@ describe('wiki writes', () => {
         title: 'Compiler Notes',
         body: '# Compiler Notes\n\nCompiler Notes explains deterministic build evidence.\n',
       },
+      readingPage: {
+        slug: 'compiler-notes',
+        title: 'Compiler Notes - 完整原文',
+        body: '# Compiler Notes\n\nFull source for deterministic build evidence.\n',
+      },
       entityPages: [{ slug: 'openclaw', title: 'OpenClaw', body: '# OpenClaw\n\nOpenClaw runs local agent workflows.\n' }],
       conceptPages: [],
-      synthesisSuggestions: [],
+      synthesisPages: [],
       logEntry: 'ingested compiler-notes',
       indexEntries: [
         '- [[sources/compiler-notes|Compiler Notes]]',
@@ -417,6 +470,82 @@ describe('wiki writes', () => {
     expect(pages).not.toContain('"target": "entities/index"')
   })
 
+  it('maintain backfills historical source-card-only entries into complete wiki assets', async () => {
+    const knowledgeRoot = await createTestRoot()
+    const sourcePath = path.join(knowledgeRoot, 'compiler-notes.md')
+    await writeFile(
+      sourcePath,
+      '# Compiler Notes\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic.\n',
+      'utf8',
+    )
+
+    await runCliIngestWithCuration(knowledgeRoot, sourcePath)
+
+    const dedupPath = path.join(knowledgeRoot, 'system', 'dedup', 'manifest.json')
+    const dedupManifest = JSON.parse(await readFile(dedupPath, 'utf8')) as {
+      entries: Record<string, {
+        lastOutputManifest: {
+          pageFiles: string[]
+          indexEntries: string[]
+          pageSnapshots?: Array<{ filePath: string }>
+        }
+      }>
+    }
+    const entry = dedupManifest.entries[path.resolve(sourcePath)]
+    if (!entry) {
+      throw new Error('expected dedup manifest entry')
+    }
+    entry.lastOutputManifest.pageFiles = ['wiki/sources/compiler-notes.md']
+    entry.lastOutputManifest.indexEntries = ['- [[sources/compiler-notes|Compiler Notes]]']
+    delete entry.lastOutputManifest.pageSnapshots
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'),
+      '# Compiler Notes\n\nManual source card note must stay.\n',
+      'utf8',
+    )
+    await writeFile(dedupPath, `${JSON.stringify(dedupManifest, null, 2)}\n`, 'utf8')
+    await rm(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'), { force: true })
+    await rm(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), { force: true })
+    await rm(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), { force: true })
+
+    const result = await runCliFromArgv(['maintain', knowledgeRoot]) as {
+      wikiAssets: {
+        backfilledEntries: number
+        status: string
+        warnings: string[]
+      }
+    }
+
+    expect(result.wikiAssets).toMatchObject({
+      status: 'ready',
+      backfilledEntries: 1,
+      warnings: [],
+    })
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'), 'utf8'))
+      .resolves.toContain('## 原文全文')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8'))
+      .resolves.toContain('Manual source card note must stay.')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8'))
+      .resolves.toContain('[[readings/compiler-notes|完整原文]]')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' })
+
+    const refreshedManifest = JSON.parse(await readFile(dedupPath, 'utf8')) as {
+      entries: Record<string, { lastOutputManifest: { pageFiles: string[]; pageSnapshots?: Array<{ filePath: string }> } }>
+    }
+    expect(refreshedManifest.entries[path.resolve(sourcePath)]?.lastOutputManifest.pageFiles).toEqual(expect.arrayContaining([
+      'wiki/sources/compiler-notes.md',
+      'wiki/readings/compiler-notes.md',
+    ]))
+    expect(refreshedManifest.entries[path.resolve(sourcePath)]?.lastOutputManifest.pageSnapshots?.map((snapshot) => snapshot.filePath))
+      .toEqual(expect.arrayContaining([
+        'wiki/sources/compiler-notes.md',
+        'wiki/readings/compiler-notes.md',
+      ]))
+  })
+
   it('rejects unsafe slugs before writing outside the wiki section', async () => {
     const knowledgeRoot = await createTestRoot()
 
@@ -424,9 +553,10 @@ describe('wiki writes', () => {
       writeKnowledgeChanges({
         knowledgeRoot,
         sourcePage: { slug: '../../../escape-target/bad', title: 'Bad', body: '...' },
+        readingPage: { slug: 'bad', title: 'Bad - 完整原文', body: '...' },
         entityPages: [],
         conceptPages: [],
-        synthesisSuggestions: [],
+        synthesisPages: [],
         logEntry: 'should not write',
         indexEntries: ['[[bad]]'],
       }),

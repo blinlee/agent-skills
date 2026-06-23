@@ -77,6 +77,7 @@ export function createDedupStore(manifestPath) {
                     sourceKind: input.sourceKind,
                     lastSuccessfulJobId: input.jobId,
                     lastCompiledAt: input.compiledAt ?? new Date().toISOString(),
+                    lastStatus: input.status ?? 'completed',
                     lastOutputManifest: input.outputManifest
                         ? normalizeSourceOutputManifest(input.outputManifest)
                         : null,

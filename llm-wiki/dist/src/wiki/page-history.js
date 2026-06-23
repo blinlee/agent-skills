@@ -78,6 +78,6 @@ function validatePageHistoryEntry(page) {
 }
 function parseRelativeWikiPagePath(relativeFilePath) {
     const normalized = relativeFilePath.replace(/\\/g, '/');
-    const match = /^wiki\/(sources|entities|concepts|syntheses)\/([a-z0-9-]+)\.md$/u.exec(normalized);
+    const match = /^wiki\/(sources|readings|entities|concepts|syntheses)\/([a-z0-9-]+)\.md$/u.exec(normalized);
     return match ? { section: match[1], slug: match[2] } : null;
 }

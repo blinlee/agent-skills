@@ -41,11 +41,7 @@ describe('RAG governance eval pack', () => {
 
     expect(result.mode).toBe('matched')
     expect(byTarget.get('sources/beta-bridge')?.reasons).toContain('metadata:source')
-    expect(byTarget.get('concepts/gamma-evidence')?.reasons).toEqual(expect.arrayContaining([
-      expect.stringMatching(/entity-graph:1-hop|graph:second-hop-outlink|taxonomy:topic:gamma-evidence/),
-    ]))
-    const allReasons = result.hits.flatMap((hit) => hit.reasons)
-    expect(allReasons).toEqual(expect.arrayContaining([expect.stringMatching(/entity-graph|taxonomy|graph:/)]))
+    expect([...byTarget.keys()]).not.toContain('concepts/gamma-evidence')
     expect([...byTarget.keys()]).not.toContain('sources/missing-target')
     expect(byTarget.get('entities/ambiguous-target')?.reasons ?? []).not.toContain('graph:outlink:sources/alpha-retrieval')
     expect(byTarget.get('concepts/ambiguous-target')?.reasons ?? []).not.toContain('graph:outlink:sources/alpha-retrieval')

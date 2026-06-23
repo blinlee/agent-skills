@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { runIngestCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration, testConcept, testEntity, writeTestCurationPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 const tempSources: string[] = []
@@ -15,7 +16,7 @@ afterEach(async () => {
 })
 
 describe('ingest review governance', () => {
-  it('keeps heuristic classifications out of durable pages and human approval queues', async () => {
+  it('materializes ordinary semantic candidates without human approval backlog', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-review-governance-'))
     const sourcePath = path.join(os.tmpdir(), `llm-wiki-review-source-${Date.now()}.md`)
     tempRoots.push(knowledgeRoot)
@@ -23,48 +24,41 @@ describe('ingest review governance', () => {
 
     await writeFile(
       sourcePath,
-      '# Compiler Notes\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic. Rust Analyzer observes the pipeline.\n',
+      '# Compiler Notes\n\nEntity: OpenClaw\nEntity: Rust Analyzer\nConcept: compilation\n\nOpenClaw keeps compilation deterministic. Rust Analyzer observes the pipeline.\n',
       'utf8',
     )
 
-    const ingestResult = await runIngestCommand({
+    const ingestResult = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [
+          testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' }),
+          testEntity({ title: 'Rust Analyzer', quote: 'Entity: Rust Analyzer' }),
+        ],
+        concepts: [testConcept({ title: 'Compilation', quote: 'Concept: compilation' })],
+      }),
     })
 
-    expect(ingestResult.status).toBe('needs_review')
+    expect(ingestResult.status).toBe('completed')
 
     expect(ingestResult.reviewFiles.some((filePath) => filePath.includes(path.join('review', 'low-confidence')))).toBe(false)
+    expect(ingestResult.reviewFiles).toEqual([])
 
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'compiler-notes.md'))).rejects.toMatchObject({
       code: 'ENOENT',
     })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'rust-analyzer.md'))).rejects.toMatchObject({
-      code: 'ENOENT',
-    })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'rust-analyzer.md'))).resolves.toBeUndefined()
 
-    const reviewRecords = await Promise.all(
-      ingestResult.reviewFiles
-        .filter((filePath) => filePath.includes(path.join('review', 'queue')))
-        .map(async (filePath) => JSON.parse(await readFile(filePath, 'utf8'))),
-    )
-    expect(reviewRecords).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        type: 'semantic-candidate',
-        status: 'open',
-        relatedSources: expect.arrayContaining([expect.stringContaining(path.basename(sourcePath))]),
-        relatedPages: expect.arrayContaining(['sources/compiler-notes']),
-        candidate: expect.objectContaining({
-          kind: 'entity',
-          slug: 'openclaw',
-          title: 'OpenClaw',
-          source: 'marker',
-        }),
-      }),
-    ]))
-    expect(JSON.stringify(reviewRecords)).not.toContain('Rust Analyzer')
+    const sourcePage = await readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'), 'utf8')
+    expect(sourcePage).toContain('[[readings/compiler-notes|完整原文]]')
+    expect(sourcePage).toContain('[[entities/openclaw|OpenClaw]]')
+    expect(sourcePage).toContain('[[concepts/compilation|Compilation]]')
   })
 
   it('routes filename/title/body mismatches into conflict review instead of silently accepting source metadata', async () => {
@@ -79,7 +73,7 @@ describe('ingest review governance', () => {
       'utf8',
     )
 
-    const ingestResult = await runIngestCommand({
+    const ingestResult = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: sourcePath,
     })
@@ -118,7 +112,7 @@ describe('ingest review governance', () => {
       'utf8',
     )
 
-    const ingestResult = await runIngestCommand({
+    const ingestResult = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: sourcePath,
     })
@@ -136,37 +130,41 @@ describe('ingest review governance', () => {
 
   it('removes stale review artifacts when recompiling a changed source', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-review-governance-'))
-    const sourcePath = path.join(os.tmpdir(), `llm-wiki-source-${Date.now()}.md`)
+    const sourcePath = path.join(os.tmpdir(), `RAG_for_AIGC_Survey_2024-${Date.now()}.md`)
     tempRoots.push(knowledgeRoot)
     tempSources.push(sourcePath)
 
     await writeFile(
       sourcePath,
-      '# Compiler Notes\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic. Rust Analyzer observes the pipeline.\n',
+      '# Pseduo-Random and de Bruijn Array Codes\n\nThis paper studies de Bruijn array codes and pseudo-random arrays for coding theory.\n',
       'utf8',
     )
 
-    const firstIngest = await runIngestCommand({
+    const firstIngest = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: sourcePath,
     })
 
-    const firstReviewArtifact = firstIngest.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'queue')))
+    const firstReviewArtifact = firstIngest.reviewFiles.find((filePath) => filePath.includes(path.join('review', 'conflicts')))
     expect(firstReviewArtifact).toBeTruthy()
 
-    await writeFile(sourcePath, '# Scratch note\n\nplaceholder\n', 'utf8')
+    await writeFile(
+      sourcePath,
+      '# RAG for AIGC Survey 2024\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic.\n',
+      'utf8',
+    )
 
-    const secondIngest = await runIngestCommand({
+    const secondIngest = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: sourcePath,
     })
 
-    expect(secondIngest.status).toMatch(/completed|partial|needs_review/)
+    expect(secondIngest.status).toMatch(/completed|partial/)
 
-    const queueFiles = await readdir(path.join(knowledgeRoot, 'review', 'queue'))
+    const queueFiles = await readdir(path.join(knowledgeRoot, 'review', 'conflicts'))
 
     if (queueFiles.includes(path.basename(firstReviewArtifact!))) {
-      await expect(readFile(path.join(knowledgeRoot, 'review', 'queue', path.basename(firstReviewArtifact!)), 'utf8')).resolves.not.toContain('Rust Analyzer')
+      await expect(readFile(path.join(knowledgeRoot, 'review', 'conflicts', path.basename(firstReviewArtifact!)), 'utf8')).resolves.not.toContain('Pseduo-Random')
     }
   })
 })

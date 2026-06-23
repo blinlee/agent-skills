@@ -5,15 +5,15 @@ Load this reference when working on raw integrity, review policy, classification
 ## Layer contract
 
 ```text
-raw/inbox -> raw/objects + intake ledger -> sharded raw/staged/raw/archive -> review/taxonomy proposals -> accepted wiki/taxonomy
+raw/inbox -> raw/objects + intake ledger -> sharded raw/staged/raw/archive -> semantic curation plan -> wiki/sources + wiki/readings + curated entity/concept/synthesis pages -> indexes/embeddings -> govern only for structural decisions
 ```
 
 - `raw/inbox/`: short-lived user dropzone; not canonical generated knowledge and not a historical archive.
-- `raw/objects/`: sharded content-addressed atlas original store. Scheduled agents should use `system/intake/items/`, not scan this tree for pending work.
+- `raw/objects/`: sharded content-addressed atlas original store. Scheduled runs should use `system/intake/items/`, not scan this tree for pending work.
 - `raw/staged/` and `raw/archive/`: sharded managed immutable evidence. Files include sha256 frontmatter over the body and are recorded in `system/manifests/raw-sources.json`.
-- `wiki/`: Obsidian-compatible generated pages, index, log, sources, entities, concepts, syntheses.
-- `review/`: low-confidence, conflict, merge-candidate, and synthesis promotion queues.
-- `taxonomy/`: proposal and accepted classification state.
+- `wiki/`: Obsidian-compatible generated pages, index, log, source cards, full reading mirrors, and curation-backed entities/concepts/syntheses.
+- `review/`: real blockers and promotion queues: unreadable/unsupported inputs, metadata conflicts, dedup/merge candidates, sparse sources, and synthesis promotion.
+- `taxonomy/`: proposal and accepted structural classification state. Ordinary per-source entity/concept pages are not taxonomy proposals.
 - `system/`: jobs, dedup, raw manifests, adapters, cache.
 
 ## Five risk controls
@@ -31,10 +31,10 @@ Model output may propose:
 - source domain/category
 - topic/tag/taxonomy placement
 - target folder or page section
-- entity/concept assignment
+- entity/concept/synthesis assignment from the curation plan
 - merge/backlink candidate
 
-It must not become canonical taxonomy or durable placement without explicit approval or edit. Unreviewed classification can support temporary routing, daily briefs, and review queues only.
+Structural classification must not become canonical taxonomy or cross-wiki placement without explicit approval or edit. Ordinary per-source source cards and full reading mirrors may be materialized deterministically. Entity/concept/synthesis pages may be materialized during ingest only from a semantic curation plan with exact source evidence; runtime code must not create them from heuristic extraction.
 
 Classification proposals should separate:
 
@@ -50,10 +50,10 @@ Query answers are working analysis until promoted. A `save-synthesis` promotion 
 - cross-source insight, comparison, conflict analysis, concept unification, or reusable method summary
 - citations that cover the claim rather than merely decorating it
 - novelty beyond a transient chat answer or single-source paraphrase
-- clear enough scope that future agents will retrieve it as knowledge rather than management chatter
+- clear enough scope that future query runs retrieve it as knowledge rather than management chatter
 - explicit human approval before the durable write
 
-Backlink policy follows the same proposal-first boundary. Ingest should not repair backlinks or scan the wiki for semantic link opportunities. That work belongs to explicit graph-health surfaces: lint, index, bridge-index, accepted bridge/taxonomy operations, or confirmed synthesis promotion.
+Ingest may add narrow backlinks among the pages created for the same source: source card, full reading mirror, and curation-backed entity/concept/synthesis pages. It should not perform broad cross-source backlink repair or reshape taxonomy/profile boundaries. That work belongs to explicit graph-health surfaces: lint, index, bridge-index, accepted bridge/taxonomy operations, or confirmed synthesis promotion.
 
 Confirmed promotion may add narrow backlinks to cited/related pages because the human has approved the synthesis as durable knowledge. Broad backlink repair for large roots should be delayed to lint/index or a dedicated review pass.
 

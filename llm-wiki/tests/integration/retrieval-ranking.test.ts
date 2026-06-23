@@ -19,6 +19,7 @@ import { retrieveChunks } from '../../src/retrieval/retrieval.js'
 import { scoreTaxonomyBoosts } from '../../src/retrieval/taxonomy.js'
 import { tokenize } from '../../src/retrieval/tokenize.js'
 import type { ChunkIndexEntryV2, ChunkIndexStateV2 } from '../../src/retrieval/types.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 const embeddingEnvKeys = [
@@ -604,7 +605,7 @@ describe('retrieval ranking, graph boosts, rerank, and HyDE', () => {
 async function buildSampleIndex(prefix: string): Promise<string> {
   const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), prefix))
   tempRoots.push(knowledgeRoot)
-  await runIngestCommand({
+  await runIngestCommandWithCuration({
     knowledgeRoot,
     input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
   })

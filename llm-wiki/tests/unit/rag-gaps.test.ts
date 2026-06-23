@@ -6,6 +6,7 @@ import { runBuildIndexCommand, runIngestCommand, runQueryCommand } from '../../s
 import { buildEntityConceptGraphIndex, scoreEntityGraphBoosts } from '../../src/retrieval/entity-graph.js'
 import { createEmbeddingProvider, diagnoseEmbeddingProviderConfig, loadEmbeddingProviderConfigFromEnv } from '../../src/retrieval/embedding-provider.js'
 import type { ChunkIndexEntryV2 } from '../../src/retrieval/types.js'
+import { writeTestQualityPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -195,9 +196,33 @@ describe('phase gaps: graph, claims, conflicts, provider matrix', () => {
 async function buildSampleIndex(prefix: string): Promise<string> {
   const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), prefix))
   tempRoots.push(knowledgeRoot)
+  const curationPath = path.join(knowledgeRoot, 'sample.curation.json')
+  await writeFile(curationPath, JSON.stringify({
+    schema: 'llm-wiki.semantic-curation.v1',
+    status: 'ready',
+    summary: '这份样例材料说明 OpenClaw 支持确定性编译流程。',
+    entities: [{
+      title: 'OpenClaw',
+      slug: 'openclaw',
+      kind: 'system',
+      description: 'OpenClaw 是样例材料中出现的系统实体。',
+      evidence: [{ quote: 'OpenClaw keeps compilation deterministic across the knowledge pipeline.' }],
+    }],
+    concepts: [{
+      title: 'Compilation',
+      slug: 'compilation',
+      description: '材料中明确出现的确定性编译概念。',
+      evidence: [{ quote: 'OpenClaw keeps compilation deterministic across the knowledge pipeline.' }],
+    }],
+  }), 'utf8')
   await runIngestCommand({
     knowledgeRoot,
     input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
+    qualityPath: await writeTestQualityPlan({
+      sourcePath: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
+      baseDir: knowledgeRoot,
+    }),
+    curationPath,
   })
   await runBuildIndexCommand({ knowledgeRoot })
   return knowledgeRoot

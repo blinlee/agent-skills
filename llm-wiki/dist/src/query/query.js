@@ -67,7 +67,7 @@ export async function runQuery(input) {
     const displayQuestion = redactor(input.question);
     const groundedCitations = redactCitations(compressCitations(citations, retrieval.signalSummary.evidenceBudget), redactor);
     const lowConfidenceRefusal = retrieval.signalSummary.confidence.lowConfidence;
-    const grounding = buildGroundingDiagnostics(displayQuestion, selection, groundedCitations, retrieval.signalSummary.evidenceBudget, lowConfidenceRefusal);
+    const grounding = buildGroundingDiagnostics(displayQuestion, selection, groundedCitations, retrieval.signalSummary.evidenceBudget, lowConfidenceRefusal, undefined, input.queryIntent);
     const answer = redactor(buildGroundedAnswer(displayQuestion, selection, groundedCitations, grounding));
     const suggestion = selection.mode === 'matched' && selection.pages[0] && grounding.answerability === 'answered'
         ? await persistSynthesisSuggestion({

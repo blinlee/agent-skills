@@ -6,31 +6,61 @@ Use this reference when the user invokes `/llm-wiki query` or asks an llm-wiki r
 
 Run retrieval before answering. Do not answer `/llm-wiki query` from source inspection, README reading, implementation memory, or architecture explanation alone.
 
-## Deterministic handoff
+## Classify First
+
+Before the handoff, classify the user question yourself. Do not call runtime code to decide the question type. The runtime only executes the retrieval mode you choose.
+
+Use these categories:
+
+| Type | Use When | Retrieval Route |
+|---|---|---|
+| Exact fact | definition, parameter, command, author/date, one quoted claim, one paper's exact conclusion | `passage` |
+| Single-document follow-up | the user points to "this paper/source/document" or a named source and asks what it says | `passage`, after identifying the source if needed |
+| Technical mechanism | how one method/system/framework works, modules, pipeline, implementation, limitations, tradeoffs | `passage` |
+| Same-domain comparison | A vs B, pros/cons, differences inside one wiki/field | `passage`, usually with several passages |
+| Survey / route / landscape | major frameworks, routes, schools, taxonomy, research landscape, state of the art, broad literature overview | `document` |
+| Cross-wiki synthesis | explicitly connects or compares multiple fields/wikis, such as RAG + finance or agents + automation | registry query; choose `passage` for precise comparison, `document` for broad survey |
+| Material inventory | asks what the wiki contains, what was ingested, coverage, readiness, or available sources | use readiness/index/overview evidence, not factual synthesis |
+
+Low-confidence gate:
+
+- If you cannot distinguish technical mechanism from survey/route, ask the user which output they want.
+- If the relevant wiki/domain is unclear, ask for scope before retrieval.
+- If the question is too broad, such as "AI 研究怎么样", ask for a narrower field or desired output.
+- If `passage` vs `document` would materially change token cost, timing, or output shape, ask first.
+- Do not proceed with a guessed route when the ambiguity affects the retrieval workflow.
+
+Examples:
+
+- "LightRAG 的 query mode 怎么工作？" -> technical mechanism -> `passage`
+- "GraphRAG 和 LightRAG 差异是什么？" -> same-domain comparison -> `passage`
+- "RAG 现在主要有哪些路线？" -> survey/route -> `document`
+- "GraphRAG for financial reports 怎么做？" -> cross-wiki, technical if asking mechanism, survey if asking research landscape
+- "当前 wiki 收了哪些论文？" -> material inventory, not ordinary RAG answering
 
 From the package root:
 
 ```bash
-python3 scripts/query_handoff.py "<question>" --json
+python3 scripts/query_handoff.py "<question>" --reading-mode <passage|document> --json
 ```
 
 Then run the returned `recommendedCommand` exactly:
 
 ```bash
-npm run --silent cli -- query <knowledgeRoot> "<question>"
-npm run --silent cli -- query-registry <registryRoot> "<question>"
+npm run --silent cli -- query <knowledgeRoot> "<question>" --reading-mode <passage|document>
+npm run --silent cli -- query-registry <registryRoot> "<question>" --reading-mode <passage|document>
 ```
 
 Use `--root <path>` on the helper only when the user supplied an explicit root.
 
-The default command output is the agent-facing reading pack wrapper:
+The default command output is the compact reading pack for this run:
 
 - `question`
 - `answerability`
 - `readiness`
 - `sourceReadingPack`
 
-Answer from `sourceReadingPack.passages[]`. When `sourceReadingPack.readingMode === "document"`, treat `sourceReadingPack.documents[]` as the concise original-document reading list and use the paired entry passages as the starting points. Run the same query with `--full` only when you need complete citations, diagnostics, `agentReadingPack`, per-wiki reading packs, or score details.
+Answer from `sourceReadingPack.passages[]`. When `sourceReadingPack.readingMode === "document"`, treat `sourceReadingPack.documents[]` as the concise original-document reading list and use the paired entry passages as the starting points. Run the same query with `--full` only when you need complete citations, diagnostics, detailed reading-pack fields, per-wiki reading packs, or score details.
 
 ## Interpret result
 
@@ -44,9 +74,9 @@ Single-wiki query:
 Registry query:
 
 - Default output uses the same `sourceReadingPack.passages[]` evidence contract.
-- Survey/framework/route questions may return `sourceReadingPack.readingMode === "document"` with `documents[]`. That list is not a score ledger; it identifies the original raw documents an agent should read when full-document synthesis is needed.
+- Survey/framework/route questions may return `sourceReadingPack.readingMode === "document"` with `documents[]`. That list is not a score ledger; it identifies the original raw documents to read when full-document synthesis is needed.
 - Registry default passages should be raw-backed original-source passages. If no raw-backed evidence qualifies, the default pack should be empty/insufficient rather than falling back to derived wiki excerpts.
-- Use `--full` to inspect `selectedWikis`, `agentReadingPack.searchedWikis`, `agentReadingPack.citationsToRead`, `diagnostics.embeddingDegradedWikis`, raw-backed/derived citation counts, and per-wiki packs.
+- Use `--full` to inspect `selectedWikis`, detailed reading-pack fields such as `agentReadingPack.searchedWikis` and `agentReadingPack.citationsToRead`, `diagnostics.embeddingDegradedWikis`, raw-backed/derived citation counts, and per-wiki packs.
 
 ## Embedding verification
 

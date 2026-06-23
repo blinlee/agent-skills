@@ -14,6 +14,9 @@ export async function runIntakeScan(input) {
         if (!entry.isFile() && !entry.isDirectory()) {
             continue;
         }
+        if (entry.isFile() && isInboxControlSidecarName(entry.name)) {
+            continue;
+        }
         const sourcePath = path.join(paths.inboxDirectory, entry.name);
         const now = new Date().toISOString();
         const id = `src-${now.slice(0, 10).replace(/-/g, '')}-${randomUUID()}`;
@@ -24,11 +27,23 @@ export async function runIntakeScan(input) {
             fileName: entry.name,
             sha256,
         });
+        const qualityPlanPath = await moveInboxControlSidecar({
+            sourcePath,
+            objectPath,
+            extension: '.quality.json',
+        });
+        const curationPlanPath = await moveInboxControlSidecar({
+            sourcePath,
+            objectPath,
+            extension: '.curation.json',
+        });
         const item = {
             id,
             originalPath: path.relative(paths.root, sourcePath),
             currentPath: path.relative(paths.root, objectPath),
             objectPath: path.relative(paths.root, objectPath),
+            qualityPlanPath: qualityPlanPath ? path.relative(paths.root, qualityPlanPath) : null,
+            curationPlanPath: curationPlanPath ? path.relative(paths.root, curationPlanPath) : null,
             fileName: entry.name,
             sourceKind: entry.isDirectory() ? 'directory' : detectRouteSourceKind(entry.name),
             sha256,
@@ -64,6 +79,9 @@ export async function runIntakeScan(input) {
         pendingItems,
     };
 }
+function isInboxControlSidecarName(name) {
+    return name.endsWith('.curation.json') || name.endsWith('.quality.json');
+}
 export async function runIntakeStatus(input) {
     const paths = resolveRegistryPaths(input.registryRoot);
     await runRegistryInit({ registryRoot: paths.root });
@@ -88,13 +106,15 @@ export async function runIntakeNext(input) {
             registryRoot: paths.root,
             action: 'silent',
             item: null,
-            message: '没有新的或待处理的原始材料。定时 agent 可以安静退出。',
+            message: '没有新的或待处理的原始材料。定时任务可以安静退出。',
             suggestedCommand: null,
         };
     }
     const routeCommand = `llm-wiki route ${shellQuote(paths.root)} ${shellQuote(path.join(paths.root, item.currentPath))}`;
+    const qualityArg = item.qualityPlanPath ? shellQuote(path.join(paths.root, item.qualityPlanPath)) : '<quality.json>';
+    const curationArg = item.curationPlanPath ? shellQuote(path.join(paths.root, item.curationPlanPath)) : '<curation.json>';
     const acceptCommand = item.routeProposalId
-        ? `llm-wiki route-accept ${shellQuote(paths.root)} ${shellQuote(item.routeProposalId)} --wiki <wiki-id> --reviewer <name>`
+        ? `llm-wiki route-accept ${shellQuote(paths.root)} ${shellQuote(item.routeProposalId)} --wiki <wiki-id> --reviewer <name> --quality ${qualityArg} --curation ${curationArg}`
         : null;
     if (item.status === 'discovered' || item.status === 'blocked') {
         return {
@@ -222,6 +242,33 @@ async function moveInboxSourceToObjectStore(input) {
     }
     await rename(input.sourcePath, objectPath);
     return objectPath;
+}
+async function moveInboxControlSidecar(input) {
+    const sidecarPath = await findInboxControlSidecar(input.sourcePath, input.extension);
+    if (!sidecarPath) {
+        return null;
+    }
+    const objectSidecarPath = `${input.objectPath}${input.extension}`;
+    await mkdir(path.dirname(objectSidecarPath), { recursive: true });
+    if (await exists(objectSidecarPath)) {
+        await rm(sidecarPath, { force: true });
+        return objectSidecarPath;
+    }
+    await rename(sidecarPath, objectSidecarPath);
+    return objectSidecarPath;
+}
+async function findInboxControlSidecar(sourcePath, extension) {
+    const parsed = path.parse(sourcePath);
+    const candidates = [
+        `${sourcePath}${extension}`,
+        path.join(parsed.dir, `${parsed.name}${extension}`),
+    ];
+    for (const candidate of candidates) {
+        if (await exists(candidate)) {
+            return candidate;
+        }
+    }
+    return null;
 }
 export async function readIntakeItems(paths) {
     const entries = await readdir(paths.intakeItemsDirectory, { withFileTypes: true });

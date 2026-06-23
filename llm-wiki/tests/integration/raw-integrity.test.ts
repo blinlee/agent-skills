@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { runIngestCommand, runLintCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -23,7 +24,7 @@ describe('raw source integrity', () => {
       'utf8',
     )
 
-    const ingest = await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    const ingest = await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
     expect(ingest.retainedPath ?? ingest.archivePath).toBeTruthy()
 
     const rawPath = ingest.retainedPath ?? ingest.archivePath!

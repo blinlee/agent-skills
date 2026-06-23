@@ -2,7 +2,7 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { runIngestCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration, testConcept, testEntity, writeTestCurationPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -13,7 +13,7 @@ afterEach(async () => {
 })
 
 describe('url ingest quality', () => {
-  it('preserves explicit entity/concept markers from html and suppresses wrapper noise', async () => {
+  it('uses explicit curation for html sources and suppresses wrapper noise', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-url-quality-'))
     tempRoots.push(knowledgeRoot)
 
@@ -39,18 +39,24 @@ describe('url ingest quality', () => {
       } satisfies Partial<Response> as Response)),
     )
 
-    const result = await runIngestCommand({
+    const result = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: 'https://example.com/url-sample',
+      curationPath: await writeTestCurationPlan({
+        sourcePath: 'https://example.com/url-sample',
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Routing', quote: 'Concept: routing' })],
+      }),
     })
 
     const entityFiles = await readdir(path.join(knowledgeRoot, 'wiki', 'entities'))
     const conceptFiles = await readdir(path.join(knowledgeRoot, 'wiki', 'concepts'))
 
-    expect(result.status).toBe('needs_review')
-    expect(result.taxonomyFiles.length).toBeGreaterThan(0)
-    expect(entityFiles).toEqual([])
-    expect(conceptFiles).toEqual([])
+    expect(result.status).toBe('completed')
+    expect(result.taxonomyFiles).toEqual([])
+    expect(entityFiles).toEqual(expect.arrayContaining(['openclaw.md']))
+    expect(conceptFiles).toEqual(expect.arrayContaining(['routing.md']))
     expect(entityFiles).not.toEqual(expect.arrayContaining(['url-sample.md', 'url-sample-url-sample.md', 'openclaw-concept.md']))
   })
 })

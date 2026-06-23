@@ -92,7 +92,7 @@ export function chunkPage(page: IndexedPage, evidence: PageEvidenceSource): { ch
           text: window.text,
           textSha256,
           tokenCountApprox: approximateTokenCount(window.text),
-          links: parseWikiLinks(window.text).map((link) => link.rawTarget),
+          links: page.section === 'readings' ? [] : parseWikiLinks(window.text).map((link) => link.rawTarget),
           metadata,
         }
         if (previousChunk) {

@@ -30,6 +30,9 @@ export async function runIntakeScan(input: RegistryCommandInput): Promise<Intake
     if (!entry.isFile() && !entry.isDirectory()) {
       continue
     }
+    if (entry.isFile() && isInboxControlSidecarName(entry.name)) {
+      continue
+    }
 
     const sourcePath = path.join(paths.inboxDirectory, entry.name)
     const now = new Date().toISOString()
@@ -41,12 +44,24 @@ export async function runIntakeScan(input: RegistryCommandInput): Promise<Intake
       fileName: entry.name,
       sha256,
     })
+    const qualityPlanPath = await moveInboxControlSidecar({
+      sourcePath,
+      objectPath,
+      extension: '.quality.json',
+    })
+    const curationPlanPath = await moveInboxControlSidecar({
+      sourcePath,
+      objectPath,
+      extension: '.curation.json',
+    })
 
     const item: IntakeItem = {
       id,
       originalPath: path.relative(paths.root, sourcePath),
       currentPath: path.relative(paths.root, objectPath),
       objectPath: path.relative(paths.root, objectPath),
+      qualityPlanPath: qualityPlanPath ? path.relative(paths.root, qualityPlanPath) : null,
+      curationPlanPath: curationPlanPath ? path.relative(paths.root, curationPlanPath) : null,
       fileName: entry.name,
       sourceKind: entry.isDirectory() ? 'directory' : detectRouteSourceKind(entry.name),
       sha256,
@@ -85,6 +100,10 @@ export async function runIntakeScan(input: RegistryCommandInput): Promise<Intake
   }
 }
 
+function isInboxControlSidecarName(name: string): boolean {
+  return name.endsWith('.curation.json') || name.endsWith('.quality.json')
+}
+
 export async function runIntakeStatus(input: RegistryCommandInput): Promise<IntakeStatusResult> {
   const paths = resolveRegistryPaths(input.registryRoot)
   await runRegistryInit({ registryRoot: paths.root })
@@ -113,14 +132,16 @@ export async function runIntakeNext(input: RegistryCommandInput): Promise<Intake
       registryRoot: paths.root,
       action: 'silent',
       item: null,
-      message: '没有新的或待处理的原始材料。定时 agent 可以安静退出。',
+      message: '没有新的或待处理的原始材料。定时任务可以安静退出。',
       suggestedCommand: null,
     }
   }
 
   const routeCommand = `llm-wiki route ${shellQuote(paths.root)} ${shellQuote(path.join(paths.root, item.currentPath))}`
+  const qualityArg = item.qualityPlanPath ? shellQuote(path.join(paths.root, item.qualityPlanPath)) : '<quality.json>'
+  const curationArg = item.curationPlanPath ? shellQuote(path.join(paths.root, item.curationPlanPath)) : '<curation.json>'
   const acceptCommand = item.routeProposalId
-    ? `llm-wiki route-accept ${shellQuote(paths.root)} ${shellQuote(item.routeProposalId)} --wiki <wiki-id> --reviewer <name>`
+    ? `llm-wiki route-accept ${shellQuote(paths.root)} ${shellQuote(item.routeProposalId)} --wiki <wiki-id> --reviewer <name> --quality ${qualityArg} --curation ${curationArg}`
     : null
 
   if (item.status === 'discovered' || item.status === 'blocked') {
@@ -269,6 +290,39 @@ async function moveInboxSourceToObjectStore(input: {
 
   await rename(input.sourcePath, objectPath)
   return objectPath
+}
+
+async function moveInboxControlSidecar(input: {
+  sourcePath: string
+  objectPath: string
+  extension: '.quality.json' | '.curation.json'
+}): Promise<string | null> {
+  const sidecarPath = await findInboxControlSidecar(input.sourcePath, input.extension)
+  if (!sidecarPath) {
+    return null
+  }
+  const objectSidecarPath = `${input.objectPath}${input.extension}`
+  await mkdir(path.dirname(objectSidecarPath), { recursive: true })
+  if (await exists(objectSidecarPath)) {
+    await rm(sidecarPath, { force: true })
+    return objectSidecarPath
+  }
+  await rename(sidecarPath, objectSidecarPath)
+  return objectSidecarPath
+}
+
+async function findInboxControlSidecar(sourcePath: string, extension: '.quality.json' | '.curation.json'): Promise<string | null> {
+  const parsed = path.parse(sourcePath)
+  const candidates = [
+    `${sourcePath}${extension}`,
+    path.join(parsed.dir, `${parsed.name}${extension}`),
+  ]
+  for (const candidate of candidates) {
+    if (await exists(candidate)) {
+      return candidate
+    }
+  }
+  return null
 }
 
 export async function readIntakeItems(paths: RegistryPaths): Promise<IntakeItem[]> {

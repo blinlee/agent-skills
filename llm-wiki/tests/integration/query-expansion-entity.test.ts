@@ -19,6 +19,7 @@ import { retrieveChunks } from '../../src/retrieval/retrieval.js'
 import { scoreTaxonomyBoosts } from '../../src/retrieval/taxonomy.js'
 import { tokenize } from '../../src/retrieval/tokenize.js'
 import type { ChunkIndexEntryV2, ChunkIndexStateV2 } from '../../src/retrieval/types.js'
+import { runIngestCommandWithCuration, writeTestCurationPlan, writeTestQualityPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 const embeddingEnvKeys = [
@@ -274,7 +275,15 @@ describe('query expansion and entity extraction integration', () => {
       })
     }))
 
-    const ingest = await runCliFromArgv(['ingest', knowledgeRoot, sourcePath, '--extract-entities']) as Awaited<ReturnType<typeof runIngestCommand>>
+    const curationPath = await writeTestCurationPlan({
+      sourcePath,
+      baseDir: path.join(knowledgeRoot, '.test-curation'),
+    })
+    const qualityPath = await writeTestQualityPlan({
+      sourcePath,
+      baseDir: path.join(knowledgeRoot, '.test-curation'),
+    })
+    const ingest = await runCliFromArgv(['ingest', knowledgeRoot, sourcePath, '--quality', qualityPath, '--curation', curationPath, '--extract-entities']) as Awaited<ReturnType<typeof runIngestCommand>>
     const extractionIndex = await loadEntityExtractionIndex(knowledgeRoot)
     const result = await retrieveChunks({ knowledgeRoot, question: 'semantic bridge vector aware', limit: 2 })
 
@@ -356,7 +365,7 @@ describe('query expansion and entity extraction integration', () => {
 async function buildSampleIndex(prefix: string): Promise<string> {
   const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), prefix))
   tempRoots.push(knowledgeRoot)
-  await runIngestCommand({
+  await runIngestCommandWithCuration({
     knowledgeRoot,
     input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
   })

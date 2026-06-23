@@ -5,6 +5,7 @@ import Database from 'better-sqlite3'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runCliFromArgv, runIngestCommand, runLintCommand, runQueryCommand } from '../../src/cli.js'
 import { contentDedupDatabasePath } from '../../src/intake/content-dedup-store.js'
+import { runIngestCommandWithCuration, testConcept, testEntity, writeTestCurationPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -37,6 +38,22 @@ async function removeStoredPageSnapshots(knowledgeRoot: string, sourcePath: stri
   }
 
   delete entry.lastOutputManifest.pageSnapshots
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
+}
+
+async function markManifestNeedsReviewAndRemoveReading(knowledgeRoot: string, sourcePath: string) {
+  const manifestPath = path.join(knowledgeRoot, 'system', 'dedup', 'manifest.json')
+  const raw = await readFile(manifestPath, 'utf8')
+  const manifest = JSON.parse(raw) as {
+    entries: Record<string, { lastStatus?: string; lastOutputManifest?: { pageFiles: string[]; indexEntries: string[] } | null }>
+  }
+  const entry = manifest.entries[path.resolve(sourcePath)]
+  if (!entry?.lastOutputManifest) {
+    throw new Error(`Missing dedup manifest entry for ${sourcePath}`)
+  }
+  entry.lastStatus = 'needs_review'
+  entry.lastOutputManifest.pageFiles = entry.lastOutputManifest.pageFiles.filter((filePath) => !filePath.startsWith('wiki/readings/'))
+  entry.lastOutputManifest.indexEntries = entry.lastOutputManifest.indexEntries.filter((entryValue) => !entryValue.includes('[[readings/'))
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
 }
 
@@ -89,8 +106,8 @@ describe('cli dedup and lifecycle', () => {
     await writeFile(firstPath, body, 'utf8')
     await writeFile(secondPath, body, 'utf8')
 
-    const first = await runIngestCommand({ knowledgeRoot, input: firstPath })
-    const second = await runIngestCommand({ knowledgeRoot, input: secondPath })
+    const first = await runIngestCommandWithCuration({ knowledgeRoot, input: firstPath })
+    const second = await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const contentIndex = readContentDedupSqlite(knowledgeRoot)
 
     expect(['completed', 'needs_review', 'partial']).toContain(first.status)
@@ -117,7 +134,7 @@ describe('cli dedup and lifecycle', () => {
     const sourcePath = path.join(inputRoot, 'old-runtime-source.md')
     await writeFile(sourcePath, '# Old Runtime Source\n\nEntity: BackfillAtlas\nConcept: ledger migration\n\nBackfillAtlas keeps old accepted material visible to the current content ledger.\n', 'utf8')
 
-    const ingested = await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    const ingested = await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
     await rm(contentDedupDatabasePath(knowledgeRoot), { force: true })
     await removeStoredPageSnapshots(knowledgeRoot, sourcePath)
 
@@ -167,6 +184,135 @@ describe('cli dedup and lifecycle', () => {
     )
   })
 
+  it('keeps existing needs-review status when maintain backfills missing reading assets', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-maintain-backfill-status-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    const sourcePath = path.join(inputRoot, 'review-state.md')
+    await writeFile(
+      sourcePath,
+      '# Review State\n\nThis source has an old review status but needs reading-page backfill.\n',
+      'utf8',
+    )
+
+    const ingested = await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
+    expect(ingested.status).toBe('completed')
+    await markManifestNeedsReviewAndRemoveReading(knowledgeRoot, sourcePath)
+
+    await runCliFromArgv(['maintain', knowledgeRoot])
+
+    const manifest = JSON.parse(await readFile(path.join(knowledgeRoot, 'system', 'dedup', 'manifest.json'), 'utf8')) as {
+      entries: Record<string, { lastStatus?: string; lastOutputManifest?: { pageFiles: string[] } | null }>
+    }
+    expect(manifest.entries[path.resolve(sourcePath)]?.lastStatus).toBe('needs_review')
+    expect(manifest.entries[path.resolve(sourcePath)]?.lastOutputManifest?.pageFiles).toContain('wiki/readings/review-state.md')
+  })
+
+  it('migrates snapshotless source manifests before ordinary changed-source ingest', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-source-manifest-migrate-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    const sourcePath = path.join(inputRoot, 'manifest-migration.md')
+    await writeFile(
+      sourcePath,
+      '# Manifest Migration\n\nEntity: MigrationBot\nConcept: manifest hygiene\n\nMigrationBot keeps manifest hygiene visible.\n',
+      'utf8',
+    )
+
+    const first = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'MigrationBot', quote: 'Entity: MigrationBot' })],
+        concepts: [testConcept({ title: 'Manifest Hygiene', quote: 'Concept: manifest hygiene' })],
+      }),
+    })
+    expect(['completed', 'needs_review', 'partial']).toContain(first.status)
+    await removeStoredPageSnapshots(knowledgeRoot, sourcePath)
+    await writeFile(
+      sourcePath,
+      '# Manifest Migration Updated\n\nEntity: MigrationBot\nConcept: manifest hygiene\n\nMigrationBot keeps old source manifests ingestable after updates.\n',
+      'utf8',
+    )
+
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'MigrationBot', quote: 'Entity: MigrationBot' })],
+        concepts: [testConcept({ title: 'Manifest Hygiene', quote: 'Concept: manifest hygiene' })],
+      }),
+    })
+
+    expect(second.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
+    expect(['completed', 'needs_review', 'partial']).toContain(second.status)
+    const manifest = JSON.parse(await readFile(path.join(knowledgeRoot, 'system', 'dedup', 'manifest.json'), 'utf8')) as {
+      entries: Record<string, { lastOutputManifest?: { pageSnapshots?: Array<{ filePath: string }> } | null }>
+    }
+    expect(manifest.entries[path.resolve(sourcePath)]?.lastOutputManifest?.pageSnapshots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ filePath: 'wiki/sources/manifest-migration-updated.md' }),
+        expect.objectContaining({ filePath: 'wiki/readings/manifest-migration-updated.md' }),
+      ]),
+    )
+  })
+
+  it('keeps unchanged dedup skips in the previous non-completed ingest status', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-dedup-status-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    const sourcePath = path.join(inputRoot, 'RAG_for_AIGC_Survey_2024.md')
+    await writeFile(
+      sourcePath,
+      '# Pseduo-Random and de Bruijn Array Codes\n\nThis paper studies de Bruijn array codes and pseudo-random arrays for coding theory.\n',
+      'utf8',
+    )
+
+    const first = await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    const second = await runIngestCommand({ knowledgeRoot, input: sourcePath })
+
+    expect(first.status).toBe('needs_review')
+    expect(second.status).toBe('needs_review')
+    expect(second.dedupDecision).toBeNull()
+    const manifest = JSON.parse(await readFile(path.join(knowledgeRoot, 'system', 'dedup', 'manifest.json'), 'utf8')) as {
+      entries: Record<string, { lastStatus?: string }>
+    }
+    expect(manifest.entries[path.resolve(sourcePath)]?.lastStatus).toBe('needs_review')
+  })
+
+  it('retries an unchanged needs-review source when semantic curation is later provided', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-dedup-curation-retry-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    const sourcePath = path.join(inputRoot, 'compiler-notes.md')
+    await writeFile(
+      sourcePath,
+      '# Compiler Notes\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic.\n',
+      'utf8',
+    )
+
+    const first = await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Compilation', quote: 'Concept: compilation' })],
+      }),
+    })
+
+    expect(first.status).toBe('needs_review')
+    expect(second.status).toBe('completed')
+    expect(second.dedupDecision).toEqual({ action: 'recompile', reason: 'inbox-gate-resolved' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
+  })
+
   it('skips high-similarity semantic duplicates when a document embedding provider is configured', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-semantic-dedup-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
@@ -196,8 +342,8 @@ describe('cli dedup and lifecycle', () => {
     await writeFile(firstPath, '# Semantic Dedup Alpha\n\nEntity: SemanticDedup\nConcept: content hygiene\n\nVariant one says semantic dedup removes near duplicate research notes.\n', 'utf8')
     await writeFile(secondPath, '# Semantic Dedup Beta\n\nEntity: SemanticDedup\nConcept: content hygiene\n\nvariant two says semantic dedup removes nearly duplicate research notes with small wording changes.\n', 'utf8')
 
-    const first = await runIngestCommand({ knowledgeRoot, input: firstPath })
-    const second = await runIngestCommand({ knowledgeRoot, input: secondPath })
+    const first = await runIngestCommandWithCuration({ knowledgeRoot, input: firstPath })
+    const second = await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const contentIndex = readContentDedupSqlite(knowledgeRoot)
 
     expect(['completed', 'needs_review', 'partial']).toContain(first.status)
@@ -251,8 +397,8 @@ describe('cli dedup and lifecycle', () => {
     await writeFile(firstPath, '# Dedup Confirm Alpha\n\nEntity: DedupConfirm\nConcept: confirmation flow\n\nBaseline document about dedup confirmation.\n', 'utf8')
     await writeFile(secondPath, '# Dedup Confirm Beta\n\nEntity: DedupConfirm\nConcept: confirmation flow\n\nambiguous two document about duplicate confirmation with wording changes.\n', 'utf8')
 
-    const first = await runIngestCommand({ knowledgeRoot, input: firstPath })
-    const second = await runIngestCommand({ knowledgeRoot, input: secondPath })
+    const first = await runIngestCommandWithCuration({ knowledgeRoot, input: firstPath })
+    const second = await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const pending = await runCliFromArgv(['dedup', knowledgeRoot, 'pending']) as {
       pending: Array<{ id: string; sourceIdentity: string; matchedSourceIdentity: string; similarity: number; status: string }>
     }
@@ -298,7 +444,7 @@ describe('cli dedup and lifecycle', () => {
       'duplicate',
     ])
 
-    const third = await runIngestCommand({ knowledgeRoot, input: secondPath })
+    const third = await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const afterDecision = await runCliFromArgv(['dedup', knowledgeRoot, 'pending']) as { pending: unknown[] }
     const contentIndex = readContentDedupSqlite(knowledgeRoot)
 
@@ -341,8 +487,8 @@ describe('cli dedup and lifecycle', () => {
     await writeFile(firstPath, '# Dedup Scan Alpha\n\nEntity: DedupScan\nConcept: duplicate audit\n\nBaseline document about duplicate scanning.\n', 'utf8')
     await writeFile(secondPath, '# Dedup Scan Beta\n\nEntity: DedupScan\nConcept: duplicate audit\n\nscan two document about duplicate scanning with wording changes.\n', 'utf8')
 
-    await runIngestCommand({ knowledgeRoot, input: firstPath })
-    await runIngestCommand({ knowledgeRoot, input: secondPath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: firstPath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const pending = await runCliFromArgv(['dedup', knowledgeRoot, 'pending']) as { pending: Array<{ id: string }> }
     await runCliFromArgv([
       'dedup',
@@ -354,7 +500,7 @@ describe('cli dedup and lifecycle', () => {
       '--reviewer',
       'tester',
     ])
-    const ingested = await runIngestCommand({ knowledgeRoot, input: secondPath })
+    const ingested = await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const scan = await runCliFromArgv(['dedup', knowledgeRoot, 'scan']) as {
       candidates: Array<{ reason: string; left: { sourceIdentity: string }; right: { sourceIdentity: string }; similarity: number }>
     }
@@ -406,8 +552,8 @@ describe('cli dedup and lifecycle', () => {
     await writeFile(firstPath, '# Dedup Merge Alpha\n\nEntity: DedupMerge\nConcept: duplicate merge\n\nBaseline document about dedup merge.\n', 'utf8')
     await writeFile(secondPath, '# Dedup Merge Beta\n\nEntity: DedupMerge\nConcept: duplicate merge\n\nmerge two document about duplicate merge with wording changes.\n', 'utf8')
 
-    await runIngestCommand({ knowledgeRoot, input: firstPath })
-    await runIngestCommand({ knowledgeRoot, input: secondPath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: firstPath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
     const pending = await runCliFromArgv(['dedup', knowledgeRoot, 'pending']) as { pending: Array<{ id: string }> }
     await runCliFromArgv([
       'dedup',
@@ -419,7 +565,7 @@ describe('cli dedup and lifecycle', () => {
       '--reviewer',
       'tester',
     ])
-    await runIngestCommand({ knowledgeRoot, input: secondPath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: secondPath })
 
     const sourcePageId = 'sources/dedup-merge-beta'
     const targetPageId = 'sources/dedup-merge-alpha'
@@ -483,7 +629,7 @@ describe('cli dedup and lifecycle', () => {
     expect(indexMarkdown).not.toContain('[[sources/dedup-merge-beta|Dedup Merge Beta]]')
   })
 
-  it('compiles first ingest, skips unchanged input, recompiles modified input, rejects unsupported input, and keeps weak extraction reviewable', async () => {
+  it('compiles first ingest, skips unchanged input, recompiles modified input, rejects unsupported input, and completes ordinary weak extraction without approval backlog', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
     tempRoots.push(knowledgeRoot, inputRoot)
@@ -495,13 +641,31 @@ describe('cli dedup and lifecycle', () => {
       'utf8',
     )
 
-    const first = await runIngestCommand({ knowledgeRoot, input: sourcePath })
-    expect(first.status).toBe('needs_review')
+    const first = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Compilation', quote: 'Concept: compilation' })],
+      }),
+    })
+    expect(first.status).toBe('completed')
     expect(first.dedupDecision).toEqual({ action: 'compile', reason: 'first-seen' })
-    expect(first.retainedPath).toContain(path.join('raw', 'staged'))
-    await expect(access(first.retainedPath!)).resolves.toBeUndefined()
+    expect(first.archivePath).toContain(path.join('raw', 'archive'))
+    await expect(access(first.archivePath!)).resolves.toBeUndefined()
 
-    const second = await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'GraphOps', quote: 'Entity: GraphOps' })],
+        concepts: [testConcept({ title: 'Stability', quote: 'Concept: stability' })],
+      }),
+    })
     expect(second.status).toBe('completed')
     expect(second.dedupDecision).toEqual({ action: 'skip', reason: 'unchanged' })
     expect(second.writtenFiles).toEqual([])
@@ -513,13 +677,13 @@ describe('cli dedup and lifecycle', () => {
       'utf8',
     )
 
-    const third = await runIngestCommand({ knowledgeRoot, input: sourcePath })
-    expect(third.status).toBe('needs_review')
+    const third = await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
+    expect(third.status).toBe('completed')
     expect(third.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    expect(third.retainedPath).toContain(path.join('raw', 'staged'))
-    await expect(access(third.retainedPath!)).resolves.toBeUndefined()
+    expect(third.archivePath).toContain(path.join('raw', 'archive'))
+    await expect(access(third.archivePath!)).resolves.toBeUndefined()
 
-    const rejected = await runIngestCommand({
+    const rejected = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'broken.bin'),
     })
@@ -527,14 +691,14 @@ describe('cli dedup and lifecycle', () => {
     expect(rejected.rejectedPath).toContain(path.join('raw', 'rejected'))
     await expect(access(rejected.rejectedPath!)).resolves.toBeUndefined()
 
-    const weak = await runIngestCommand({
+    const weak = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.txt'),
     })
-    expect(['needs_review', 'partial']).toContain(weak.status)
+    expect(weak.status).toBe('completed')
     expect(weak.reviewFiles).toEqual([])
-    expect(weak.retainedPath).toContain(path.join('raw', 'staged'))
-    await expect(access(weak.retainedPath!)).resolves.toBeUndefined()
+    expect(weak.archivePath).toContain(path.join('raw', 'archive'))
+    await expect(access(weak.archivePath!)).resolves.toBeUndefined()
   })
 
   it('removes stale derived pages and stale query answers after a changed-source recompile', async () => {
@@ -549,11 +713,21 @@ describe('cli dedup and lifecycle', () => {
       'utf8',
     )
 
-    const first = await runIngestCommand({ knowledgeRoot, input: sourcePath })
-    expect(first.status).toBe('needs_review')
+    const first = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Compilation', quote: 'Concept: compilation' })],
+      }),
+    })
+    expect(first.status).toBe('completed')
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).resolves.toBeUndefined()
 
     await writeFile(
       sourcePath,
@@ -561,14 +735,25 @@ describe('cli dedup and lifecycle', () => {
       'utf8',
     )
 
-    const second = await runIngestCommand({ knowledgeRoot, input: sourcePath })
-    expect(second.status).toBe('needs_review')
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'GraphOps', quote: 'Entity: GraphOps' })],
+        concepts: [testConcept({ title: 'Stability', quote: 'Concept: stability' })],
+      }),
+    })
+    expect(second.status).toBe('completed')
     expect(second.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
 
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'graph-digest.md'))).resolves.toBeUndefined()
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'readings', 'graph-digest.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'compiler-notes.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'readings', 'compiler-notes.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'))).rejects.toMatchObject({ code: 'ENOENT' })
 

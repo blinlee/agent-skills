@@ -75,7 +75,8 @@ export async function runLint(input: LintCommandInput): Promise<LintCommandResul
   checkedFiles.push(...wikiFiles)
 
   const indexPath = path.join(root, 'wiki', 'index.md')
-  const linkSourceFiles = (await exists(indexPath)) ? [indexPath, ...wikiFiles] : wikiFiles
+  const linkableWikiFiles = wikiFiles.filter((filePath) => !isReadingMirrorFile(root, filePath))
+  const linkSourceFiles = (await exists(indexPath)) ? [indexPath, ...linkableWikiFiles] : linkableWikiFiles
   const linkedTargets = new Set<string>()
   const diskPages = wikiFiles
     .map((filePath) => toDiskPage(root, filePath))
@@ -154,6 +155,11 @@ export async function runLint(input: LintCommandInput): Promise<LintCommandResul
     warnings,
     checkedFiles: [...new Set(checkedFiles)],
   }
+}
+
+function isReadingMirrorFile(root: string, filePath: string): boolean {
+  const relativePath = path.relative(path.join(root, 'wiki'), filePath).replace(/\\/g, '/')
+  return /^readings\/[^/]+\.md$/u.test(relativePath)
 }
 
 
@@ -422,7 +428,7 @@ async function lintWikiPageQuality(wikiFiles: string[]): Promise<{ errors: LintM
     }
 
     const lineCount = content.split('\n').length
-    if (lineCount > 220) {
+    if (lineCount > 220 && resolveWikiPageKind(filePath, frontmatter) !== 'reading') {
       warnings.push({
         type: 'warning',
         code: 'oversized-page',
@@ -608,7 +614,7 @@ async function collectWikiMarkdownFiles(root: string): Promise<string[]> {
 
     const entries = await readdir(sectionPath, { withFileTypes: true })
     for (const entry of entries) {
-      if (entry.isFile() && entry.name.endsWith('.md')) {
+      if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'index.md') {
         results.push(path.join(sectionPath, entry.name))
       }
     }

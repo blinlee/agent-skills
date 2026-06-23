@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runBuildIndexCommand, runIngestCommand, runInitCommand, runQueryCommand, runSaveSynthesisCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -34,7 +35,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    const ingestResult = await runIngestCommand({
+    const ingestResult = await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -47,7 +48,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -144,7 +145,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -180,7 +181,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -225,7 +226,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -296,7 +297,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -352,7 +353,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -418,7 +419,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -475,7 +476,7 @@ describe('save-synthesis', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-save-synthesis-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })

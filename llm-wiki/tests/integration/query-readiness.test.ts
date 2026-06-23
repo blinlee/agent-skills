@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runBuildIndexCommand, runCliMain, runIngestCommand, runInitCommand, runLintCommand, runQueryCommand, runQueryReadinessCommand, runStatusCommand, runWikiOverviewCommand } from '../../src/cli.js'
 import { retrieveChunks } from '../../src/retrieval/retrieval.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -120,7 +121,7 @@ describe('query readiness and source reading pack', () => {
     const configPath = path.join(knowledgeRoot, 'embedding-config.json')
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -166,7 +167,7 @@ describe('query readiness and source reading pack', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-stale-query-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -197,7 +198,7 @@ describe('query readiness and source reading pack', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-missing-raw-query-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -223,7 +224,7 @@ describe('query readiness and source reading pack', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-stale-chunk-query-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -251,7 +252,7 @@ describe('query readiness and source reading pack', () => {
   it('prints sourceReadingPack by default and full query diagnostics only with --full', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-cli-query-output-'))
     tempRoots.push(knowledgeRoot)
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -288,11 +289,11 @@ describe('query readiness and source reading pack', () => {
     }
   })
 
-  it('exposes three-layer query context in the agent reading pack', async () => {
+  it('exposes three-layer query context in the detailed reading pack', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-context-layers-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })

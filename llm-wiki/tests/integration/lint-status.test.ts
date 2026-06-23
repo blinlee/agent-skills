@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runBuildIndexCommand, runCliMain, runIngestCommand, runInitCommand, runLintCommand, runQueryCommand, runQueryReadinessCommand, runStatusCommand, runWikiOverviewCommand } from '../../src/cli.js'
 import { retrieveChunks } from '../../src/retrieval/retrieval.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -73,7 +74,7 @@ describe('lint and status structural checks', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -101,7 +102,7 @@ describe('lint and status structural checks', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -121,11 +122,53 @@ describe('lint and status structural checks', () => {
     ]))
   })
 
+  it('does not lint raw wikilink-looking text inside reading mirrors as wiki links', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-reading-lint-'))
+    tempRoots.push(knowledgeRoot)
+    await runInitCommand({ knowledgeRoot })
+    await mkdir(path.join(knowledgeRoot, 'wiki', 'readings'), { recursive: true })
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'readings', 'market-notes.md'),
+      [
+        '---',
+        'title: "Market Notes - 完整原文"',
+        'created: "2026-06-22T00:00:00.000Z"',
+        'updated: "2026-06-22T00:00:00.000Z"',
+        'type: "reading"',
+        'tags: []',
+        'sources: ["fixture"]',
+        'confidence: "medium"',
+        'contested: false',
+        '---',
+        '# Market Notes',
+        '',
+        'The original paper contains bracketed action text like [[BUY]] and [[DECISION]] that is not a wiki link.',
+        '',
+      ].join('\n'),
+      'utf8',
+    )
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'index.md'),
+      '# Wiki 索引\n\n## 原文\n- [[readings/market-notes|Market Notes - 完整原文]]\n',
+      'utf8',
+    )
+
+    const lint = await runLintCommand({ knowledgeRoot })
+
+    expect(lint.errors).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'missing-linked-page',
+        path: path.join(knowledgeRoot, 'wiki', 'readings', 'market-notes.md'),
+      }),
+    ]))
+    expect(lint.errors.map((error) => error.code)).not.toContain('missing-linked-page')
+  })
+
   it('treats ambiguous bare-slug links as unresolved instead of picking the first matching page', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -173,7 +216,7 @@ describe('lint and status structural checks', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })

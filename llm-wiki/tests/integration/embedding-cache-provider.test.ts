@@ -19,6 +19,7 @@ import { retrieveChunks } from '../../src/retrieval/retrieval.js'
 import { scoreTaxonomyBoosts } from '../../src/retrieval/taxonomy.js'
 import { tokenize } from '../../src/retrieval/tokenize.js'
 import type { ChunkIndexEntryV2, ChunkIndexStateV2 } from '../../src/retrieval/types.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 const embeddingEnvKeys = [
@@ -129,7 +130,8 @@ describe('embedding cache and provider integration', () => {
 
     expect(provider.calls).toHaveLength(firstCalls)
     expect(second.embeddedCount).toBe(0)
-    expect(second.reusedCount).toBe(second.chunkCount)
+    expect(second.reusedCount).toBe(second.coverage.currentVectorKeyCount)
+    expect(second.coverage.currentVectorKeyCount).toBeLessThanOrEqual(second.chunkCount)
   })
 
   it('embeds missing chunks through provider batch calls and reports current coverage', async () => {
@@ -152,15 +154,15 @@ describe('embedding cache and provider integration', () => {
     expect(first.providerRequestCount).toBe(first.batchCount)
     expect(provider.batchCalls).toHaveLength(first.batchCount)
     expect(provider.batchCalls.flat()).toHaveLength(first.chunkCount)
-    expect(first.coverage).toEqual({
+    expect(first.coverage).toMatchObject({
       currentChunkCount: first.chunkCount,
-      currentVectorKeyCount: first.chunkCount,
       reusableVectorCount: 0,
       missingVectorCount: first.chunkCount,
       staleRecordCount: 0,
       finalVectorCount: first.chunkCount,
       remainingMissingVectorCount: 0,
     })
+    expect(first.coverage.currentVectorKeyCount).toBeLessThanOrEqual(first.chunkCount)
 
     const second = await runEmbedIndex({
       knowledgeRoot,
@@ -381,7 +383,7 @@ describe('embedding cache and provider integration', () => {
 async function buildSampleIndex(prefix: string): Promise<string> {
   const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), prefix))
   tempRoots.push(knowledgeRoot)
-  await runIngestCommand({
+  await runIngestCommandWithCuration({
     knowledgeRoot,
     input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
   })

@@ -77,6 +77,36 @@ describe('buildCli', () => {
     }
   }, 120000)
 
+  it('passes explicit reading mode through the query handoff and rejects invalid CLI modes', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-reading-mode-'))
+    const env = { ...process.env, llm_wiki_root: knowledgeRoot }
+
+    try {
+      await execFile('npm', ['run', '--silent', 'cli', '--', 'init', knowledgeRoot], {
+        cwd: process.cwd(),
+      })
+
+      const { stdout } = await execFile(
+        pythonBin,
+        ['scripts/query_handoff.py', 'What is indexed?', '--root', knowledgeRoot, '--reading-mode', 'document', '--json'],
+        { cwd: process.cwd(), env }
+      )
+      const plan = JSON.parse(stdout.trim()) as { readingMode: string; recommendedCommand: string[] }
+      expect(plan.readingMode).toBe('document')
+      expect(plan.recommendedCommand).toContain('--reading-mode')
+      expect(plan.recommendedCommand).toContain('document')
+
+      const failure = await expectExecFileFailure(
+        'npm',
+        ['run', '--silent', 'cli', '--', 'query', knowledgeRoot, 'What is indexed?', '--reading-mode', 'invalid'],
+        { cwd: process.cwd() }
+      )
+      expect(failure.stderr).toContain('Invalid value for --reading-mode')
+    } finally {
+      await rm(knowledgeRoot, { recursive: true, force: true })
+    }
+  }, 120000)
+
   it('requires an existing host-local root when resolving the skill default strictly', async () => {
     const workspace = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-root-config-'))
     const configPath = path.join(workspace, 'config.json')

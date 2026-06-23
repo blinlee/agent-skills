@@ -2,7 +2,7 @@
 
 面向 CLI 的 Markdown 知识库编译器，用来构建**有人审、有证据、兼容 Obsidian** 的 llm-wiki 知识库。
 
-llm-wiki 适合这样的人：想把来源材料沉淀成耐久知识层，但又不想把所有内容都粗暴塞进一个没人审核的大杂烩笔记库里。它会把可读输入转成结构化 Markdown Wiki，同时保留原始材料证据、内部 review 面、taxonomy proposal、可查询页面，以及可选的多 wiki registry 管理能力。
+llm-wiki 适合这样的人：想把来源材料沉淀成耐久知识层，但又不想把所有内容都粗暴塞进一个没人审核的大杂烩笔记库里。它会把可读输入转成结构化 Markdown Wiki，同时保留原始材料证据、中文来源卡片、完整原文阅读页、实体/概念页、可查询索引，以及可选的多 wiki registry 管理能力。
 
 ## 它解决什么问题
 
@@ -14,7 +14,8 @@ llm-wiki 适合这样的人：想把来源材料沉淀成耐久知识层，但�
 llm-wiki 反过来做：
 
 - 原始材料保留为证据
-- 生成结构保持可审核
+- 入库完成后直接生成可读、可链接、可查询的 wiki 页面
+- 结构性治理决策保持可审核
 - taxonomy 和路由决策默认有人审
 - 一个超大总库不是前提，而是可选项
 
@@ -25,7 +26,7 @@ llm-wiki 反过来做：
 - **人工审核面**：taxonomy、route、profile creation、bridge decision 都是可审核 proposal
 - **OpenClaw skill 合同层**：位于根目录 `SKILL.md`
 - **TypeScript 实现与测试**：真正的持久核心在这里
-- **`AGENTS.md` 贡献说明**：给 agent-assisted 开发者看的维护指引
+- **`AGENTS.md` 贡献说明**：给 AI-assisted 开发者看的维护指引
 
 ## 核心概念
 
@@ -33,7 +34,7 @@ llm-wiki 反过来做：
 
 knowledge root 是通过 `init` 创建出来的一个有边界的 wiki 工作区，里面包括：
 
-- wiki 页面与 schema 文件
+- wiki 页面、完整原文阅读页与 schema 文件
 - 原始材料 intake 和 manifest
 - 内部 review / taxonomy proposal 状态
 - system index 与日志
@@ -44,7 +45,7 @@ registry root 用来管理多个有边界的 wiki，而不是强迫所有内容�
 
 ### Human-governed proposals
 
-llm-wiki 默认把模型生成的分类建议、路由建议、taxonomy 变更、bridge link、profile 建议都视为 **proposal**，而不是自动真理。Inbox / govern 工作流负责把这些决策提交给人审；不存在一个会悄悄物化 proposal 的独立公开 review pass。
+llm-wiki 默认把模型生成的路由建议、taxonomy 变更、bridge link、profile 建议都视为 **proposal**，而不是自动真理。Inbox / govern 工作流负责把这些决策提交给人审；不存在一个会悄悄物化结构性 proposal 的独立公开 review pass。普通来源卡片、完整原文页、实体页、概念页属于已接受材料的入库结果，不需要再走一次公开 review。
 
 ## 环境要求
 
@@ -76,16 +77,16 @@ npm test
 
 ## 快速开始
 
-### Agent 工作流触发词
+### Skill 工作流触发词
 
 当从本仓库根目录作为 skill 使用时，llm-wiki 暴露五个稳定的用户工作流：
 
 | 触发词 | 用途 |
 | --- | --- |
-| `/llm-wiki setup` | 连接或初始化本地 knowledge root / registry root。若没有已知 root，agent 需要询问路径，并可按用户确认保存为本机默认。 |
-| `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再摄入或路由新材料，当场给出本批次的归档/连接决策，并只执行已批准的接受、拒绝、暂存或改派动作。 |
-| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。skill 会先跑 `scripts/query_handoff.py`，再执行返回的 `query` 或 `query-registry` 命令。 |
-| `/llm-wiki maintain` | 运行 `status`、`lint`、`index` 等健康与新鲜度检查。 |
+| `/llm-wiki setup` | 连接或初始化本地 knowledge root / registry root。若没有已知 root，需要询问路径，并可按用户确认保存为本机默认。 |
+| `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再阅读原文并写入库质量计划，决定接受/拒绝/暂存/转换/合并；只有接受的材料才继续写语义整理计划并摄入或路由。已接受材料必须生成来源卡片、完整原文页、curation plan 接受的实体/概念/综合页和索引。 |
+| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。先判断问题类型；不清楚就先问用户；明确后跑 `scripts/query_handoff.py --reading-mode <passage|document>`，最后执行返回的 `query` 或 `query-registry` 命令。 |
+| `/llm-wiki maintain` | 补齐历史 source-card-only 的确定性资产，并运行 `status`、`lint`、`index` 等健康与新鲜度检查；不会凭规则发明语义页。 |
 | `/llm-wiki govern` | 管理 registry 成员、profile 边界、taxonomy、bridge 和 routing policy。 |
 
 这些是覆盖 CLI 命令的 skill 级工作流合同，不是独立的 TypeScript 子命令。
@@ -100,7 +101,7 @@ skill 按以下顺序解析本地目标 root：
 3. `scripts/root_config.py` 管理的本机本地配置
 4. 若仍不存在，则询问用户 root 路径以及是否保存为本机默认
 
-保存的默认值是 agent 共享的本机状态。`scripts/root_config.py set` 仅在显式设置 `$llm_wiki_config` 时写入该覆盖路径；否则写入稳定的用户级 canonical 路径，例如 Unix/macOS 下的 `~/.config/llm-wiki/config.json`，或 Windows 下的 `%APPDATA%/llm-wiki/config.json`。`show` 还会兼容读取 `$XDG_CONFIG_HOME/llm-wiki/config.json` 和 macOS Application Support。默认值不会提交到本仓库。
+保存的默认值是 Codex、Claude、OpenClaw 等本机工具共享的本机状态。`scripts/root_config.py set` 仅在显式设置 `$llm_wiki_config` 时写入该覆盖路径；否则写入稳定的用户级 canonical 路径，例如 Unix/macOS 下的 `~/.config/llm-wiki/config.json`，或 Windows 下的 `%APPDATA%/llm-wiki/config.json`。`show` 还会兼容读取 `$XDG_CONFIG_HOME/llm-wiki/config.json` 和 macOS Application Support。默认值不会提交到本仓库。
 
 ### 1）初始化一个 knowledge root
 
@@ -111,7 +112,7 @@ npm run --silent cli -- init ./knowledge
 ### 2）摄入一个来源文件
 
 ```bash
-npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md
+npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md --quality ./sample.quality.json --curation ./sample.curation.json
 ```
 
 或者把 inbox 里当前待处理的内容一起 ingest：
@@ -119,6 +120,8 @@ npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md
 ```bash
 npm run --silent cli -- ingest-inbox ./knowledge
 ```
+
+普通材料入库前，必须先阅读原文并写 `llm-wiki.inbox-quality.v1` 计划，判断材料是否有稳定知识价值、是否重复、是否可读，以及下一步该接受/拒绝/暂存/转换/合并。只有接受的材料继续写 `llm-wiki.semantic-curation.v1` 计划；里面的实体/概念/综合页都要带原文精确 quote。成功完成后，已接受材料不应只停留在 `wiki/sources` 的摘要页里；还应有 `wiki/readings` 的完整原文阅读页，以及 curation plan 明确认可的 `wiki/entities` / `wiki/concepts` / `wiki/syntheses` 页面。`govern` 只处理跨 wiki、taxonomy、profile、bridge 这类结构性决策。旧版本留下的 source-card-only 资产可由 `maintain` 在受管 raw 证据仍存在时补齐阅读页和索引，但不会凭规则补语义页。
 
 ### 3）查询 wiki
 
@@ -273,7 +276,7 @@ llm-wiki 对下面几件事是有明确立场的：
 - 生成结构应该可检查
 - 路由与 taxonomy 应该可审核
 - 多个有边界 wiki 往往比一个超级 wiki 更健康
-- 持久状态变更应由 CLI/core 负责，而不是薄薄一层 agent 包装负责
+- 持久状态变更应由 CLI/core 负责，而不是薄薄一层 skill 包装负责
 
 ## OpenClaw skill 边界
 
@@ -283,7 +286,7 @@ skill 层故意做得很薄，真正持久的逻辑在 TypeScript CLI/core 里�
 
 六个 `/llm-wiki ...` 工作流、`/anything2md` 接线、本机 root 默认值和人工批准门都记录在这个 skill 合同里。
 
-`AGENTS.md` 是给 agent-assisted 贡献者看的维护说明，普通 CLI 使用者可以忽略。
+`AGENTS.md` 是给 AI-assisted 贡献者看的维护说明，普通 CLI 使用者可以忽略。
 
 ## 典型开发流程
 

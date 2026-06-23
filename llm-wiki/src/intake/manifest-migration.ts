@@ -26,6 +26,7 @@ export function normalizeSourceOutputManifest(manifest: SourceOutputManifest): N
 export function normalizeDedupEntry(entry: DedupEntry): NormalizedDedupEntry {
   return {
     ...entry,
+    lastStatus: entry.lastStatus ?? 'completed',
     lastOutputManifest: entry.lastOutputManifest
       ? normalizeSourceOutputManifest(entry.lastOutputManifest)
       : null,
@@ -99,7 +100,7 @@ async function buildPageSnapshotsFromFiles(input: {
 }): Promise<OutputPageSnapshot[]> {
   const snapshots = await Promise.all(input.pageFiles
     .map(normalizeRelativePath)
-    .filter((filePath) => /^wiki\/(sources|entities|concepts)\/[^/]+\.md$/.test(filePath))
+    .filter((filePath) => /^wiki\/(sources|readings|entities|concepts)\/[^/]+\.md$/.test(filePath))
     .map(async (filePath): Promise<OutputPageSnapshot | null> => {
       try {
         const body = await readFile(path.join(input.knowledgeRoot, filePath), 'utf8')

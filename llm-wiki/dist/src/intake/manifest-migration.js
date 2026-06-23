@@ -14,6 +14,7 @@ export function normalizeSourceOutputManifest(manifest) {
 export function normalizeDedupEntry(entry) {
     return {
         ...entry,
+        lastStatus: entry.lastStatus ?? 'completed',
         lastOutputManifest: entry.lastOutputManifest
             ? normalizeSourceOutputManifest(entry.lastOutputManifest)
             : null,
@@ -57,7 +58,7 @@ async function readLegacyDedupManifest(manifestPath) {
 async function buildPageSnapshotsFromFiles(input) {
     const snapshots = await Promise.all(input.pageFiles
         .map(normalizeRelativePath)
-        .filter((filePath) => /^wiki\/(sources|entities|concepts)\/[^/]+\.md$/.test(filePath))
+        .filter((filePath) => /^wiki\/(sources|readings|entities|concepts)\/[^/]+\.md$/.test(filePath))
         .map(async (filePath) => {
         try {
             const body = await readFile(path.join(input.knowledgeRoot, filePath), 'utf8');

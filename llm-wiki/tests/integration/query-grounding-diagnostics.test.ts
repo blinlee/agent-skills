@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runBuildIndexCommand, runCliMain, runIngestCommand, runInitCommand, runLintCommand, runQueryCommand, runQueryReadinessCommand, runStatusCommand, runWikiOverviewCommand } from '../../src/cli.js'
 import { retrieveChunks } from '../../src/retrieval/retrieval.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -108,7 +109,7 @@ describe('query grounding diagnostics', () => {
       'utf8',
     )
 
-    await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
     await runBuildIndexCommand({ knowledgeRoot })
 
     const answer = await runQueryCommand({
@@ -137,7 +138,7 @@ describe('query grounding diagnostics', () => {
       '',
     ].join('\n'), 'utf8')
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: sourcePath,
     })

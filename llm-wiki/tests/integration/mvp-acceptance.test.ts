@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises'
 import { afterEach, describe, expect, it } from 'vitest'
 import { runIngestCommand, runQueryCommand, runLintCommand, runStatusCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const acceptanceRoot = '/tmp/llm-wiki-mvp-acceptance'
 
@@ -11,8 +12,8 @@ afterEach(async () => {
 describe('mvp acceptance', () => {
   it('supports the approved MVP path end-to-end', async () => {
     const root = '/tmp/llm-wiki-mvp-acceptance'
-    await runIngestCommand({ knowledgeRoot: root, input: 'tests/fixtures/inputs/sample.md' })
-    await runIngestCommand({ knowledgeRoot: root, input: 'tests/fixtures/inputs/sample.txt' })
+    await runIngestCommandWithCuration({ knowledgeRoot: root, input: 'tests/fixtures/inputs/sample.md' })
+    await runIngestCommandWithCuration({ knowledgeRoot: root, input: 'tests/fixtures/inputs/sample.txt' })
 
     const status = await runStatusCommand({ knowledgeRoot: root })
     const lint = await runLintCommand({ knowledgeRoot: root })

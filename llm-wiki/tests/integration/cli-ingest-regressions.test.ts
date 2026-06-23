@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runIngestCommand, runLintCommand, runQueryCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration, testConcept, testEntity, testSynthesis, writeTestCurationPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -42,8 +43,8 @@ describe('cli ingest regressions', () => {
     await writeFile(sourceA, '# Shared Notes\n\nEntity: AlphaTeam\nConcept: reliability\n\nAlphaTeam keeps reliability visible.\n', 'utf8')
     await writeFile(sourceB, '# Shared Notes\n\nEntity: BetaTeam\nConcept: observability\n\nBetaTeam keeps observability visible.\n', 'utf8')
 
-    await runIngestCommand({ knowledgeRoot, input: sourceA })
-    const second = await runIngestCommand({ knowledgeRoot, input: sourceB })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: sourceA })
+    const second = await runIngestCommandWithCuration({ knowledgeRoot, input: sourceB })
 
     const sourceFiles = (await readDedupManifest(knowledgeRoot))
     const firstSourcePages = sourceFiles.entries[path.resolve(sourceA)]?.lastOutputManifest?.pageFiles.filter((file) => file.startsWith('wiki/sources/'))
@@ -77,8 +78,8 @@ describe('cli ingest regressions', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_710_000_000_000)
 
     const [first, second] = await Promise.all([
-      runIngestCommand({ knowledgeRoot, input: sourceA }),
-      runIngestCommand({ knowledgeRoot, input: sourceB }),
+      runIngestCommandWithCuration({ knowledgeRoot, input: sourceA }),
+      runIngestCommandWithCuration({ knowledgeRoot, input: sourceB }),
     ])
 
     expect(first.status).toMatch(/completed|needs_review|partial/)
@@ -101,7 +102,118 @@ describe('cli ingest regressions', () => {
     })
   })
 
-  it('keeps candidate semantics in proposals while removing source-owned stale outputs on changed-source recompiles', async () => {
+  it('does not overwrite another source synthesis page when curated synthesis slugs collide', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-synthesis-collision-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    const sourceAPath = path.join(inputRoot, 'alpha-synthesis.md')
+    const sourceBPath = path.join(inputRoot, 'beta-synthesis.md')
+    await writeFile(
+      sourceAPath,
+      '# Alpha Synthesis\n\nAlpha source says synthesis ownership must preserve alpha evidence.\n',
+      'utf8',
+    )
+    await writeFile(
+      sourceBPath,
+      '# Beta Synthesis\n\nBeta source says synthesis ownership must preserve beta evidence.\n',
+      'utf8',
+    )
+
+    const first = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceAPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceAPath,
+        baseDir: knowledgeRoot,
+        syntheses: [testSynthesis({
+          title: 'Shared Synthesis',
+          slug: 'shared-synthesis',
+          quote: 'Alpha source says synthesis ownership must preserve alpha evidence.',
+        })],
+      }),
+    })
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceBPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceBPath,
+        baseDir: knowledgeRoot,
+        syntheses: [testSynthesis({
+          title: 'Shared Synthesis',
+          slug: 'shared-synthesis',
+          quote: 'Beta source says synthesis ownership must preserve beta evidence.',
+        })],
+      }),
+    })
+
+    expect(first.status).toBe('completed')
+    expect(second.status).toBe('completed')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'shared-synthesis.md'), 'utf8'))
+      .resolves.toContain('alpha evidence')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'shared-synthesis-beta-synthesis.md'), 'utf8'))
+      .resolves.toContain('beta evidence')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'beta-synthesis.md'), 'utf8'))
+      .resolves.toContain('[[syntheses/shared-synthesis-beta-synthesis|Shared Synthesis]]')
+  })
+
+  it('does not overwrite source-owned semantic pages after manual edits', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-manual-semantic-edit-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    const sourcePath = path.join(inputRoot, 'alpha-manual.md')
+    await writeFile(
+      sourcePath,
+      '# Alpha Manual\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic. Shared synthesis evidence stays grounded.\n',
+      'utf8',
+    )
+    const curation = async () => writeTestCurationPlan({
+      sourcePath,
+      baseDir: knowledgeRoot,
+      entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+      concepts: [testConcept({ title: 'Compilation', quote: 'Concept: compilation' })],
+      syntheses: [testSynthesis({
+        title: 'Shared Synthesis',
+        slug: 'shared-synthesis',
+        quote: 'Shared synthesis evidence stays grounded.',
+      })],
+    })
+
+    const first = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await curation(),
+    })
+    expect(first.status).toBe('completed')
+    await writeFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), `${await readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8')}\nManual entity edit must stay.\n`, 'utf8')
+    await writeFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), `${await readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), 'utf8')}\nManual concept edit must stay.\n`, 'utf8')
+    await writeFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'shared-synthesis.md'), `${await readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'shared-synthesis.md'), 'utf8')}\nManual synthesis edit must stay.\n`, 'utf8')
+    await writeFile(
+      sourcePath,
+      '# Alpha Manual\n\nEntity: OpenClaw\nConcept: compilation\n\nOpenClaw keeps compilation deterministic. Shared synthesis evidence stays grounded.\n\nChanged source body.\n',
+      'utf8',
+    )
+
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      curationPath: await curation(),
+    })
+
+    expect(second.status).toBe('completed')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'), 'utf8'))
+      .resolves.toContain('Manual entity edit must stay.')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation.md'), 'utf8'))
+      .resolves.toContain('Manual concept edit must stay.')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'shared-synthesis.md'), 'utf8'))
+      .resolves.toContain('Manual synthesis edit must stay.')
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw-alpha-manual.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'compilation-alpha-manual.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'shared-synthesis-alpha-manual.md'))).resolves.toBeUndefined()
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-manual.md'), 'utf8'))
+      .resolves.toContain('[[syntheses/shared-synthesis-alpha-manual|Shared Synthesis]]')
+  })
+
+  it('materializes ordinary semantics while removing source-owned stale outputs on changed-source recompiles', async () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
     tempRoots.push(knowledgeRoot, inputRoot)
@@ -120,16 +232,41 @@ describe('cli ingest regressions', () => {
       'utf8',
     )
 
-    const first = await runIngestCommand({ knowledgeRoot, input: sourceBPath })
-    const second = await runIngestCommand({ knowledgeRoot, input: sourceAPath })
-    expect(first.status).toBe('needs_review')
-    expect(second.status).toBe('needs_review')
+    const first = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceBPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceBPath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Reliability', quote: 'Concept: reliability' })],
+      }),
+    })
+    const second = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceAPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceAPath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Reliability', quote: 'Concept: reliability' })],
+      }),
+    })
+    expect(first.status).toBe('completed')
+    expect(second.status).toBe('completed')
 
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'readings', 'alpha-notes.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'alpha-notes-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'beta-notes-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'reliability-concept-overview.md'), 'utf8'))
+      .resolves.toContain('这是入库流程自动维护的概念主题页')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'openclaw-entity-overview.md'), 'utf8'))
+      .resolves.toContain('这是入库流程自动维护的实体主题页')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'), 'utf8'))
+      .resolves.toContain('[[syntheses/reliability-concept-overview|Reliability 主题综述]]')
 
     await writeFile(
       sourceAPath,
@@ -137,49 +274,140 @@ describe('cli ingest regressions', () => {
       'utf8',
     )
 
-    const recompiled = await runIngestCommand({ knowledgeRoot, input: sourceAPath })
+    const recompiled = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceAPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceAPath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'GraphOps', quote: 'Entity: GraphOps' })],
+        concepts: [testConcept({ title: 'Stability', quote: 'Concept: stability' })],
+      }),
+    })
     expect(recompiled.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    expect(recompiled.status).toBe('needs_review')
+    expect(recompiled.status).toBe('completed')
 
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'readings', 'alpha-notes.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'alpha-notes-synthesis.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(access(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-digest.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'readings', 'alpha-digest.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'alpha-digest-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
 
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'openclaw.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'reliability.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
     await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'beta-notes-synthesis.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'reliability-concept-overview.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'syntheses', 'openclaw-entity-overview.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'beta-notes.md'), 'utf8'))
+      .resolves.toContain('[[syntheses/wiki-topic-overview|Wiki 资料总览]]')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'beta-notes.md'), 'utf8'))
+      .resolves.not.toContain('[[syntheses/reliability-concept-overview|Reliability 主题综述]]')
 
     const indexContent = await readFile(path.join(knowledgeRoot, 'wiki', 'index.md'), 'utf8')
-    expect(indexContent).not.toContain('[[entities/openclaw|OpenClaw]]')
-    expect(indexContent).not.toContain('[[concepts/reliability|Reliability]]')
-    expect(indexContent).not.toContain('[[entities/graphops|GraphOps]]')
-    expect(indexContent).not.toContain('[[concepts/stability|Stability]]')
+    expect(indexContent).toContain('[[entities/openclaw|OpenClaw]]')
+    expect(indexContent).toContain('[[concepts/reliability|Reliability]]')
+    expect(indexContent).toContain('[[entities/graphops|GraphOps]]')
+    expect(indexContent).toContain('[[concepts/stability|Stability]]')
+    expect(indexContent).toContain('[[readings/alpha-digest|alpha digest - 完整原文]]')
     expect(indexContent).toContain('[[sources/alpha-digest|alpha digest]]')
     expect(indexContent).toContain('[[sources/beta-notes|beta notes]]')
+    expect(indexContent).not.toContain('[[readings/alpha-notes|alpha notes - 完整原文]]')
     expect(indexContent).not.toContain('[[sources/alpha-notes|alpha notes]]')
     expect(indexContent).not.toContain('[[syntheses/alpha-digest-synthesis|GraphOps × Stability]]')
     expect(indexContent).not.toContain('[[syntheses/beta-notes-synthesis|OpenClaw × Reliability]]')
     expect(indexContent).not.toContain('[[syntheses/alpha-notes-synthesis|OpenClaw × Reliability]]')
+    expect(indexContent).not.toContain('[[syntheses/reliability-concept-overview|Reliability 主题综述]]')
+    expect(indexContent).not.toContain('[[syntheses/openclaw-entity-overview|OpenClaw 主题综述]]')
 
     const dedupManifest = await readDedupManifest(knowledgeRoot)
     expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest).toMatchObject({
       pageFiles: expect.arrayContaining([
         'wiki/sources/alpha-digest.md',
+        'wiki/readings/alpha-digest.md',
+        'wiki/entities/graphops.md',
+        'wiki/concepts/stability.md',
       ]),
       indexEntries: expect.arrayContaining([
         '- [[sources/alpha-digest|alpha digest]]',
+        '- [[readings/alpha-digest|alpha digest - 完整原文]]',
+        '- [[entities/graphops|GraphOps]]',
+        '- [[concepts/stability|Stability]]',
       ]),
     })
-    expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/entities/openclaw.md')
-    expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/concepts/reliability.md')
+    expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/readings/alpha-notes.md')
     expect(dedupManifest.entries[path.resolve(sourceAPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/syntheses/alpha-digest-synthesis.md')
     expect(dedupManifest.entries[path.resolve(sourceBPath)]?.lastOutputManifest?.pageFiles).toEqual(expect.arrayContaining([
       'wiki/sources/beta-notes.md',
+      'wiki/readings/beta-notes.md',
+      'wiki/entities/openclaw.md',
+      'wiki/concepts/reliability.md',
     ]))
     expect(dedupManifest.entries[path.resolve(sourceBPath)]?.lastOutputManifest?.pageFiles).not.toContain('wiki/syntheses/beta-notes-synthesis.md')
+  })
+
+  it('does not overwrite manual synthesis pages when generated overviews collide', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
+    const inputRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-inputs-'))
+    tempRoots.push(knowledgeRoot, inputRoot)
+    await mkdir(path.join(knowledgeRoot, 'wiki', 'syntheses'), { recursive: true })
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'syntheses', 'wiki-topic-overview.md'),
+      '# Manual Wiki Topic Overview\n\nHuman-approved synthesis must stay.\n',
+      'utf8',
+    )
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'syntheses', 'openclaw-entity-overview.md'),
+      '# Manual OpenClaw Overview\n\nHuman-approved entity synthesis must stay.\n',
+      'utf8',
+    )
+
+    const sourceAPath = path.join(inputRoot, 'alpha-notes.md')
+    const sourceBPath = path.join(inputRoot, 'beta-notes.md')
+    await writeFile(
+      sourceAPath,
+      '# alpha notes\n\nEntity: OpenClaw\nConcept: reliability\n\nOpenClaw keeps reliability visible.\n',
+      'utf8',
+    )
+    await writeFile(
+      sourceBPath,
+      '# beta notes\n\nEntity: OpenClaw\nConcept: reliability\n\nOpenClaw documents reliability work.\n',
+      'utf8',
+    )
+
+    expect((await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceAPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceAPath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Reliability', quote: 'Concept: reliability' })],
+      }),
+    })).status).toBe('completed')
+    expect((await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourceBPath,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: sourceBPath,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Reliability', quote: 'Concept: reliability' })],
+      }),
+    })).status).toBe('completed')
+
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'wiki-topic-overview.md'), 'utf8'))
+      .resolves.toContain('Human-approved synthesis must stay.')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'openclaw-entity-overview.md'), 'utf8'))
+      .resolves.toContain('Human-approved entity synthesis must stay.')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'wiki-topic-overview-generated.md'), 'utf8'))
+      .resolves.toContain('generatedBy: "llm-wiki-semantic-overview"')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'syntheses', 'openclaw-entity-overview-generated.md'), 'utf8'))
+      .resolves.toContain('generatedBy: "llm-wiki-semantic-overview"')
+    await expect(readFile(path.join(knowledgeRoot, 'wiki', 'sources', 'alpha-notes.md'), 'utf8'))
+      .resolves.toContain('[[syntheses/wiki-topic-overview-generated|Wiki 资料总览]]')
   })
 
   it('skips unchanged repo inputs and recompiles when shallow repo content changes', async () => {
@@ -195,8 +423,8 @@ describe('cli ingest regressions', () => {
     )
     await writeFile(path.join(repoRoot, 'docs', 'overview.md'), 'The repo contains stable docs.\n', 'utf8')
 
-    const first = await runIngestCommand({ knowledgeRoot, input: repoRoot })
-    const second = await runIngestCommand({ knowledgeRoot, input: repoRoot })
+    const first = await runIngestCommandWithCuration({ knowledgeRoot, input: repoRoot })
+    const second = await runIngestCommandWithCuration({ knowledgeRoot, input: repoRoot })
 
     expect(first.dedupDecision).toEqual({ action: 'compile', reason: 'first-seen' })
     expect(second.dedupDecision).toEqual({ action: 'skip', reason: 'unchanged' })
@@ -208,11 +436,20 @@ describe('cli ingest regressions', () => {
       'utf8',
     )
 
-    const third = await runIngestCommand({ knowledgeRoot, input: repoRoot })
+    const third = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: repoRoot,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: repoRoot,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'GraphOps', quote: 'Entity: GraphOps' })],
+        concepts: [testConcept({ title: 'Stability', quote: 'Concept: stability' })],
+      }),
+    })
 
     expect(third.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
   })
 
   it('skips unchanged url inputs and recompiles when fetched content changes', async () => {
@@ -244,8 +481,8 @@ describe('cli ingest regressions', () => {
     )
 
     const url = 'https://example.com/url-dedup-sample'
-    const first = await runIngestCommand({ knowledgeRoot, input: url })
-    const second = await runIngestCommand({ knowledgeRoot, input: url })
+    const first = await runIngestCommandWithCuration({ knowledgeRoot, input: url })
+    const second = await runIngestCommandWithCuration({ knowledgeRoot, input: url })
 
     expect(first.dedupDecision).toEqual({ action: 'compile', reason: 'first-seen' })
     expect(second.dedupDecision).toEqual({ action: 'skip', reason: 'unchanged' })
@@ -265,11 +502,20 @@ describe('cli ingest regressions', () => {
       '</html>',
     ].join('\n')
 
-    const third = await runIngestCommand({ knowledgeRoot, input: url })
+    const third = await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: url,
+      curationPath: await writeTestCurationPlan({
+        sourcePath: url,
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'GraphOps', quote: 'Entity: GraphOps' })],
+        concepts: [testConcept({ title: 'Stability', quote: 'Concept: stability' })],
+      }),
+    })
 
     expect(third.dedupDecision).toEqual({ action: 'recompile', reason: 'changed' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'entities', 'graphops.md'))).resolves.toBeUndefined()
+    await expect(access(path.join(knowledgeRoot, 'wiki', 'concepts', 'stability.md'))).resolves.toBeUndefined()
   })
 })
 

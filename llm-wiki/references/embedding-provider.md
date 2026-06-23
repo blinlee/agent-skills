@@ -112,10 +112,10 @@ When configured, query uses generated variants for lexical retrieval only, fuses
 Entity/relation extraction:
 
 ```bash
-npm run --silent cli -- ingest <knowledgeRoot> <source> --extract-entities
+npm run --silent cli -- ingest <knowledgeRoot> <source> --quality <quality.json> --curation <curation.json> --extract-entities
 ```
 
-Requires host-local config or `LLM_WIKI_ENTITY_ENDPOINT`. Extracted entity/relation JSON is written to `system/index/entity-extractions.json`; `index` folds extracted entity keys into `entity-graph.json` and lexical retrieval text.
+Requires host-local config or `LLM_WIKI_ENTITY_ENDPOINT`. This is a retrieval substrate only: extracted entity/relation JSON is written to `system/index/entity-extractions.json`; `index` folds extracted entity keys into `entity-graph.json` and lexical retrieval text. It does not create public `wiki/entities` pages; public semantic pages require accepted quality and curation plans.
 
 Key info extraction:
 

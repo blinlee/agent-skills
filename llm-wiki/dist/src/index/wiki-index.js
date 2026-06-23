@@ -72,7 +72,8 @@ export async function runBuildIndex(input) {
         const currentHash = evidenceSource.evidenceKind === 'raw'
             ? hashText(`${CHUNKING_SCHEMA}\n${pageHash}\nraw:${evidenceSource.rawPath}\n${evidenceSource.contentHash}`)
             : hashText(`${CHUNKING_SCHEMA}\n${pageHash}`);
-        const reused = reusablePageArtifacts(previous, page.target, currentHash);
+        const shouldBuildRetrievalChunks = shouldBuildRetrievalChunksForPage(page, content);
+        const reused = shouldBuildRetrievalChunks && reusablePageArtifacts(previous, page.target, currentHash);
         if (reused) {
             const linkArtifacts = buildPageLinkArtifacts(page, content, indexedPages, missingTargets);
             pages.push({
@@ -113,9 +114,11 @@ export async function runBuildIndex(input) {
         for (const link of linkArtifacts.links) {
             pushLink(links, backlinks, link);
         }
-        const chunkArtifacts = chunkPage(page, evidenceSource);
-        chunks.push(...chunkArtifacts.chunks);
-        parentSpans.push(...chunkArtifacts.parentSpans);
+        if (shouldBuildRetrievalChunks) {
+            const chunkArtifacts = chunkPage(page, evidenceSource);
+            chunks.push(...chunkArtifacts.chunks);
+            parentSpans.push(...chunkArtifacts.parentSpans);
+        }
         currentFileHashes[page.target] = {
             filePath: page.filePath,
             sha256: currentHash,
@@ -193,6 +196,15 @@ export async function runBuildIndex(input) {
         rebuiltPageCount,
     };
 }
+function shouldBuildRetrievalChunksForPage(page, content) {
+    if (page.section === 'syntheses' && content.includes('generatedBy: "llm-wiki-semantic-overview"')) {
+        return false;
+    }
+    return page.section === 'sources'
+        || page.section === 'syntheses'
+        || page.section === 'comparisons'
+        || page.section === 'queries';
+}
 async function loadPreviousIndexArtifacts(files, targetSignature) {
     const fileHashes = await readJsonFile(files.fileHashes, null);
     if (!isFileHashIndexState(fileHashes) || fileHashes.targetSignature !== targetSignature) {
@@ -231,6 +243,9 @@ function reusablePageArtifacts(previous, pageTarget, currentHash) {
     };
 }
 function buildPageLinkArtifacts(page, content, indexedPages, missingTargets) {
+    if (page.section === 'readings') {
+        return { links: [], outgoingLinks: [] };
+    }
     const links = [];
     const outgoingLinks = [];
     for (const link of parseWikiLinks(content)) {
@@ -327,12 +342,14 @@ function mergeSupplementalTexts(inputs) {
     return merged;
 }
 async function loadTopicMetadata(root) {
-    const [aliasesRaw, redirectsRaw, categoryGraphRaw] = await Promise.all([
+    const [topicsRaw, aliasesRaw, redirectsRaw, categoryGraphRaw] = await Promise.all([
+        readOptionalText(path.join(root, 'taxonomy', 'topics.json')),
         readOptionalText(path.join(root, 'taxonomy', 'aliases.json')),
         readOptionalText(path.join(root, 'taxonomy', 'redirects.json')),
         readOptionalText(path.join(root, 'taxonomy', 'category-graph.json')),
     ]);
     return {
+        topics: parseTopicRegistry(topicsRaw),
         aliases: parseStringRecord(aliasesRaw, 'aliases'),
         redirects: parseStringRecord(redirectsRaw, 'redirects'),
         categoryEdges: parseCategoryEdges(categoryGraphRaw),
@@ -360,6 +377,26 @@ function parseStringRecord(raw, key) {
     }
     return Object.fromEntries(Object.entries(value).filter((entry) => typeof entry[1] === 'string'));
 }
+function parseTopicRegistry(raw) {
+    if (!raw) {
+        return [];
+    }
+    const parsed = JSON.parse(raw);
+    const topics = parsed.topics;
+    if (!Array.isArray(topics)) {
+        return [];
+    }
+    return topics.flatMap((topic) => {
+        if (!topic || typeof topic !== 'object') {
+            return [];
+        }
+        const record = topic;
+        if (typeof record.slug !== 'string' || typeof record.name !== 'string') {
+            return [];
+        }
+        return [{ slug: record.slug, name: record.name }];
+    });
+}
 function parseCategoryEdges(raw) {
     if (!raw) {
         return [];
@@ -385,21 +422,15 @@ function parseCategoryEdges(raw) {
 }
 function buildTopicIndex(chunks, metadata) {
     const nodes = new Map();
+    for (const topic of metadata.topics) {
+        ensureTopicNode(nodes, topic.slug, topic.name);
+    }
     for (const chunk of chunks) {
         if (!chunk.pageTarget.startsWith('concepts/')) {
             continue;
         }
         const slug = chunk.pageTarget.slice('concepts/'.length);
-        const node = nodes.get(slug) ?? {
-            slug,
-            name: chunk.pageTitle,
-            aliases: [],
-            redirectsFrom: [],
-            relatedSlugs: [],
-            chunkIds: [],
-            pageTargets: [],
-            sourceRefs: [],
-        };
+        const node = ensureTopicNode(nodes, slug, chunk.pageTitle);
         node.chunkIds.push(chunk.chunkId);
         if (!node.pageTargets.includes(chunk.pageTarget)) {
             node.pageTargets.push(chunk.pageTarget);
@@ -410,14 +441,14 @@ function buildTopicIndex(chunks, metadata) {
         nodes.set(slug, node);
     }
     for (const [alias, target] of Object.entries(metadata.aliases)) {
-        const node = nodes.get(target);
-        if (node && !node.aliases.includes(alias)) {
+        const node = ensureTopicNode(nodes, target, titleFromSlug(target));
+        if (!node.aliases.includes(alias)) {
             node.aliases.push(alias);
         }
     }
     for (const [from, to] of Object.entries(metadata.redirects)) {
-        const node = nodes.get(to);
-        if (node && !node.redirectsFrom.includes(from)) {
+        const node = ensureTopicNode(nodes, to, titleFromSlug(to));
+        if (!node.redirectsFrom.includes(from)) {
             node.redirectsFrom.push(from);
         }
     }
@@ -425,12 +456,12 @@ function buildTopicIndex(chunks, metadata) {
         if (edge.status !== undefined && edge.status !== 'accepted') {
             continue;
         }
-        const fromNode = nodes.get(edge.from);
-        const toNode = nodes.get(edge.to);
-        if (fromNode && !fromNode.relatedSlugs.includes(edge.to)) {
+        const fromNode = ensureTopicNode(nodes, edge.from, titleFromSlug(edge.from));
+        const toNode = ensureTopicNode(nodes, edge.to, titleFromSlug(edge.to));
+        if (!fromNode.relatedSlugs.includes(edge.to)) {
             fromNode.relatedSlugs.push(edge.to);
         }
-        if (toNode && !toNode.relatedSlugs.includes(edge.from)) {
+        if (!toNode.relatedSlugs.includes(edge.from)) {
             toNode.relatedSlugs.push(edge.from);
         }
     }
@@ -445,6 +476,31 @@ function buildTopicIndex(chunks, metadata) {
         sourceRefs: [...new Set(node.sourceRefs)].sort((left, right) => left.localeCompare(right)),
     }))
         .sort((left, right) => left.slug.localeCompare(right.slug));
+}
+function ensureTopicNode(nodes, slug, name) {
+    const existing = nodes.get(slug);
+    if (existing) {
+        return existing;
+    }
+    const node = {
+        slug,
+        name,
+        aliases: [],
+        redirectsFrom: [],
+        relatedSlugs: [],
+        chunkIds: [],
+        pageTargets: [`concepts/${slug}`],
+        sourceRefs: [],
+    };
+    nodes.set(slug, node);
+    return node;
+}
+function titleFromSlug(slug) {
+    return slug
+        .split('-')
+        .filter(Boolean)
+        .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+        .join(' ') || slug;
 }
 async function resolvePageEvidenceSource(input) {
     const sourceRef = extractSourceRef(input.pageContent);

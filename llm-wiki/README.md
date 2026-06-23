@@ -2,14 +2,15 @@
 
 CLI-first markdown knowledge-base compiler for source-grounded, human-governed LLM wikis.
 
-llm-wiki turns source material into a durable Markdown wiki with preserved raw evidence, reviewable classification proposals, retrieval indexes, source-reading query output, and optional multi-wiki registry management. It is both a TypeScript CLI package and an agent skill backend.
+llm-wiki turns source material into a durable Markdown wiki with preserved raw evidence, Chinese source cards, full reading mirrors, curation-backed entity/concept/synthesis pages, retrieval indexes, source-reading query output, and optional multi-wiki registry management. It is both a TypeScript CLI package and a skill backend.
 
 ## What It Provides
 
 - Knowledge-root setup, ingest, query, lint, index, maintenance, and OKF export/import.
 - Registry-root workflows for multiple bounded wikis under one atlas.
 - Inbox routing with explicit human approval for accept, reject, park, profile, taxonomy, and bridge decisions.
-- Raw-backed RAG retrieval that gives agents original source passages or concise original-document reading packs.
+- Inbox completion that writes directly usable wiki assets: source card, full reading page, curation-backed semantic pages when justified, and indexes.
+- Raw-backed RAG retrieval that returns original source passages or concise original-document reading packs.
 - Optional embedding, HyDE, query expansion, rerank, entity graph, key-info, wiki overview, and SQLite-backed cache/state surfaces.
 - Deduplication workflows for exact, semantic, pending-decision, merge, stats, scan, and historical backfill cases.
 - Host-local root configuration shared by Codex, Claude, OpenClaw, and other agents on the same machine.
@@ -18,7 +19,7 @@ llm-wiki turns source material into a durable Markdown wiki with preserved raw e
 
 ### Knowledge Root
 
-A knowledge root is one bounded wiki workspace. It contains wiki pages, raw evidence, manifests, review/proposal state, logs, schemas, and system indexes.
+A knowledge root is one bounded wiki workspace. It contains wiki pages, full reading mirrors, raw evidence, manifests, review/proposal state, logs, schemas, and system indexes.
 
 ### Registry Root
 
@@ -30,7 +31,7 @@ Raw files and decoded originals stay under `raw/`. Generated wiki pages, overvie
 
 ### Human-Governed Proposals
 
-Model-generated routing, taxonomy, profile, bridge, dedup, and synthesis decisions are proposals until a human approves them. Approval-gated commands require explicit user approval.
+Model-generated routing, taxonomy, profile, bridge, dedup, and synthesis decisions are proposals until a human approves them. Approval-gated commands require explicit user approval. Ordinary source-card, reading-page, entity-page, and concept-page generation inside an accepted wiki is part of ingest completion, not a separate public review pass.
 
 ## Requirements
 
@@ -50,7 +51,7 @@ npm install
 npm run build
 ```
 
-The runtime CLI entrypoint is checked in at `dist/src/cli.js`:
+The compiled entrypoint at `dist/src/cli.js` is checked in for skill/runtime handoff:
 
 ```bash
 npm run --silent cli -- <command> ...args
@@ -60,14 +61,14 @@ Use `--silent` for JSON-oriented output.
 
 ## Skill Workflows
 
-The agent skill exposes five public workflows:
+The skill exposes five public workflows:
 
 | Workflow | Purpose |
 | --- | --- |
 | `/llm-wiki setup` | Resolve, save, initialize, or inspect a knowledge root or registry root. |
-| `/llm-wiki inbox` | Process new raw drops, decode non-Markdown sources, route or ingest material, present placement/linking decisions, and execute approved actions. |
-| `/llm-wiki query <question>` | Run `scripts/query_handoff.py`, execute the recommended query command, and answer from the returned source-reading pack. |
-| `/llm-wiki maintain` | Refresh indexes, overviews, readiness, embedding state, lint/status, and derived maintenance artifacts. |
+| `/llm-wiki inbox` | Process new raw drops, decode non-Markdown sources, write quality and curation plans, route or ingest accepted material, execute approved placement decisions, and finish accepted material as usable wiki pages plus indexes. |
+| `/llm-wiki query <question>` | Classify the question, ask for clarification if route is unclear, run `scripts/query_handoff.py --reading-mode <passage|document>`, execute the recommended query command, and answer from the returned source-reading pack. |
+| `/llm-wiki maintain` | Backfill deterministic historical source-card-only assets, refresh indexes, overviews, readiness, embedding state, lint/status, and derived maintenance artifacts. |
 | `/llm-wiki govern` | Manage registry membership, wiki profiles, taxonomy, bridge links, routing policy, and approval queues. |
 
 The active skill contract is [SKILL.md](SKILL.md). Detailed operator references live in:
@@ -80,7 +81,7 @@ The active skill contract is [SKILL.md](SKILL.md). Detailed operator references 
 
 ## Root Resolution
 
-Agent workflows resolve the target root in this order:
+Skill workflows resolve the target root in this order:
 
 1. Explicit root path from the user.
 2. `llm_wiki_root`.
@@ -100,7 +101,7 @@ Create and query one wiki:
 
 ```bash
 npm run --silent cli -- init ./knowledge
-npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md
+npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md --quality ./sample.quality.json --curation ./sample.curation.json
 npm run --silent cli -- query ./knowledge "What is Compiler Notes?"
 npm run --silent cli -- lint ./knowledge
 ```
@@ -112,12 +113,15 @@ npm run --silent cli -- ingest-inbox ./knowledge
 npm run --silent cli -- maintain ./knowledge
 ```
 
+Before ingesting ordinary source material, write an `llm-wiki.inbox-quality.v1` JSON plan and an `llm-wiki.semantic-curation.v1` JSON plan with exact source quotes. The quality plan decides accept/reject/park/convert/merge before ingest; only accepted material reaches curation. After a successful inbox pass, accepted sources have generated pages under `wiki/sources`, `wiki/readings`, and any curation-backed `wiki/entities` / `wiki/concepts` / `wiki/syntheses` entries. `govern` is for structural changes, not for finishing ordinary ingestion. `maintain` backfills deterministic reading/index assets when managed raw evidence is present; it does not invent semantic pages.
+
 Create and query a registry:
 
 ```bash
 npm run --silent cli -- registry-init ./atlas
 npm run --silent cli -- registry-add ./atlas --id ai --title "AI Wiki" --scope "llm,agent,rag"
 npm run --silent cli -- route ./atlas ./notes/article.md
+npm run --silent cli -- route-accept ./atlas <proposalId> --quality ./article.quality.json --curation ./article.curation.json
 npm run --silent cli -- query-registry ./atlas "What do my notes say about LoRA?"
 ```
 
@@ -182,8 +186,10 @@ Default query output is compact and source-reading oriented. Use `--full` for di
 - `profile-reject`
 - `profile-review`
 - `bridge-list`
+- `bridge-targets`
 - `bridge-index`
 - `bridge-accept`
+- `bridge-create-landing`
 - `bridge-reject`
 
 ### Packaging And Interchange
@@ -244,7 +250,7 @@ node scripts/main_workflow_smoke.mjs --output /tmp/llm-wiki-main-workflow-smoke.
 
 ## Boundaries
 
-llm-wiki is not a hosted service, automatic approval system, or replacement for human curation. It is a local, source-preserving knowledge workflow for agents and people who need auditable evidence, controlled organization, and reusable retrieval context.
+llm-wiki is not a hosted service, automatic approval system, or replacement for human curation. It is a local, source-preserving knowledge workflow for auditable evidence, controlled organization, and reusable retrieval context.
 
 ## License
 

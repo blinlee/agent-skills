@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { SourceKind } from '../types.js'
+import type { JobStatus, SourceKind } from '../types.js'
 import { normalizeDedupEntry, normalizeSourceOutputManifest } from './manifest-migration.js'
 
 export type OutputPageSnapshot = {
@@ -24,6 +24,7 @@ export type DedupEntry = {
   sourceKind: SourceKind
   lastSuccessfulJobId: string | null
   lastCompiledAt: string | null
+  lastStatus: Extract<JobStatus, 'completed' | 'partial' | 'needs_review'> | null
   lastOutputManifest: SourceOutputManifest | null
 }
 
@@ -41,6 +42,9 @@ export type DedupDecision = {
     | 'content-semantic-high'
     | 'content-dedup-confirmation'
     | 'content-dedup-user-skip'
+    | 'inbox-gate-resolved'
+    | 'semantic-curation-resolved'
+    | 'forced-recompile'
 }
 
 export type DedupStore = {
@@ -52,6 +56,7 @@ export type DedupStore = {
     sourceKind: SourceKind
     fingerprint: string
     jobId: string
+    status?: Extract<JobStatus, 'completed' | 'partial' | 'needs_review'>
     compiledAt?: string
     outputManifest?: SourceOutputManifest | null
   }): Promise<DedupEntry>
@@ -145,6 +150,7 @@ export function createDedupStore(manifestPath: string): DedupStore {
           sourceKind: input.sourceKind,
           lastSuccessfulJobId: input.jobId,
           lastCompiledAt: input.compiledAt ?? new Date().toISOString(),
+          lastStatus: input.status ?? 'completed',
           lastOutputManifest: input.outputManifest
             ? normalizeSourceOutputManifest(input.outputManifest)
             : null,

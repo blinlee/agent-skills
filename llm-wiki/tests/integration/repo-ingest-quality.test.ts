@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { runIngestCommand } from '../../src/cli.js'
+import { runIngestCommandWithCuration } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -15,7 +16,7 @@ describe('repo ingest quality', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-repo-quality-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'repos', 'minimal-repo'),
     })

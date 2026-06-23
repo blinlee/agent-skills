@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Plan the deterministic llm-wiki query command for an agent.
+"""Plan the deterministic llm-wiki query command for this workflow.
 
-This helper prevents agents from substituting source inspection for the real
+This helper prevents source inspection from replacing the real
 query/query-registry workflow. It resolves the host-local default root, detects
 whether the target is a knowledge root or registry root, and emits the exact
 package-root CLI command to run.
@@ -34,11 +34,12 @@ def main() -> int:
     parser.add_argument("question", help="Question to pass to llm-wiki query")
     parser.add_argument("--root", help="Explicit knowledge or registry root. Defaults to llm_wiki_root/env/config.")
     parser.add_argument("--kind", choices=["knowledge", "registry", "unknown"], help="Root kind override.")
+    parser.add_argument("--reading-mode", choices=["passage", "document"], help="Execution mode chosen by the skill workflow.")
     parser.add_argument("--json", action="store_true", help="Emit JSON only.")
     args = parser.parse_args()
 
     try:
-        plan = build_plan(args.question, explicit_root=args.root, explicit_kind=args.kind)
+        plan = build_plan(args.question, explicit_root=args.root, explicit_kind=args.kind, reading_mode=args.reading_mode)
     except Exception as error:  # noqa: BLE001 - command-line diagnostic boundary
         if args.json:
             print(json.dumps({"status": "error", "error": str(error)}, ensure_ascii=False, indent=2))
@@ -57,7 +58,12 @@ def main() -> int:
     return 0
 
 
-def build_plan(question: str, explicit_root: str | None = None, explicit_kind: str | None = None) -> dict[str, Any]:
+def build_plan(
+    question: str,
+    explicit_root: str | None = None,
+    explicit_kind: str | None = None,
+    reading_mode: str | None = None,
+) -> dict[str, Any]:
     resolved = resolve_root(explicit_root, explicit_kind)
     root = Path(resolved["root"]).expanduser().resolve()
     if not root.exists():
@@ -69,9 +75,12 @@ def build_plan(question: str, explicit_root: str | None = None, explicit_kind: s
 
     command_name = "query-registry" if root_kind == "registry" else "query"
     command = ["npm", "run", "--silent", "cli", "--", command_name, str(root), question]
+    if reading_mode:
+        command.extend(["--reading-mode", reading_mode])
 
     notes: list[str] = [
         "Run recommendedCommand before answering; do not substitute source inspection for retrieval.",
+        "This helper does not classify question type; choose --reading-mode before calling it.",
     ]
     if root_kind == "registry":
         notes.append("Registry root detected; use query-registry and report searched wikis/citations.")
@@ -94,6 +103,7 @@ def build_plan(question: str, explicit_root: str | None = None, explicit_kind: s
         "rootKind": root_kind,
         "rootSource": resolved.get("source"),
         "question": question,
+        "readingMode": reading_mode or "passage",
         "recommendedCommand": command,
         "shellCommand": " ".join(shlex.quote(part) for part in command),
         "embedding": embedding,

@@ -30,6 +30,7 @@ import {
 } from '../../src/cli.js'
 import { runRegistryHybridRetrieval } from '../../src/retrieval/registry.js'
 import type { Reranker } from '../../src/retrieval/rerank.js'
+import { runIngestCommandWithCuration, runRouteAcceptCommandWithCuration, writeTestQualityPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -56,7 +57,7 @@ describe('multi-wiki registry query routing', () => {
       registryRoot,
       source: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
-    await runRouteAcceptCommand({ registryRoot, proposalId: route.proposal.id })
+    await runRouteAcceptCommandWithCuration({ registryRoot, proposalId: route.proposal.id })
     await runBuildIndexCommand({ knowledgeRoot: aiRoot })
 
     const result = await runQueryRegistryCommand({
@@ -109,7 +110,15 @@ describe('multi-wiki registry query routing', () => {
     const target = 'REGISTRY_TARGET_SIGNAL says registry output must preserve expanded source passages. '.repeat(5)
     const later = 'REGISTRY_LATER_CONTEXT gives the consequence after the central retrieval claim. '.repeat(8)
     await writeFile(sourcePath, `# Registry Source Pack\n\n## Evidence Section\n\n${earlier}\n\n${target}\n\n${later}\n`, 'utf8')
-    await runIngestCommand({ knowledgeRoot: wikiRoot, input: sourcePath })
+    await runIngestCommandWithCuration({
+      knowledgeRoot: wikiRoot,
+      input: sourcePath,
+      qualityPath: await writeTestQualityPlan({
+        sourcePath,
+        baseDir: wikiRoot,
+        quote: 'REGISTRYTARGETSIGNAL says registry output must preserve expanded source passages',
+      }),
+    })
     await runBuildIndexCommand({ knowledgeRoot: wikiRoot })
 
     const result = await runQueryRegistryCommand({
@@ -159,7 +168,7 @@ describe('multi-wiki registry query routing', () => {
       '# llm-wiki RAG architecture\n\nAgent-facing RAG uses evidence-first hybrid retrieval: lexical chunks, local embedding vectors, graph and taxonomy boosts, and citation-grounded answers. The embedding architecture is optional and stores provider/model/text-hash vectors for each chunk.\n',
       'utf8',
     )
-    await runIngestCommand({ knowledgeRoot: ragRoot, input: sourcePath })
+    await runIngestCommandWithCuration({ knowledgeRoot: ragRoot, input: sourcePath })
     await runBuildIndexCommand({ knowledgeRoot: ragRoot })
 
     const result = await runQueryRegistryCommand({
@@ -202,7 +211,7 @@ describe('multi-wiki registry query routing', () => {
       scope: ['3D perception', 'sensor fusion', 'scene understanding'],
     })
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: ragRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -210,7 +219,7 @@ describe('multi-wiki registry query routing', () => {
         '# LightRAG Query Modes\n\nLightRAG RAG architecture combines hybrid retrieval, entity graph context, chunk embeddings, and rerank context before returning source passages.',
       ),
     })
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: financeRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -218,7 +227,7 @@ describe('multi-wiki registry query routing', () => {
         '# Financial Foundation Models\n\nFinancial time-series models discuss AI architecture, forecasting workflows, market factors, and portfolio research methods.',
       ),
     })
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: perceptionRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -306,7 +315,7 @@ describe('multi-wiki registry query routing', () => {
         title: testCase.targetTitle,
         scope: [...testCase.targetScope],
       })
-      await runIngestCommand({
+      await runIngestCommandWithCuration({
         knowledgeRoot: targetRoot,
         input: await writeSurveyInput(inputRoot, testCase.targetFile, testCase.targetText),
       })
@@ -322,7 +331,7 @@ describe('multi-wiki registry query routing', () => {
           title,
           scope: [...scope],
         })
-        await runIngestCommand({
+        await runIngestCommandWithCuration({
           knowledgeRoot: decoyRoot,
           input: await writeSurveyInput(inputRoot, `${wikiId}.md`, `# ${sourceTitle}\n\n${sourceBody}`),
         })
@@ -375,7 +384,7 @@ describe('multi-wiki registry query routing', () => {
       scope: ['financial factor mining', 'trading agent'],
     })
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: agentRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -383,7 +392,7 @@ describe('multi-wiki registry query routing', () => {
         '# Agent Engineering\n\nAn AI agent is a software system that uses tools, context, planning, and evaluation harnesses to complete tasks.',
       ),
     })
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: robotRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -391,7 +400,7 @@ describe('multi-wiki registry query routing', () => {
         '# Robot Agent Notes\n\nA robot agent appears in embodied perception benchmarks with cameras, LiDAR, and manipulation scenes.',
       ),
     })
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: financeRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -430,7 +439,7 @@ describe('multi-wiki registry query routing', () => {
       title: 'RAG & Knowledge Graph',
       scope: ['LightRAG', 'GraphRAG', 'graph retrieval'],
     })
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: ragRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -438,7 +447,7 @@ describe('multi-wiki registry query routing', () => {
         '# RAG Table Fragment\n\n<td>GraphRAG</td><td>LightRAG</td><td>58.4%</td><td>GraphRAG</td><td>LightRAG</td><td>73.6%</td>',
       ),
     })
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: ragRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -485,7 +494,7 @@ describe('multi-wiki registry query routing', () => {
     await writeFile(path.join(profileRoot, 'wiki', 'index.md'), '- [[sources/decoy|Decoy]]\n', 'utf8')
     const evidenceSource = path.join(evidenceRoot, 'evidence-source.md')
     await writeFile(evidenceSource, '# Source\n\nThe needle alpha quantum path route belongs to the evidence wiki source text.', 'utf8')
-    await runIngestCommand({ knowledgeRoot: evidenceRoot, input: evidenceSource })
+    await runIngestCommandWithCuration({ knowledgeRoot: evidenceRoot, input: evidenceSource })
     await runBuildIndexCommand({ knowledgeRoot: profileRoot })
     await runBuildIndexCommand({ knowledgeRoot: evidenceRoot })
 
@@ -552,14 +561,15 @@ describe('multi-wiki registry query routing', () => {
       '',
       'General agent engineering discusses tool use, prompt workflows, task decomposition, evaluation harnesses, and team automation for software systems.',
     ].join('\n'), 'utf8')
-    await runIngestCommand({ knowledgeRoot: financeRoot, input: financeSource })
-    await runIngestCommand({ knowledgeRoot: decoyRoot, input: decoySource })
+    await runIngestCommandWithCuration({ knowledgeRoot: financeRoot, input: financeSource })
+    await runIngestCommandWithCuration({ knowledgeRoot: decoyRoot, input: decoySource })
     await runBuildIndexCommand({ knowledgeRoot: financeRoot })
     await runBuildIndexCommand({ knowledgeRoot: decoyRoot })
 
     const result = await runQueryRegistryCommand({
       registryRoot,
       question: '基于AI的量化研究现在主要框架是怎样的，哪几种路线？',
+      readingMode: 'document',
     })
 
     expect(result.results.map((entry) => entry.wikiId)).toEqual(expect.arrayContaining(['ai-finance', 'ai-agent-engineering']))
@@ -608,9 +618,9 @@ describe('multi-wiki registry query routing', () => {
       ['portfolio-construction.md', '# Portfolio Construction Route\n\nPortfolio construction connects alpha signals to allocation, risk control, transaction cost modeling, and execution optimization in AI-based quantitative research.'],
     ] as const
     for (const [filename, content] of sources) {
-      await runIngestCommand({ knowledgeRoot: financeRoot, input: await writeSurveyInput(inputRoot, filename, content) })
+      await runIngestCommandWithCuration({ knowledgeRoot: financeRoot, input: await writeSurveyInput(inputRoot, filename, content) })
     }
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot: decoyRoot,
       input: await writeSurveyInput(
         inputRoot,
@@ -634,6 +644,7 @@ describe('multi-wiki registry query routing', () => {
     const result = await runQueryRegistryCommand({
       registryRoot,
       question: '基于AI的量化研究现在主要框架是怎样的，哪几种路线？',
+      readingMode: 'document',
     })
 
     expect(result.agentReadingPack.answerability).toBe('answered')
@@ -701,14 +712,15 @@ describe('multi-wiki registry query routing', () => {
       '',
       'AI software engineering discusses coding agents, tool use, task decomposition, prompt workflows, and evaluation harnesses.',
     ].join('\n'), 'utf8')
-    await runIngestCommand({ knowledgeRoot: financeRoot, input: financeSource })
-    await runIngestCommand({ knowledgeRoot: decoyRoot, input: decoySource })
+    await runIngestCommandWithCuration({ knowledgeRoot: financeRoot, input: financeSource })
+    await runIngestCommandWithCuration({ knowledgeRoot: decoyRoot, input: decoySource })
     await runBuildIndexCommand({ knowledgeRoot: financeRoot })
     await runBuildIndexCommand({ knowledgeRoot: decoyRoot })
 
     const result = await runQueryRegistryCommand({
       registryRoot,
       question: '基于AI的量化研究现在主要框架是怎样的，哪几种路线？',
+      readingMode: 'document',
     })
 
     expect(result.selectedWikis[0]).toEqual(expect.objectContaining({ wikiId: 'ai-finance' }))
@@ -740,8 +752,8 @@ describe('multi-wiki registry query routing', () => {
       'Registry rerank candidate includes the preferred result marker and should be ranked first by reranker.',
     ].join('\n'), 'utf8')
 
-    await runIngestCommand({ knowledgeRoot: alphaRoot, input: alphaSource })
-    await runIngestCommand({ knowledgeRoot: betaRoot, input: betaSource })
+    await runIngestCommandWithCuration({ knowledgeRoot: alphaRoot, input: alphaSource })
+    await runIngestCommandWithCuration({ knowledgeRoot: betaRoot, input: betaSource })
     await runBuildIndexCommand({ knowledgeRoot: alphaRoot })
     await runBuildIndexCommand({ knowledgeRoot: betaRoot })
 
@@ -794,7 +806,7 @@ describe('multi-wiki registry query routing', () => {
       '',
       'Registry rerank fallback evidence remains available when the optional reranker is down.',
     ].join('\n'), 'utf8')
-    await runIngestCommand({ knowledgeRoot: root, input: source })
+    await runIngestCommandWithCuration({ knowledgeRoot: root, input: source })
     await runBuildIndexCommand({ knowledgeRoot: root })
 
     const reranker: Reranker = {
@@ -947,7 +959,7 @@ describe('multi-wiki registry query routing', () => {
         registryRoot,
         source,
       })
-      await runRouteAcceptCommand({ registryRoot, proposalId: route.proposal.id, wikiId: wiki.id })
+      await runRouteAcceptCommandWithCuration({ registryRoot, proposalId: route.proposal.id, wikiId: wiki.id })
       await runBuildIndexCommand({ knowledgeRoot: wiki.root })
     }
 
@@ -996,7 +1008,7 @@ describe('multi-wiki registry query routing', () => {
       const source = path.join(wiki.root, `${wiki.id}-sample.md`)
       await writeFile(source, await readFile(path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'), 'utf8'), 'utf8')
       const route = await runRouteCommand({ registryRoot, source })
-      await runRouteAcceptCommand({ registryRoot, proposalId: route.proposal.id, wikiId: wiki.id })
+      await runRouteAcceptCommandWithCuration({ registryRoot, proposalId: route.proposal.id, wikiId: wiki.id })
       await runBuildIndexCommand({ knowledgeRoot: wiki.root })
     }
 

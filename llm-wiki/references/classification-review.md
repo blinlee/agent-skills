@@ -1,10 +1,10 @@
 # Classification Review Protocol
 
-Load this reference whenever routing, profile boundary, taxonomy placement, bridge decisions, or atlas `raw/inbox` intake are involved. The CLI route proposal is an audit artifact and candidate generator; the agent remains responsible for semantic review before asking the human to approve a mutation.
+Load this reference whenever routing, profile boundary, taxonomy placement, bridge decisions, or atlas `raw/inbox` intake are involved. The CLI route proposal is an audit artifact and candidate generator; you remain responsible for semantic review before asking the human to approve routing or structural mutations.
 
 ## Non-Negotiable Gate
 
-Do not run `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-complete`, `intake-park`, or `intake-reject` until the user explicitly approves the proposed action. High confidence, a strong CLI score, or a good-looking classification package is still only a proposal.
+Do not run `route-accept`, `profile-accept`, `bridge-accept`, `taxonomy-accept`, `intake-complete`, `intake-park`, or `intake-reject` until the user explicitly approves the proposed action. High confidence, a strong CLI score, or a good-looking classification package is still only a proposal. This gate covers ownership and structural decisions; it does not require a second approval pass for ordinary source-card, full-reading, entity, and concept pages created inside an already accepted target wiki.
 
 ## Classification Principles
 
@@ -27,10 +27,11 @@ Use model judgment inside this controlled organization frame:
 For each source, collect:
 
 - the source path and intake item id, if present
+- the inbox quality plan, including duplicate/readability/value decision and exact source evidence
 - the route proposal, candidates, evidence, risks, human questions, and classification package
 - the route proposal's `routingAssessment`, especially `ownershipDecision`, `relationshipHint`, `novelty`, and `reviewFocus`
 - registry profiles for plausible target wikis
-- source evidence read directly by the agent
+- source evidence you read directly
 
 For decoded or long documents, read enough source material to understand the document before judging the route. Prefer title, abstract, summary, table of contents, introduction, conclusion, headings, captions/tables that carry domain meaning, and selected high-signal sections. Do not classify only from filenames, frontmatter, route scores, or the first excerpt.
 
@@ -46,6 +47,8 @@ For decoded or long documents, read enough source material to understand the doc
    - A `possible_child_profile` or `adjacent_family` hint is not approval to route into the nearest wiki; it is a prompt to decide whether to create a bounded profile, park, or override after reading the source.
 5. **Choose one proposed action.** Recommend exactly one next operation for the user to approve: accept route, override route to another existing wiki, accept/create a new profile, park for later, reject/convert, or review bridges/taxonomy.
 6. **Preserve the review gate.** Return the audited recommendation and the exact command you would run after approval, but do not run it yet.
+
+If the quality plan decision is `reject`, `park`, `convert`, or `merge`, resolve that route before ownership/classification. Do not classify low-value, unreadable, duplicate, or merge-only material as if it were an accepted source.
 
 ## Decision Ladder
 
@@ -99,7 +102,7 @@ Material:
 - <source or item being reviewed>
 
 Content judgment:
-- <what it is about in plain language>
+- <what it is about in plain language, whether it is worth entering the wiki, and duplicate/readability concerns>
 
 Suggested home:
 - <target wiki, section, category path, or note that a new boundary may be needed>
@@ -113,6 +116,8 @@ Uncertainty:
 Decision needed:
 - <accept / reject / park / override with one short sentence>
 ```
+
+After an approved accept/route-accept, the normal completion expectation is not just "source captured." The target wiki should contain a Chinese source card, an Obsidian-visible full reading page, directly source-backed entity/concept pages, and links among those pages. Escalate only true blockers such as quality rejection/parking/conversion/merge, unreadable files, metadata conflicts, duplicate decisions, weak ownership, or structural taxonomy/profile/bridge choices.
 
 Translate internal workflow nouns before showing them to the user:
 

@@ -401,10 +401,10 @@ export async function updateIntakeItemAfterRouteAcceptance(
     return
   }
 
-  const terminalFailure = ingestResult.status === 'failed_terminal' || ingestResult.status === 'failed_retryable' || ingestResult.status === 'rejected'
+  const ingestCompleted = ingestResult.status === 'completed'
   const taxonomyProposalSlugs = ingestResult.taxonomyFiles.map(taxonomySlugFromFile).filter((slug): slug is string => Boolean(slug))
   const now = new Date().toISOString()
-  const status = terminalFailure ? 'blocked' : 'completed'
+  const status = ingestCompleted ? 'completed' : 'blocked'
 
   await updateIntakeItem(paths, item.id, (current) => ({
     ...current,
@@ -414,12 +414,12 @@ export async function updateIntakeItemAfterRouteAcceptance(
     taxonomyProposalSlugs,
     wikiPages: ingestResult.writtenFiles,
     managedRawArchive: ingestResult.archivePath ?? ingestResult.retainedPath ?? ingestResult.rejectedPath,
-    reviewRequired: terminalFailure,
-    lastError: terminalFailure ? `ingest status: ${ingestResult.status}` : null,
+    reviewRequired: !ingestCompleted,
+    lastError: ingestCompleted ? null : `ingest status: ${ingestResult.status}`,
     reviewer,
-    completedAt: terminalFailure ? current.completedAt : now,
+    completedAt: ingestCompleted ? now : current.completedAt,
     updatedAt: now,
-  }), 'route-accepted')
+  }), ingestCompleted ? 'route-accepted' : 'route-accept-blocked')
 }
 
 export function profileProposalFile(paths: RegistryPaths, proposalId: string): string {

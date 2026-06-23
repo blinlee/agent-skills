@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { runBuildIndexCommand, runCliFromArgv, runIngestCommand, runInitCommand } from '../../src/cli.js'
 import { formatManagedRawFile, hashRawBody } from '../../src/intake/raw-store.js'
+import { runIngestCommandWithCuration, testConcept, testEntity, writeTestCurationPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
 
@@ -16,9 +17,15 @@ describe('wiki index', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-index-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
+      curationPath: await writeTestCurationPlan({
+        sourcePath: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
+        baseDir: knowledgeRoot,
+        entities: [testEntity({ title: 'OpenClaw', quote: 'Entity: OpenClaw' })],
+        concepts: [testConcept({ title: 'Compilation', quote: 'Concept: compilation' })],
+      }),
     })
 
     const result = await runBuildIndexCommand({ knowledgeRoot })
@@ -71,8 +78,8 @@ describe('wiki index', () => {
       chunkCount: result.chunkCount,
     })
     expect(lexical.terms.compiler?.postings.some((posting) => posting.chunkId === compilerChunk?.chunkId)).toBe(true)
-    expect(links.links.some((link) => link.from === 'entities/openclaw')).toBe(false)
-    expect(links.backlinks['sources/compiler-notes'] ?? []).not.toContain('entities/openclaw')
+    expect(links.links.some((link) => link.from === 'entities/openclaw' && link.to === 'sources/compiler-notes')).toBe(true)
+    expect(links.backlinks['sources/compiler-notes'] ?? []).toContain('entities/openclaw')
     expect(topics).toMatchObject({ version: 1, schema: 'llm-wiki.topics.v1' })
     expect(topics.topics.every((topic) => topic.chunkIds.length > 0 && topic.pageTargets.length > 0)).toBe(true)
 
@@ -80,6 +87,45 @@ describe('wiki index', () => {
     const secondChunks = JSON.parse(await readFile(secondResult.files.chunks, 'utf8')) as typeof chunks
     const reusedCompilerChunk = secondChunks.chunks.find((chunk) => chunk.pageTarget === 'sources/compiler-notes' && /Compiler Notes/.test(chunk.text))
     expect(reusedCompilerChunk!.filePath).toBe(reusedCompilerChunk!.rawPath)
+  })
+
+  it('does not treat raw wikilink-looking text inside reading mirrors as graph links', async () => {
+    const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-reading-index-'))
+    tempRoots.push(knowledgeRoot)
+    await runInitCommand({ knowledgeRoot })
+    await mkdir(path.join(knowledgeRoot, 'wiki', 'readings'), { recursive: true })
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'readings', 'market-notes.md'),
+      [
+        '---',
+        'title: "Market Notes - 完整原文"',
+        'created: "2026-06-22T00:00:00.000Z"',
+        'updated: "2026-06-22T00:00:00.000Z"',
+        'type: "reading"',
+        'tags: []',
+        'sources: ["fixture"]',
+        'confidence: "medium"',
+        'contested: false',
+        '---',
+        '# Market Notes',
+        '',
+        'Original text includes [[BUY]] and [[DECISION]] as domain notation, not wiki links.',
+        '',
+      ].join('\n'),
+      'utf8',
+    )
+    await writeFile(
+      path.join(knowledgeRoot, 'wiki', 'index.md'),
+      '# Wiki 索引\n\n## 原文\n- [[readings/market-notes|Market Notes - 完整原文]]\n',
+      'utf8',
+    )
+
+    const result = await runBuildIndexCommand({ knowledgeRoot })
+    const links = JSON.parse(await readFile(result.files.links, 'utf8')) as { links: Array<{ from: string; rawTarget: string }> }
+    const chunks = JSON.parse(await readFile(result.files.chunks, 'utf8')) as { chunks: Array<{ pageTarget: string; links: string[] }> }
+
+    expect(links.links.filter((link) => link.from === 'readings/market-notes')).toEqual([])
+    expect(chunks.chunks.filter((chunk) => chunk.pageTarget === 'readings/market-notes').flatMap((chunk) => chunk.links)).toEqual([])
   })
 
   it('splits long sections into overlapping 512 character chunks', async () => {
@@ -243,7 +289,7 @@ describe('wiki index', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-index-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -270,8 +316,8 @@ describe('wiki index', () => {
       'utf8',
     )
 
-    await runIngestCommand({ knowledgeRoot, input: firstSource })
-    await runIngestCommand({ knowledgeRoot, input: secondSource })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: firstSource })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: secondSource })
 
     const result = await runBuildIndexCommand({ knowledgeRoot })
     const links = JSON.parse(await readFile(result.files.links, 'utf8')) as { links: Array<{ from: string; to: string | null; status: string }>; backlinks: Record<string, string[]> }
@@ -291,7 +337,7 @@ describe('wiki index', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-index-topics-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -394,7 +440,7 @@ describe('wiki index', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-index-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })

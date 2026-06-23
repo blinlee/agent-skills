@@ -1,7 +1,7 @@
 import type { EvidenceBudget } from '../retrieval/context-budget.js'
 import { tokenize } from '../retrieval/tokenize.js'
 import { buildContradictionTable, HeuristicEvidenceConflictJudge, type EvidenceConflictJudge } from './conflict-judge.js'
-import { buildQueryIntent, isStrongSemanticEvidence, type EvidenceForIntent } from './intent.js'
+import { buildQueryIntent, isEvidenceDomainConsistent, isStrongSemanticEvidence, type EvidenceForIntent, type QueryIntent } from './intent.js'
 import type {
   QueryCitation,
   QueryGroundedClaim,
@@ -19,14 +19,16 @@ export function buildGroundingDiagnostics(
   evidenceBudget: EvidenceBudget,
   lowRetrievalConfidence = false,
   conflictJudge: EvidenceConflictJudge = new HeuristicEvidenceConflictJudge(),
+  queryIntent: QueryIntent = buildQueryIntent(question),
 ): QueryGroundingDiagnostics {
   const conflicts = conflictJudge.findSignals(citations)
   const claims = buildGroundedClaims(question, citations)
   const contradictionTable = buildContradictionTable(conflicts)
   const hasLexicalQuestionSupport = citationsHaveQuestionSupport(question, citations)
-  const hasSemanticQuestionSupport = citationsHaveSemanticQuestionSupport(question, citations)
+    && citationsHaveIntentConsistentSupport(citations, queryIntent)
+  const hasSemanticQuestionSupport = citationsHaveSemanticQuestionSupport(question, citations, queryIntent)
   const hasGroundedQuestionSupport = hasLexicalQuestionSupport || hasSemanticQuestionSupport
-  const allowSemanticConfidenceOverride = hasSemanticQuestionSupport && citationsHaveStrongSemanticQuestionSupport(question, citations)
+  const allowSemanticConfidenceOverride = hasSemanticQuestionSupport && citationsHaveStrongSemanticQuestionSupport(citations, queryIntent)
   return {
     answerability: selection.mode === 'matched' && citations.length > 0 && hasGroundedQuestionSupport && (!lowRetrievalConfidence || allowSemanticConfidenceOverride) ? 'answered' : 'insufficient-evidence',
     evidenceBudget: evidenceBudget.citationLimit,
@@ -54,8 +56,16 @@ function citationsHaveQuestionSupport(question: string, citations: QueryCitation
   })
 }
 
-function citationsHaveSemanticQuestionSupport(question: string, citations: QueryCitation[]): boolean {
-  const intent = buildQueryIntent(question)
+function citationsHaveIntentConsistentSupport(citations: QueryCitation[], intent: QueryIntent): boolean {
+  if (!intent.hasDomainSpecificIntent) {
+    return true
+  }
+  return citations.some((citation) => isEvidenceDomainConsistent(intent, citationEvidenceForIntent(citation), {
+    allowRerankOverride: false,
+  }))
+}
+
+function citationsHaveSemanticQuestionSupport(question: string, citations: QueryCitation[], intent: QueryIntent): boolean {
   const rawSemanticCitations = citations.filter((citation) => {
     if (!citation.chunkId || !citation.rawPath || citation.evidenceKind === 'wiki') {
       return false
@@ -83,8 +93,7 @@ function citationsHaveSemanticQuestionSupport(question: string, citations: Query
   }))
 }
 
-function citationsHaveStrongSemanticQuestionSupport(question: string, citations: QueryCitation[]): boolean {
-  const intent = buildQueryIntent(question)
+function citationsHaveStrongSemanticQuestionSupport(citations: QueryCitation[], intent: QueryIntent): boolean {
   return citations.some((citation) =>
     Boolean(citation.chunkId && citation.rawPath && citation.evidenceKind !== 'wiki')
     && isStrongSemanticEvidence({

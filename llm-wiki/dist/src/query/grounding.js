@@ -1,14 +1,15 @@
 import { tokenize } from '../retrieval/tokenize.js';
 import { buildContradictionTable, HeuristicEvidenceConflictJudge } from './conflict-judge.js';
-import { buildQueryIntent, isStrongSemanticEvidence } from './intent.js';
-export function buildGroundingDiagnostics(question, selection, citations, evidenceBudget, lowRetrievalConfidence = false, conflictJudge = new HeuristicEvidenceConflictJudge()) {
+import { buildQueryIntent, isEvidenceDomainConsistent, isStrongSemanticEvidence } from './intent.js';
+export function buildGroundingDiagnostics(question, selection, citations, evidenceBudget, lowRetrievalConfidence = false, conflictJudge = new HeuristicEvidenceConflictJudge(), queryIntent = buildQueryIntent(question)) {
     const conflicts = conflictJudge.findSignals(citations);
     const claims = buildGroundedClaims(question, citations);
     const contradictionTable = buildContradictionTable(conflicts);
-    const hasLexicalQuestionSupport = citationsHaveQuestionSupport(question, citations);
-    const hasSemanticQuestionSupport = citationsHaveSemanticQuestionSupport(question, citations);
+    const hasLexicalQuestionSupport = citationsHaveQuestionSupport(question, citations)
+        && citationsHaveIntentConsistentSupport(citations, queryIntent);
+    const hasSemanticQuestionSupport = citationsHaveSemanticQuestionSupport(question, citations, queryIntent);
     const hasGroundedQuestionSupport = hasLexicalQuestionSupport || hasSemanticQuestionSupport;
-    const allowSemanticConfidenceOverride = hasSemanticQuestionSupport && citationsHaveStrongSemanticQuestionSupport(question, citations);
+    const allowSemanticConfidenceOverride = hasSemanticQuestionSupport && citationsHaveStrongSemanticQuestionSupport(citations, queryIntent);
     return {
         answerability: selection.mode === 'matched' && citations.length > 0 && hasGroundedQuestionSupport && (!lowRetrievalConfidence || allowSemanticConfidenceOverride) ? 'answered' : 'insufficient-evidence',
         evidenceBudget: evidenceBudget.citationLimit,
@@ -34,8 +35,15 @@ function citationsHaveQuestionSupport(question, citations) {
         return questionTokens.some((token) => citationTokens.has(token));
     });
 }
-function citationsHaveSemanticQuestionSupport(question, citations) {
-    const intent = buildQueryIntent(question);
+function citationsHaveIntentConsistentSupport(citations, intent) {
+    if (!intent.hasDomainSpecificIntent) {
+        return true;
+    }
+    return citations.some((citation) => isEvidenceDomainConsistent(intent, citationEvidenceForIntent(citation), {
+        allowRerankOverride: false,
+    }));
+}
+function citationsHaveSemanticQuestionSupport(question, citations, intent) {
     const rawSemanticCitations = citations.filter((citation) => {
         if (!citation.chunkId || !citation.rawPath || citation.evidenceKind === 'wiki') {
             return false;
@@ -56,8 +64,7 @@ function citationsHaveSemanticQuestionSupport(question, citations) {
         minEmbeddingWithoutDomain: multilingualMismatch ? 0.62 : 0.55,
     }));
 }
-function citationsHaveStrongSemanticQuestionSupport(question, citations) {
-    const intent = buildQueryIntent(question);
+function citationsHaveStrongSemanticQuestionSupport(citations, intent) {
     return citations.some((citation) => Boolean(citation.chunkId && citation.rawPath && citation.evidenceKind !== 'wiki')
         && isStrongSemanticEvidence({
             intent,

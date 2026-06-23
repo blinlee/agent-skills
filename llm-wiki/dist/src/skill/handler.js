@@ -27,6 +27,8 @@ export async function handleSkillIntent(input) {
                 ? await runIngestCommand({
                     knowledgeRoot,
                     input: normalizeSourceInput(requireLocalOrRemoteInput(input.input, 'ingest')),
+                    qualityPath: input.qualityPath,
+                    curationPath: input.curationPath,
                 })
                 : await runIngestInboxCommand({ knowledgeRoot });
             const summary = 'results' in payload

@@ -164,7 +164,8 @@ export async function runBuildIndex(input: BuildIndexInput): Promise<BuildIndexR
     const currentHash = evidenceSource.evidenceKind === 'raw'
       ? hashText(`${CHUNKING_SCHEMA}\n${pageHash}\nraw:${evidenceSource.rawPath}\n${evidenceSource.contentHash}`)
       : hashText(`${CHUNKING_SCHEMA}\n${pageHash}`)
-    const reused = reusablePageArtifacts(previous, page.target, currentHash)
+    const shouldBuildRetrievalChunks = shouldBuildRetrievalChunksForPage(page, content)
+    const reused = shouldBuildRetrievalChunks && reusablePageArtifacts(previous, page.target, currentHash)
     if (reused) {
       const linkArtifacts = buildPageLinkArtifacts(page, content, indexedPages, missingTargets)
       pages.push({
@@ -207,9 +208,11 @@ export async function runBuildIndex(input: BuildIndexInput): Promise<BuildIndexR
     for (const link of linkArtifacts.links) {
       pushLink(links, backlinks, link)
     }
-    const chunkArtifacts = chunkPage(page, evidenceSource)
-    chunks.push(...chunkArtifacts.chunks)
-    parentSpans.push(...chunkArtifacts.parentSpans)
+    if (shouldBuildRetrievalChunks) {
+      const chunkArtifacts = chunkPage(page, evidenceSource)
+      chunks.push(...chunkArtifacts.chunks)
+      parentSpans.push(...chunkArtifacts.parentSpans)
+    }
     currentFileHashes[page.target] = {
       filePath: page.filePath,
       sha256: currentHash,
@@ -291,6 +294,17 @@ export async function runBuildIndex(input: BuildIndexInput): Promise<BuildIndexR
   }
 }
 
+function shouldBuildRetrievalChunksForPage(page: IndexedPage, content: string): boolean {
+  if (page.section === 'syntheses' && content.includes('generatedBy: "llm-wiki-semantic-overview"')) {
+    return false
+  }
+
+  return page.section === 'sources'
+    || page.section === 'syntheses'
+    || page.section === 'comparisons'
+    || page.section === 'queries'
+}
+
 type PreviousIndexArtifacts = {
   fileHashes: FileHashIndexState
   pagesByTarget: Map<string, PageIndexEntry>
@@ -362,6 +376,10 @@ function buildPageLinkArtifacts(
   indexedPages: IndexedPage[],
   missingTargets: Set<string>,
 ): { links: LinkIndexEntry[]; outgoingLinks: string[] } {
+  if (page.section === 'readings') {
+    return { links: [], outgoingLinks: [] }
+  }
+
   const links: LinkIndexEntry[] = []
   const outgoingLinks: string[] = []
 
@@ -463,18 +481,21 @@ function mergeSupplementalTexts(inputs: Array<Map<string, string>>): Map<string,
 }
 
 type TopicIndexMetadata = {
+  topics: Array<{ slug: string; name: string }>
   aliases: Record<string, string>
   redirects: Record<string, string>
   categoryEdges: Array<{ from: string; to: string; status?: string }>
 }
 
 async function loadTopicMetadata(root: string): Promise<TopicIndexMetadata> {
-  const [aliasesRaw, redirectsRaw, categoryGraphRaw] = await Promise.all([
+  const [topicsRaw, aliasesRaw, redirectsRaw, categoryGraphRaw] = await Promise.all([
+    readOptionalText(path.join(root, 'taxonomy', 'topics.json')),
     readOptionalText(path.join(root, 'taxonomy', 'aliases.json')),
     readOptionalText(path.join(root, 'taxonomy', 'redirects.json')),
     readOptionalText(path.join(root, 'taxonomy', 'category-graph.json')),
   ])
   return {
+    topics: parseTopicRegistry(topicsRaw),
     aliases: parseStringRecord(aliasesRaw, 'aliases'),
     redirects: parseStringRecord(redirectsRaw, 'redirects'),
     categoryEdges: parseCategoryEdges(categoryGraphRaw),
@@ -504,6 +525,27 @@ function parseStringRecord(raw: string | null, key: string): Record<string, stri
   return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
 }
 
+function parseTopicRegistry(raw: string | null): TopicIndexMetadata['topics'] {
+  if (!raw) {
+    return []
+  }
+  const parsed = JSON.parse(raw) as Record<string, unknown>
+  const topics = parsed.topics
+  if (!Array.isArray(topics)) {
+    return []
+  }
+  return topics.flatMap((topic) => {
+    if (!topic || typeof topic !== 'object') {
+      return []
+    }
+    const record = topic as Record<string, unknown>
+    if (typeof record.slug !== 'string' || typeof record.name !== 'string') {
+      return []
+    }
+    return [{ slug: record.slug, name: record.name }]
+  })
+}
+
 function parseCategoryEdges(raw: string | null): TopicIndexMetadata['categoryEdges'] {
   if (!raw) {
     return []
@@ -530,21 +572,15 @@ function parseCategoryEdges(raw: string | null): TopicIndexMetadata['categoryEdg
 
 function buildTopicIndex(chunks: ChunkIndexEntry[], metadata: TopicIndexMetadata): TaxonomyTopicNode[] {
   const nodes = new Map<string, TaxonomyTopicNode>()
+  for (const topic of metadata.topics) {
+    ensureTopicNode(nodes, topic.slug, topic.name)
+  }
   for (const chunk of chunks) {
     if (!chunk.pageTarget.startsWith('concepts/')) {
       continue
     }
     const slug = chunk.pageTarget.slice('concepts/'.length)
-    const node = nodes.get(slug) ?? {
-      slug,
-      name: chunk.pageTitle,
-      aliases: [],
-      redirectsFrom: [],
-      relatedSlugs: [],
-      chunkIds: [],
-      pageTargets: [],
-      sourceRefs: [],
-    }
+    const node = ensureTopicNode(nodes, slug, chunk.pageTitle)
     node.chunkIds.push(chunk.chunkId)
     if (!node.pageTargets.includes(chunk.pageTarget)) {
       node.pageTargets.push(chunk.pageTarget)
@@ -556,14 +592,14 @@ function buildTopicIndex(chunks: ChunkIndexEntry[], metadata: TopicIndexMetadata
   }
 
   for (const [alias, target] of Object.entries(metadata.aliases)) {
-    const node = nodes.get(target)
-    if (node && !node.aliases.includes(alias)) {
+    const node = ensureTopicNode(nodes, target, titleFromSlug(target))
+    if (!node.aliases.includes(alias)) {
       node.aliases.push(alias)
     }
   }
   for (const [from, to] of Object.entries(metadata.redirects)) {
-    const node = nodes.get(to)
-    if (node && !node.redirectsFrom.includes(from)) {
+    const node = ensureTopicNode(nodes, to, titleFromSlug(to))
+    if (!node.redirectsFrom.includes(from)) {
       node.redirectsFrom.push(from)
     }
   }
@@ -571,12 +607,12 @@ function buildTopicIndex(chunks: ChunkIndexEntry[], metadata: TopicIndexMetadata
     if (edge.status !== undefined && edge.status !== 'accepted') {
       continue
     }
-    const fromNode = nodes.get(edge.from)
-    const toNode = nodes.get(edge.to)
-    if (fromNode && !fromNode.relatedSlugs.includes(edge.to)) {
+    const fromNode = ensureTopicNode(nodes, edge.from, titleFromSlug(edge.from))
+    const toNode = ensureTopicNode(nodes, edge.to, titleFromSlug(edge.to))
+    if (!fromNode.relatedSlugs.includes(edge.to)) {
       fromNode.relatedSlugs.push(edge.to)
     }
-    if (toNode && !toNode.relatedSlugs.includes(edge.from)) {
+    if (!toNode.relatedSlugs.includes(edge.from)) {
       toNode.relatedSlugs.push(edge.from)
     }
   }
@@ -592,6 +628,33 @@ function buildTopicIndex(chunks: ChunkIndexEntry[], metadata: TopicIndexMetadata
       sourceRefs: [...new Set(node.sourceRefs)].sort((left, right) => left.localeCompare(right)),
     }))
     .sort((left, right) => left.slug.localeCompare(right.slug))
+}
+
+function ensureTopicNode(nodes: Map<string, TaxonomyTopicNode>, slug: string, name: string): TaxonomyTopicNode {
+  const existing = nodes.get(slug)
+  if (existing) {
+    return existing
+  }
+  const node: TaxonomyTopicNode = {
+    slug,
+    name,
+    aliases: [],
+    redirectsFrom: [],
+    relatedSlugs: [],
+    chunkIds: [],
+    pageTargets: [`concepts/${slug}`],
+    sourceRefs: [],
+  }
+  nodes.set(slug, node)
+  return node
+}
+
+function titleFromSlug(slug: string): string {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ') || slug
 }
 
 async function resolvePageEvidenceSource(input: {

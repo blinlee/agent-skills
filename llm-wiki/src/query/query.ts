@@ -8,6 +8,7 @@ import { buildGroundingDiagnostics } from './grounding.js'
 import { buildSourceReadingPack } from './source-reading-pack.js'
 import { retrieveChunks } from '../retrieval/retrieval.js'
 import { buildKnowledgeQueryReadiness, type KnowledgeQueryReadinessReport } from '../retrieval/readiness.js'
+import type { QueryIntent } from './intent.js'
 import { tokenize } from '../retrieval/tokenize.js'
 import { comparePageOrder, loadIndexedPages, parseWikiLinks, resolveWikiLink, type IndexedPage, type WikiLink, type WikiLinkResolution } from '../wiki/links.js'
 import type { EvidenceBudget } from '../retrieval/context-budget.js'
@@ -45,6 +46,7 @@ export type QueryCommandInput = {
   includeReview?: boolean
   disableHyde?: boolean
   retrieval?: RetrievalResult
+  queryIntent?: QueryIntent
 }
 
 export type QueryCitation = {
@@ -286,6 +288,8 @@ export async function runQuery(input: QueryCommandInput): Promise<QueryCommandRe
     groundedCitations,
     retrieval.signalSummary.evidenceBudget,
     lowConfidenceRefusal,
+    undefined,
+    input.queryIntent,
   )
   const answer = redactor(buildGroundedAnswer(displayQuestion, selection, groundedCitations, grounding))
   const suggestion = selection.mode === 'matched' && selection.pages[0] && grounding.answerability === 'answered'

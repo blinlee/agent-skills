@@ -41,6 +41,9 @@ const REVIEW_GROUP_DIRECTORY: Record<string, string> = {
   conflict: 'conflicts',
   'merge-candidate': 'merge-candidates',
   'source-metadata-mismatch': 'conflicts',
+  'inbox-quality-required': 'quality',
+  'inbox-quality-invalid': 'quality',
+  'inbox-quality-blocked': 'quality',
 }
 
 const REVIEW_GROUP_DIRECTORIES = Object.values(REVIEW_GROUP_DIRECTORY)

@@ -20,12 +20,14 @@ export type SkillCommand = 'init' | 'ingest' | 'query' | 'lint' | 'status' | 'sa
 
 /**
  * Internal typed adapter for tests and programmatic CLI delegation.
- * The public agent workflow contract is the repository-root SKILL.md.
+ * The public workflow contract is the repository-root SKILL.md.
  */
 export type HandleSkillIntentInput = {
   intent: string
   knowledgeRoot: string
   input?: string
+  qualityPath?: string
+  curationPath?: string
   question?: string
   suggestionId?: string
   confirm?: boolean
@@ -74,9 +76,11 @@ export async function handleSkillIntent(input: HandleSkillIntentInput): Promise<
     case 'ingest': {
       const payload = input.input && input.input.trim().length > 0
         ? await runIngestCommand({
-            knowledgeRoot,
-            input: normalizeSourceInput(requireLocalOrRemoteInput(input.input, 'ingest')),
-          })
+          knowledgeRoot,
+          input: normalizeSourceInput(requireLocalOrRemoteInput(input.input, 'ingest')),
+          qualityPath: input.qualityPath,
+          curationPath: input.curationPath,
+        })
         : await runIngestInboxCommand({ knowledgeRoot })
 
       const summary = 'results' in payload

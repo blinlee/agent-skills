@@ -1,4 +1,6 @@
-import type { ArtifactAnalysis, TopicProposal, ReviewTrigger, AnalysisCandidate } from './analysis.js'
+import type { NormalizedArtifact } from '../types.js'
+import type { CuratedConcept, CuratedEntity, CuratedSynthesis, ValidatedSemanticCuration } from './semantic-curation.js'
+import { slugify } from './semantic-curation.js'
 
 export type KnowledgePagePayload = {
   slug: string
@@ -7,13 +9,6 @@ export type KnowledgePagePayload = {
   artifactId?: string
   topics: string[]
   backlinks: string[]
-}
-
-export type SynthesisSuggestionPayload = {
-  slug: string
-  title: string
-  body: string
-  rationale: string
 }
 
 export type FileMutationInstruction = {
@@ -35,27 +30,23 @@ export type TaxonomyEffect = {
   }
 }
 
-export type ReviewEffect = ReviewTrigger & {
+export type ReviewEffect = {
   artifactId: string
+  kind: string
+  severity: 'low' | 'medium' | 'high'
+  reason: string
   evidence?: string[]
   confidence?: number
   suggestedActions?: string[]
-  candidate?: {
-    kind: 'entity' | 'concept'
-    slug: string
-    title: string
-    confidence: number
-    source: AnalysisCandidate['source']
-    evidence: string[]
-  }
 }
 
 export type KnowledgeGenerationResult = {
   artifactId: string
   sourcePage: KnowledgePagePayload
+  readingPage: KnowledgePagePayload
   entityPages: KnowledgePagePayload[]
   conceptPages: KnowledgePagePayload[]
-  synthesisSuggestions: SynthesisSuggestionPayload[]
+  synthesisPages: KnowledgePagePayload[]
   indexMutations: FileMutationInstruction[]
   logMutations: FileMutationInstruction[]
   taxonomyEffects: TaxonomyEffect[]
@@ -67,124 +58,254 @@ export type KnowledgeGenerationOptions = {
 }
 
 export async function generateKnowledgeChanges(
-  analysis: ArtifactAnalysis,
+  artifact: NormalizedArtifact,
+  curation: ValidatedSemanticCuration,
   options: KnowledgeGenerationOptions = {},
 ): Promise<KnowledgeGenerationResult> {
-  const sourceSlug = options.sourceSlug ?? buildStableArtifactSlug(analysis)
-  const entityCandidates = removeSourceTitleHeuristics(analysis.candidateEntities, sourceSlug)
-  const conceptCandidates = removeSourceTitleHeuristics(analysis.candidateConcepts, sourceSlug)
-
+  const sourceSlug = options.sourceSlug ?? stableSlug(artifact.title, artifact.id)
   const sourcePage: KnowledgePagePayload = {
     slug: sourceSlug,
-    title: analysis.artifact.title,
-    artifactId: analysis.artifactId,
+    title: artifact.title,
+    artifactId: artifact.id,
     topics: [],
     backlinks: [],
-    body: buildSourcePageBody(analysis),
+    body: '',
   }
+  const readingPage: KnowledgePagePayload = {
+    slug: sourceSlug,
+    title: `${artifact.title} - 完整原文`,
+    artifactId: artifact.id,
+    topics: [],
+    backlinks: [`sources/${sourceSlug}`],
+    body: buildReadingPageBody(artifact, sourcePage),
+  }
+  const entityPages = curation.entities.map((entity, index) =>
+    buildEntityPage(entity, index, artifact.id, sourcePage))
+  const conceptPages = curation.concepts.map((concept, index) =>
+    buildConceptPage(concept, index, artifact.id, sourcePage))
+  const synthesisPages = curation.syntheses.map((synthesis, index) =>
+    buildSynthesisPage(synthesis, index, artifact.id, sourcePage))
 
-  const entityPages: KnowledgePagePayload[] = []
-  const conceptPages: KnowledgePagePayload[] = []
+  sourcePage.body = buildSourcePageBody(artifact, curation, {
+    readingPage,
+    entityPages,
+    conceptPages,
+    synthesisPages,
+  })
 
-  const synthesisSuggestions: SynthesisSuggestionPayload[] = []
-  const indexMutations = buildIndexMutations(sourcePage, entityPages, conceptPages)
+  const indexMutations = buildIndexMutations(sourcePage, readingPage, entityPages, conceptPages, synthesisPages)
   const logMutations = [{
     target: 'wiki/log.md',
     op: 'append' as const,
-    value: `${analysis.artifact.updatedAt}\tcompiled\t${analysis.artifactId}\t${sourceSlug}`,
+    value: `${artifact.updatedAt}\tcompiled\t${artifact.id}\t${sourceSlug}`,
   }]
 
   return {
-    artifactId: analysis.artifactId,
+    artifactId: artifact.id,
     sourcePage,
+    readingPage,
     entityPages,
     conceptPages,
-    synthesisSuggestions,
+    synthesisPages,
     indexMutations,
     logMutations,
-    taxonomyEffects: buildTaxonomyEffects(analysis.topics, sourcePage),
-    reviewEffects: buildReviewEffects(analysis, entityCandidates, conceptCandidates),
+    taxonomyEffects: [],
+    reviewEffects: [],
   }
 }
 
-function buildSourcePageBody(analysis: ArtifactAnalysis): string {
+function buildSourcePageBody(
+  artifact: NormalizedArtifact,
+  curation: ValidatedSemanticCuration,
+  generatedPages: {
+    readingPage: KnowledgePagePayload
+    entityPages: KnowledgePagePayload[]
+    conceptPages: KnowledgePagePayload[]
+    synthesisPages: KnowledgePagePayload[]
+  },
+): string {
+  const knowledgeLinks = [
+    ...generatedPages.entityPages.map((page) => `- [[entities/${page.slug}|${page.title}]]`),
+    ...generatedPages.conceptPages.map((page) => `- [[concepts/${page.slug}|${page.title}]]`),
+    ...generatedPages.synthesisPages.map((page) => `- [[syntheses/${page.slug}|${page.title}]]`),
+  ]
+  const rejectionLines = curation.rejections.length > 0
+    ? curation.rejections.map((rejection) => `- ${rejection.text}: ${rejection.reason}`)
+    : ['- 无。']
+
   return [
-    `# ${analysis.artifact.title}`,
+    `# ${artifact.title}`,
     '',
-    `- 资料 ID: ${analysis.artifactId}`,
-    `- 来源类型: ${sourceKindLabel(analysis.artifact.sourceKind)}`,
-    `- 来源引用: ${analysis.artifact.sourceRef}`,
-    `- 分析置信度: ${analysis.confidence}`,
+    `- 资料 ID: ${artifact.id}`,
+    `- 来源类型: ${sourceKindLabel(artifact.sourceKind)}`,
+    `- 来源引用: ${artifact.sourceRef}`,
+    '- 语义整理: curation-plan-backed',
     '',
-    '## 摘要',
-    buildFastReadSummary(analysis),
+    '## 原文入口',
+    `- [[readings/${generatedPages.readingPage.slug}|完整原文]]`,
+    `- ${formatExternalSourceLink(artifact.sourceRef, '打开原始来源')}`,
+    '',
+    '## 知识入口',
+    ...(knowledgeLinks.length > 0 ? knowledgeLinks : ['- curation plan 未接受适合单独建页的普通实体、概念或综合页。']),
+    '',
+    '## 中文速读',
+    curation.summary,
+    '',
+    '## 未入库候选',
+    ...rejectionLines,
     '',
     '## 证据说明',
-    '原始采集材料是事实依据。本页是派生的索引和速读摘要，用于定位与浏览，不能替代原始证据。',
+    '原始采集材料是事实依据。本页是语义整理后的资料卡，用于定位与浏览，不能替代原始证据。',
     '',
-    '候选语义会先保存在内部提案状态中；未经批准的候选项不会从本页直接写成稳定链接。',
-    '',
-    '### 原文证据片段',
-    ...selectVerbatimEvidenceSamples(analysis.artifact.content).map((line) => `- ${line}`),
-    '',
-    '### 注意点 / 边界信号',
-    ...selectCaveatSignals(analysis.artifact.content),
+    '本页是资料卡；完整阅读请进入上方“完整原文”。结构性重命名、合并、跨 wiki 边界仍由 govern 处理。',
     '',
     '## 原文摘录',
-    analysis.artifact.content.slice(0, 1200),
+    artifact.content.slice(0, 1200),
   ].join('\n')
 }
 
-function buildFastReadSummary(analysis: ArtifactAnalysis): string {
-  return `这是一份${sourceKindLabel(analysis.artifact.sourceKind)}来源材料，标题为《${analysis.artifact.title}》。当前编译置信度为 ${analysis.confidence}。本页用于快速了解资料身份、证据位置和后续治理状态；具体论断请以下方原文摘录和归档原始材料为准。`
+function buildReadingPageBody(
+  artifact: NormalizedArtifact,
+  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title'>,
+): string {
+  return [
+    `# ${artifact.title}`,
+    '',
+    `- 资料 ID: ${artifact.id}`,
+    `- 来源类型: ${sourceKindLabel(artifact.sourceKind)}`,
+    `- 来源引用: ${artifact.sourceRef}`,
+    `- 来源卡片: [[sources/${sourcePage.slug}|${sourcePage.title}]]`,
+    '',
+    '## 说明',
+    '这是入库流程生成的 Obsidian 阅读镜像，用于直接阅读完整正文和参与本地链接导航。raw/objects、raw/staged 或 raw/archive 中的受管材料仍是保真证据；不要编辑本页来修正原始证据。',
+    '',
+    '## 原文全文',
+    '',
+    artifact.content.trim(),
+  ].join('\n').trimEnd()
 }
 
-function sourceKindLabel(sourceKind: ArtifactAnalysis['artifact']['sourceKind']): string {
-  const labels: Record<ArtifactAnalysis['artifact']['sourceKind'], string> = {
-    md: 'Markdown',
-    txt: '文本',
-    url: '网页',
-    repo: '代码仓库',
+function buildEntityPage(
+  entity: CuratedEntity,
+  index: number,
+  artifactId: string,
+  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title'>,
+): KnowledgePagePayload {
+  const slug = pageSlug(entity.slug, entity.title, `entity-${index + 1}`)
+  return {
+    slug,
+    title: entity.title,
+    artifactId,
+    topics: [],
+    backlinks: [`sources/${sourcePage.slug}`],
+    body: buildCuratedNodeBody({
+      title: entity.title,
+      label: '实体',
+      description: entity.description,
+      evidence: entity.evidence,
+      sourcePage,
+      extraLines: [`- 类型: ${entity.kind}`],
+    }),
   }
-
-  return labels[sourceKind]
 }
 
-function selectVerbatimEvidenceSamples(content: string): string[] {
-  const candidates = content
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith('#'))
-    .filter((line) => !/^entity\s*:/i.test(line) && !/^concept\s*:/i.test(line))
-
-  return (candidates.length > 0 ? candidates : [content.trim()])
-    .filter(Boolean)
-    .slice(0, 5)
-    .map((line) => line.length > 240 ? `${line.slice(0, 237)}...` : line)
+function buildConceptPage(
+  concept: CuratedConcept,
+  index: number,
+  artifactId: string,
+  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title'>,
+): KnowledgePagePayload {
+  const slug = pageSlug(concept.slug, concept.title, `concept-${index + 1}`)
+  return {
+    slug,
+    title: concept.title,
+    artifactId,
+    topics: [],
+    backlinks: [`sources/${sourcePage.slug}`],
+    body: buildCuratedNodeBody({
+      title: concept.title,
+      label: '概念',
+      description: concept.description,
+      evidence: concept.evidence,
+      sourcePage,
+      extraLines: [],
+    }),
+  }
 }
 
-function selectCaveatSignals(content: string): string[] {
-  const caveatPattern = /\b(however|but|except|unless|edge case|caveat|risk|conflict|contradict|deprecated|uncertain|unknown)\b/i
-  const caveats = content
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => caveatPattern.test(line))
-    .slice(0, 5)
-    .map((line) => `- ${line.length > 240 ? `${line.slice(0, 237)}...` : line}`)
+function buildSynthesisPage(
+  synthesis: CuratedSynthesis,
+  index: number,
+  artifactId: string,
+  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title'>,
+): KnowledgePagePayload {
+  const slug = pageSlug(synthesis.slug, synthesis.title, `synthesis-${index + 1}`)
+  return {
+    slug,
+    title: synthesis.title,
+    artifactId,
+    topics: [],
+    backlinks: [`sources/${sourcePage.slug}`],
+    body: buildCuratedNodeBody({
+      title: synthesis.title,
+      label: '综合',
+      description: synthesis.description,
+      evidence: synthesis.evidence,
+      sourcePage,
+      extraLines: [],
+    }),
+  }
+}
 
-  return caveats.length > 0 ? caveats : ['- 未检测到明显边界信号；在将摘要视为完整结论前仍需核对原始材料。']
+function buildCuratedNodeBody(input: {
+  title: string
+  label: string
+  description: string
+  evidence: Array<{ quote: string; note?: string }>
+  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title'>
+  extraLines: string[]
+}): string {
+  return [
+    `# ${input.title}`,
+    '',
+    '## 说明',
+    `这是入库时根据 curation plan 从原文证据中创建的${input.label}页。它不是代码规则抽词结果；每条内容必须能回到原文证据。`,
+    '',
+    '## 中文解释',
+    input.description,
+    '',
+    '## 来源',
+    `- [[sources/${input.sourcePage.slug}|${input.sourcePage.title}]]`,
+    '',
+    '## 属性',
+    ...input.extraLines,
+    ...(input.extraLines.length === 0 ? ['- 来源: semantic curation plan'] : []),
+    '',
+    '## 原文证据',
+    ...input.evidence.flatMap((evidence) => [
+      `- ${evidence.quote}`,
+      ...(evidence.note ? [`  - 说明: ${evidence.note}`] : []),
+    ]),
+  ].join('\n')
 }
 
 function buildIndexMutations(
   sourcePage: KnowledgePagePayload,
+  readingPage: KnowledgePagePayload,
   entityPages: KnowledgePagePayload[],
   conceptPages: KnowledgePagePayload[],
+  synthesisPages: KnowledgePagePayload[],
 ): FileMutationInstruction[] {
   return [
     {
       target: 'wiki/index.md',
       op: 'append',
       value: `- [[sources/${sourcePage.slug}|${sourcePage.title}]]`,
+    },
+    {
+      target: 'wiki/index.md',
+      op: 'append',
+      value: `- [[readings/${readingPage.slug}|${readingPage.title}]]`,
     },
     ...entityPages.map((page) => ({
       target: 'wiki/index.md',
@@ -196,91 +317,34 @@ function buildIndexMutations(
       op: 'append' as const,
       value: `- [[concepts/${page.slug}|${page.title}]]`,
     })),
+    ...synthesisPages.map((page) => ({
+      target: 'wiki/index.md',
+      op: 'append' as const,
+      value: `- [[syntheses/${page.slug}|${page.title}]]`,
+    })),
   ]
 }
 
-function buildTaxonomyEffects(
-  topics: TopicProposal[],
-  sourcePage: Pick<KnowledgePagePayload, 'slug' | 'title' | 'artifactId'>,
-): TaxonomyEffect[] {
-  return topics.map((topic) => ({
-    action: 'propose-topic',
-    slug: topic.slug,
-    title: topic.title,
-    confidence: topic.confidence,
-    rationale: topic.rationale,
-    source: {
-      slug: sourcePage.slug,
-      title: sourcePage.title,
-      artifactId: sourcePage.artifactId ?? '',
-    },
-  }))
+function formatExternalSourceLink(sourceRef: string, label: string): string {
+  return `[${label}](<${sourceRef}>)`
 }
 
-function buildReviewEffects(
-  analysis: ArtifactAnalysis,
-  entityCandidates: AnalysisCandidate[],
-  conceptCandidates: AnalysisCandidate[],
-): ReviewEffect[] {
-  return [
-    ...analysis.reviewTriggers
-      .filter((trigger) => trigger.kind !== 'low-confidence')
-      .map((trigger) => ({
-        ...trigger,
-        artifactId: analysis.artifactId,
-      })),
-    ...entityCandidates
-      .filter((candidate) => candidate.source === 'marker')
-      .map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'entity', candidate)),
-    ...conceptCandidates
-      .filter((candidate) => candidate.source === 'marker')
-      .map((candidate) => buildCandidateReviewEffect(analysis.artifactId, 'concept', candidate)),
-  ]
-}
-
-function buildCandidateReviewEffect(
-  artifactId: string,
-  candidateType: 'entity' | 'concept',
-  candidate: AnalysisCandidate,
-): ReviewEffect {
-  return {
-    artifactId,
-    kind: 'semantic-candidate',
-    severity: 'low',
-    reason: `显式${candidateType === 'entity' ? '实体' : '概念'}候选“${candidate.title}”（${candidate.confidence.toFixed(2)}）需要批准后才能成为稳定 wiki 语义。`,
-    evidence: candidate.evidence,
-    confidence: candidate.confidence,
-    candidate: {
-      kind: candidateType,
-      slug: candidate.slug,
-      title: candidate.title,
-      confidence: candidate.confidence,
-      source: candidate.source,
-      evidence: candidate.evidence,
-    },
-    suggestedActions: [
-      `判断“${candidate.title}”是否应成为稳定${candidateType === 'entity' ? '实体' : '概念'}页面。`,
-      '在写入稳定 wiki 前，先批准、重命名/合并或拒绝该候选项。',
-    ],
+function sourceKindLabel(sourceKind: NormalizedArtifact['sourceKind']): string {
+  const labels: Record<NormalizedArtifact['sourceKind'], string> = {
+    md: 'Markdown',
+    txt: '文本',
+    url: '网页',
+    repo: '代码仓库',
   }
+
+  return labels[sourceKind]
 }
 
-function removeSourceTitleHeuristics(candidates: AnalysisCandidate[], sourceSlug: string): AnalysisCandidate[] {
-  return candidates.filter((candidate) => !(candidate.source === 'heuristic' && candidate.slug === sourceSlug))
-}
-
-function buildStableArtifactSlug(analysis: ArtifactAnalysis): string {
-  return stableSlug(analysis.artifact.title, analysis.artifactId)
+function pageSlug(explicitSlug: string | undefined, title: string, fallback: string): string {
+  return explicitSlug ?? stableSlug(title, fallback)
 }
 
 function stableSlug(value: string, fallback: string): string {
   const slug = slugify(value)
   return slug.length > 0 ? slug : fallback
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 }

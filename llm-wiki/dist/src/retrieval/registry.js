@@ -1,5 +1,5 @@
 import { createSensitiveRedactor, runQuery } from '../query/query.js';
-import { buildQueryIntent, DEFAULT_QUERY_INTENT_PROFILES, isEmbeddingOnlyScore, isEvidenceDomainConsistent, isFinanceQuantEvidenceForIntent, isMeaningfulNonEmbeddingSupport, isStrongSemanticEvidence, scoreEvidenceIntentFit } from '../query/intent.js';
+import { buildQueryIntent, isEmbeddingOnlyScore, isEvidenceDomainConsistent, isFocusedEvidenceForIntent, isMeaningfulNonEmbeddingSupport, isStrongSemanticEvidence, scoreEvidenceIntentFit } from '../query/intent.js';
 import { buildKnowledgeQueryReadiness } from './readiness.js';
 import { buildRegistryDiagnostics } from './registry-diagnostics.js';
 import { buildRegistrySourceReadingPack, registryCitationKey, registryPassagesByCitation } from './registry-source-pack.js';
@@ -11,12 +11,9 @@ export async function runRegistryHybridRetrieval(input) {
     const maxConcurrentWikis = Math.max(1, input.maxConcurrentWikis ?? 4);
     const redactor = createSensitiveRedactor(input.question);
     const displayQuestion = redactor(input.question);
-    const queryIntent = buildQueryIntent(input.question, [
-        ...Object.values(DEFAULT_QUERY_INTENT_PROFILES),
-        ...queryIntentProfilesForWikis(input.selectedWikis),
-    ]);
-    const readingMode = queryIntent.prefersDocumentReading ? 'document' : 'passage';
-    const results = await mapWithConcurrency(input.selectedWikis, maxConcurrentWikis, async (wiki) => queryRegistryWiki(input.question, wiki, redactor, { limit: retrievalLimitForIntent(queryIntent) }));
+    const queryIntent = input.queryIntent ?? buildQueryIntent(input.question, queryIntentProfilesForWikis(input.selectedWikis), { readingMode: input.readingMode });
+    const readingMode = input.readingMode ?? (queryIntent.prefersDocumentReading ? 'document' : 'passage');
+    const results = await mapWithConcurrency(input.selectedWikis, maxConcurrentWikis, async (wiki) => queryRegistryWiki(input.question, wiki, redactor, { limit: retrievalLimitForIntent(queryIntent), queryIntent }));
     results.sort(compareRegistryResults);
     const allCitations = results.flatMap((entry) => entry.citationPack);
     const passagesByCitation = registryPassagesByCitation(results);
@@ -35,7 +32,7 @@ export async function runRegistryHybridRetrieval(input) {
         .filter((entry) => entry.result?.grounding.answerability === 'answered')
         .map((entry) => entry.wikiId));
     const citations = readingMode === 'document'
-        ? selectSurveyRegistryCitations(rankedCitations, queryIntent, { citationBudget, maxCitationsPerWiki })
+        ? selectSurveyRegistryCitations(rankedCitations, queryIntent, results, { citationBudget, maxCitationsPerWiki })
         : selectDefaultRegistryCitations(rankedCitations, queryIntent, results, { citationBudget, maxCitationsPerWiki });
     const answerability = citations.some((citation) => isRegistryAnswerEvidence(citation, answerableWikiIds)) ? 'answered' : 'insufficient-evidence';
     const outputResults = orderRegistryResultsForOutput(results, citations);
@@ -74,7 +71,7 @@ async function queryRegistryWiki(question, wiki, redactor, options = {}) {
     try {
         const readiness = await buildKnowledgeQueryReadiness({ knowledgeRoot: wiki.knowledgeRoot });
         const retrieval = await retrieveChunks({ knowledgeRoot: wiki.knowledgeRoot, question, limit: options.limit });
-        const result = await runQuery({ knowledgeRoot: wiki.knowledgeRoot, question, retrieval });
+        const result = await runQuery({ knowledgeRoot: wiki.knowledgeRoot, question, retrieval, queryIntent: options.queryIntent });
         const citationPack = buildRegistryCitationPack(wiki, retrieval.hits, redactor);
         const chunkScore = citationPack[0]?.score.total ?? 0;
         return {
@@ -203,10 +200,10 @@ function selectDefaultRegistryCitations(citations, queryIntent, results, options
     }
     return [];
 }
-function selectSurveyRegistryCitations(citations, queryIntent, options) {
+function selectSurveyRegistryCitations(citations, queryIntent, results, options) {
     const topScore = Math.max(0, ...citations.map((citation) => citation.score.total));
     const minScore = Math.max(0.1, topScore * 0.25);
-    const candidates = citations.filter((citation) => isSurveyRegistryEvidence(citation, minScore, queryIntent));
+    const candidates = restrictGenericRegistryCitationsToLeadingWikis(citations.filter((citation) => isSurveyRegistryEvidence(citation, minScore, queryIntent)), queryIntent, results);
     const documents = new Map();
     for (const citation of candidates) {
         const key = registrySourceDocumentKey(citation);
@@ -256,7 +253,7 @@ function restrictGenericRegistryCitationsToLeadingWikis(citations, queryIntent, 
     const keepWikiIds = new Set([leader.wikiId]);
     for (const entry of rankedWikis.slice(1)) {
         const closeToLeader = leaderScore > 0 && entry.calibratedScore >= leaderScore * 0.995;
-        const hasRegistrySupport = entry.score > 0 || entry.matchedTerms.length >= 2;
+        const hasRegistrySupport = entry.score >= 2 || nonGenericProfileTerms(entry.matchedTerms).length >= 2;
         if (closeToLeader && hasRegistrySupport) {
             keepWikiIds.add(entry.wikiId);
         }
@@ -267,18 +264,37 @@ function retrievalLimitForIntent(queryIntent) {
     return queryIntent.prefersDocumentReading ? 24 : undefined;
 }
 function queryIntentProfilesForWikis(wikis) {
-    return wikis.map((wiki) => {
-        const identityTerms = uniqueProfileTerms([wiki.wikiId, wiki.title]);
-        const supportTerms = uniqueProfileTerms(wiki.matchedTerms);
+    const profiles = wikis.map((wiki) => {
+        const identityTerms = uniqueProfileTerms([wiki.wikiId, wiki.title, ...(wiki.aliases ?? [])]);
+        const profileScopeCore = nonGenericProfileTerms([...(wiki.scopeCore ?? []), ...(wiki.scope ?? [])]);
+        const profileScopeAdjacent = nonGenericProfileTerms(wiki.scopeAdjacent ?? []);
+        const genericProfileTerms = genericOnlyProfileTerms([
+            ...wiki.matchedTerms,
+            ...(wiki.scopeCore ?? []),
+            ...(wiki.scope ?? []),
+            ...(wiki.scopeAdjacent ?? []),
+        ]);
+        const coreTerms = uniqueProfileTerms([
+            ...identityTerms,
+            ...profileScopeCore,
+        ]);
+        const supportTerms = uniqueProfileTerms([
+            ...profileScopeAdjacent,
+        ]);
         return {
             domain: `wiki:${wiki.wikiId}`,
-            core: identityTerms,
+            core: coreTerms,
             support: supportTerms,
-            generic: [],
+            generic: uniqueProfileTerms(genericProfileTerms.filter((term) => !coreTerms.includes(term) && !supportTerms.includes(term))),
             negative: [],
-            focus: identityTerms,
+            focus: uniqueProfileTerms([...coreTerms, ...supportTerms]),
         };
     });
+    const profileDomains = profiles.map((profile) => profile.domain);
+    return profiles.map((profile) => ({
+        ...profile,
+        negative: profileDomains.filter((domain) => domain !== profile.domain),
+    }));
 }
 function isSurveyRegistryEvidence(citation, minScore, queryIntent) {
     if (!citation.rawPath || citation.evidenceKind === 'wiki') {
@@ -292,7 +308,7 @@ function isSurveyRegistryEvidence(citation, minScore, queryIntent) {
     if (!isEvidenceDomainConsistent(queryIntent, evidence, { minScore: 0.58, minMargin: 0.25 })) {
         return false;
     }
-    if (!isFinanceQuantEvidenceForIntent(queryIntent, evidence)) {
+    if (!isFocusedEvidenceForIntent(queryIntent, evidence)) {
         return false;
     }
     if (citation.score.total >= minScore) {
@@ -482,6 +498,49 @@ function round(value) {
 }
 function uniqueProfileTerms(terms) {
     return [...new Set(terms.map((term) => term.trim()).filter(Boolean))];
+}
+const GENERIC_PROFILE_TERMS = new Set([
+    'ai',
+    'agent',
+    'agents',
+    'architecture',
+    'automation',
+    'benchmark',
+    'benchmarks',
+    'data',
+    'dataset',
+    'evaluation',
+    'framework',
+    'frameworks',
+    'graph',
+    'learning',
+    'llm',
+    'market',
+    'method',
+    'methods',
+    'model',
+    'models',
+    'research',
+    'strategy',
+    'system',
+    'systems',
+    'task',
+    'tasks',
+    'workflow',
+]);
+function nonGenericProfileTerms(terms) {
+    return terms.filter((term) => !isGenericProfileTerm(term));
+}
+function genericOnlyProfileTerms(terms) {
+    return terms.filter(isGenericProfileTerm);
+}
+function isGenericProfileTerm(term) {
+    const normalized = term.toLowerCase().trim();
+    if (!normalized) {
+        return true;
+    }
+    const tokens = normalized.split(/[^a-z0-9\u4e00-\u9fff]+/u).filter(Boolean);
+    return tokens.length > 0 && tokens.every((token) => GENERIC_PROFILE_TERMS.has(token));
 }
 function buildRegistryAnswer(question, results, citations, answerability) {
     if (answerability === 'insufficient-evidence') {

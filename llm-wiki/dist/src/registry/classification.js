@@ -253,7 +253,7 @@ export function buildClassificationOperations(paths, routeProposalId, intakeItem
     if (recommendedWikiId) {
         operations.push({
             action: 'accept-primary-route',
-            command: `llm-wiki route-accept ${shellQuote(paths.root)} ${shellQuote(routeProposalId)} --wiki ${shellQuote(recommendedWikiId)} --reviewer <name>`,
+            command: `llm-wiki route-accept ${shellQuote(paths.root)} ${shellQuote(routeProposalId)} --wiki ${shellQuote(recommendedWikiId)} --reviewer <name> --quality <quality.json> --curation <curation.json>`,
             requiresHumanApproval: true,
             rationale: '人工确认主 wiki 分类正确后，再接受路由并收入材料。',
         });

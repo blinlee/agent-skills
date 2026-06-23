@@ -3,9 +3,30 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runBuildIndexCommand, runCliMain, runIngestCommand, runInitCommand, runLintCommand, runQueryCommand, runQueryReadinessCommand, runStatusCommand, runWikiOverviewCommand } from '../../src/cli.js'
+import { buildQueryIntent, type QueryIntentProfile } from '../../src/query/intent.js'
 import { retrieveChunks } from '../../src/retrieval/retrieval.js'
+import { runIngestCommandWithCuration, writeTestQualityPlan } from '../helpers/curation.js'
 
 const tempRoots: string[] = []
+
+const financeQueryProfiles: QueryIntentProfile[] = [
+  {
+    domain: 'wiki:ai-finance',
+    core: ['AI finance', '量化研究', 'quantitative research', 'portfolio construction', 'factor discovery'],
+    support: ['financial time-series', 'market evidence', 'trading', 'risk control'],
+    generic: ['AI', 'research', 'model'],
+    negative: ['wiki:software-engineering'],
+    focus: ['量化研究', 'quantitative research', 'portfolio', 'factor discovery'],
+  },
+  {
+    domain: 'wiki:software-engineering',
+    core: ['software engineering', 'coding agents', 'tool use', 'evaluation harnesses'],
+    support: ['prompt workflows', 'task decomposition'],
+    generic: ['AI', 'agent', 'evaluation'],
+    negative: ['wiki:ai-finance'],
+    focus: ['software engineering', 'coding agents'],
+  },
+]
 
 afterEach(async () => {
   vi.stubEnv('llm_wiki_config', path.join(os.tmpdir(), `no-embedding-config-${Date.now()}.json`))
@@ -73,7 +94,7 @@ describe('query source evidence retrieval', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -125,7 +146,15 @@ describe('query source evidence retrieval', () => {
     const later = 'LATER_PARENT_CONTEXT records the downstream implication after the key claim. '.repeat(8)
     await writeFile(sourcePath, `# Source Pack Study\n\n## Evidence Section\n\n${earlier}\n\n${target}\n\n${later}\n`, 'utf8')
 
-    await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    await runIngestCommandWithCuration({
+      knowledgeRoot,
+      input: sourcePath,
+      qualityPath: await writeTestQualityPlan({
+        sourcePath,
+        baseDir: knowledgeRoot,
+        quote: 'TARGETUNIQUESIGNAL says the retrieval answer needs surrounding source context',
+      }),
+    })
     await runBuildIndexCommand({ knowledgeRoot })
     const answer = await runQueryCommand({
       knowledgeRoot,
@@ -173,12 +202,13 @@ describe('query source evidence retrieval', () => {
       'The framework separates data engineering, feature research, model validation, portfolio construction, and risk control so each route can be tested against market evidence.',
     ].join('\n'), 'utf8')
 
-    await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
     await runBuildIndexCommand({ knowledgeRoot })
 
     const answer = await runQueryCommand({
       knowledgeRoot,
       question: '基于AI的量化研究现在主要框架是怎样的，哪几种路线？',
+      queryIntent: buildQueryIntent('基于AI的量化研究现在主要框架是怎样的，哪几种路线？', financeQueryProfiles, { readingMode: 'document' }),
     })
 
     expect(answer.retrieval.signalSummary.signalCounts.embedding).toBeGreaterThan(0)
@@ -218,12 +248,13 @@ describe('query source evidence retrieval', () => {
       '',
       'AI software engineering discusses coding agents, tool use, task decomposition, prompt workflows, and evaluation harnesses.',
     ].join('\n'), 'utf8')
-    await runIngestCommand({ knowledgeRoot, input: sourcePath })
+    await runIngestCommandWithCuration({ knowledgeRoot, input: sourcePath })
     await runBuildIndexCommand({ knowledgeRoot })
 
     const answer = await runQueryCommand({
       knowledgeRoot,
       question: '基于AI的量化研究现在主要框架是怎样的，哪几种路线？',
+      queryIntent: buildQueryIntent('基于AI的量化研究现在主要框架是怎样的，哪几种路线？', financeQueryProfiles, { readingMode: 'document' }),
     })
 
     expect(answer.retrieval.signalSummary.signalCounts.embedding).toBeGreaterThan(0)
@@ -236,7 +267,7 @@ describe('query source evidence retrieval', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -315,7 +346,7 @@ describe('query source evidence retrieval', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -338,7 +369,7 @@ describe('query source evidence retrieval', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -359,7 +390,7 @@ describe('query source evidence retrieval', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-review-retrieval-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
@@ -455,7 +486,7 @@ describe('query source evidence retrieval', () => {
     const knowledgeRoot = await mkdtemp(path.join(os.tmpdir(), 'llm-wiki-e2e-'))
     tempRoots.push(knowledgeRoot)
 
-    await runIngestCommand({
+    await runIngestCommandWithCuration({
       knowledgeRoot,
       input: path.join(process.cwd(), 'tests', 'fixtures', 'inputs', 'sample.md'),
     })
