@@ -67,8 +67,8 @@ The skill exposes five public workflows:
 | --- | --- |
 | `/llm-wiki setup` | Resolve, save, initialize, or inspect a knowledge root or registry root. |
 | `/llm-wiki inbox` | Process new raw drops, decode non-Markdown sources, write quality and curation plans, route or ingest accepted material, execute approved placement decisions, and finish accepted material as usable wiki pages plus indexes. |
-| `/llm-wiki query <question>` | Classify the question, ask for clarification if route is unclear, run `scripts/query_handoff.py --reading-mode <passage|document>`, execute the recommended query command, and answer from the returned source-reading pack. |
-| `/llm-wiki maintain` | Backfill deterministic historical source-card-only assets, refresh indexes, overviews, readiness, embedding state, lint/status, and derived maintenance artifacts. |
+| `/llm-wiki query <question>` | Classify the question, ask for clarification if route is unclear, run `scripts/query_handoff.py --reading-mode <passage|document>`, execute the recommended query command, and answer with broader knowledge plus the returned local source-reading pack. |
+| `/llm-wiki maintain` | Refresh deterministic reading/index assets, indexes, overviews, readiness, embedding state, lint/status, and derived maintenance artifacts. |
 | `/llm-wiki govern` | Manage registry membership, wiki profiles, taxonomy, bridge links, routing policy, and approval queues. |
 
 The active skill contract is [SKILL.md](SKILL.md). Detailed operator references live in:
@@ -156,7 +156,7 @@ npm run --silent cli -- query-registry ./atlas "What do my notes say about LoRA?
 - `query-readiness`
 - `save-synthesis`
 
-Default query output is compact and source-reading oriented. Use `--full` for diagnostics.
+Default query output is compact and source-reading oriented. Use returned passages/documents as local wiki evidence, then clearly separate the final answer into what the local wiki supports and what broader domain knowledge adds. Use `--full` for diagnostics.
 
 ### Maintenance And Indexing
 

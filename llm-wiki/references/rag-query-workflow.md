@@ -60,20 +60,42 @@ The default command output is the compact reading pack for this run:
 - `readiness`
 - `sourceReadingPack`
 
-Answer from `sourceReadingPack.passages[]`. When `sourceReadingPack.readingMode === "document"`, treat `sourceReadingPack.documents[]` as the concise original-document reading list and use the paired entry passages as the starting points. Run the same query with `--full` only when you need complete citations, diagnostics, detailed reading-pack fields, per-wiki reading packs, or score details.
+Use `sourceReadingPack.passages[]` as the local factual reading payload. When `sourceReadingPack.readingMode === "document"`, treat `sourceReadingPack.documents[]` as the concise original-document reading list and use the paired entry passages as the starting points. Run the same query with `--full` only when you need complete citations, diagnostics, detailed reading-pack fields, per-wiki reading packs, or score details.
+
+## Answer contract
+
+Treat llm-wiki retrieval as a local evidence layer, not as the boundary of your knowledge.
+
+RAG output is always partial. It reflects the user's local wiki, source choices, and vertical habits; it is never a complete map of any topic. For every question, use your broader trained knowledge to widen, complete, challenge, and correct the local retrieval result. Do not let a narrow source-reading pack make the final answer narrower than the best answer you can give.
+
+Use this final-answer structure whenever it fits the user's question:
+
+1. According to the local wiki
+   - Conclusion: state what the retrieved local material supports.
+   - Evidence: cite or summarize the exact retrieved source passages/documents.
+   - Coverage or gaps: state whether the local wiki evidence is strong, partial, thin, missing, or in conflict.
+
+2. Broader knowledge supplement
+   - Supplement: add what broader domain knowledge contributes beyond the local wiki.
+   - Additional considerations: include missing routes, background, exceptions, risks, counterexamples, or a more complete framework.
+   - Further verification: when needed, say what would require additional source checking.
+
+For source-specific questions, wiki-inventory questions, or claims about what the local wiki proves, stay bounded by the returned source-reading pack. Do not turn broader knowledge into a fake local citation.
+
+For all other questions, especially explanation, comparison, mechanism, route, framework, and judgment questions, combine both layers. The final answer should be scientifically careful and practically useful, not a dump of query ledgers, scores, diagnostics, or raw process notes.
 
 ## Interpret result
 
 Single-wiki query:
 
-- Default output `answerability === "answered"` plus `sourceReadingPack.passages.length > 0`: answer from those passages.
-- Default output `answerability === "insufficient-evidence"` or `passages.length === 0`: say the wiki did not return enough source-backed evidence; do not synthesize.
+- Default output `answerability === "answered"` plus `sourceReadingPack.passages.length > 0`: answer with broader knowledge, using those passages as local evidence and calibration.
+- Default output `answerability === "insufficient-evidence"` or `passages.length === 0`: say the local wiki did not return enough source-backed evidence. For general/domain questions, still answer from broader knowledge when you can do so reliably, and mark the local wiki support as thin or absent. For source-specific/wiki-inventory questions, do not synthesize beyond returned evidence.
 - If you need to explain why, rerun with `--full` and inspect `retrieval.mode`, `grounding.answerability`, citations, and diagnostics.
 - In `--full`, `retrieval.mode === "no-match"` means no evidence matched, `overview` is collection overview only, and `fallback`/`stale-index` means retrieval substrate repair is needed before factual answering.
 
 Registry query:
 
-- Default output uses the same `sourceReadingPack.passages[]` evidence contract.
+- Default output uses the same local-evidence contract for `sourceReadingPack.passages[]`.
 - Survey/framework/route questions may return `sourceReadingPack.readingMode === "document"` with `documents[]`. That list is not a score ledger; it identifies the original raw documents to read when full-document synthesis is needed.
 - Registry default passages should be raw-backed original-source passages. If no raw-backed evidence qualifies, the default pack should be empty/insufficient rather than falling back to derived wiki excerpts.
 - Use `--full` to inspect `selectedWikis`, detailed reading-pack fields such as `agentReadingPack.searchedWikis` and `agentReadingPack.citationsToRead`, `diagnostics.embeddingDegradedWikis`, raw-backed/derived citation counts, and per-wiki packs.
@@ -84,7 +106,7 @@ Registry query:
 
 1. cache records exist and are valid for configured provider/model.
 2. query diagnostics do not say cache empty/unavailable or query embedding unavailable.
-3. In default output, answer only from source passages. To prove embedding contributed, rerun with `--full` and check `retrieval.signalSummary.signalCounts.embedding > 0` or registry `agentReadingPack.embeddingUsed === true`.
+3. In default output, use source passages as local evidence. To prove embedding contributed, rerun with `--full` and check `retrieval.signalSummary.signalCounts.embedding > 0` or registry `agentReadingPack.embeddingUsed === true`.
 
 Recommended Ollama env:
 

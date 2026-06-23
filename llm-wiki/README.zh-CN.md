@@ -85,8 +85,8 @@ npm test
 | --- | --- |
 | `/llm-wiki setup` | 连接或初始化本地 knowledge root / registry root。若没有已知 root，需要询问路径，并可按用户确认保存为本机默认。 |
 | `/llm-wiki inbox` | 检查 `raw/inbox`，先解码非 Markdown 投递物，再阅读原文并写入库质量计划，决定接受/拒绝/暂存/转换/合并；只有接受的材料才继续写语义整理计划并摄入或路由。已接受材料必须生成来源卡片、完整原文页、curation plan 接受的实体/概念/综合页和索引。 |
-| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。先判断问题类型；不清楚就先问用户；明确后跑 `scripts/query_handoff.py --reading-mode <passage|document>`，最后执行返回的 `query` 或 `query-registry` 命令。 |
-| `/llm-wiki maintain` | 补齐历史 source-card-only 的确定性资产，并运行 `status`、`lint`、`index` 等健康与新鲜度检查；不会凭规则发明语义页。 |
+| `/llm-wiki query <question>` | 基于当前 wiki 或 registry 做带引用的问答。先判断问题类型；不清楚就先问用户；明确后跑 `scripts/query_handoff.py --reading-mode <passage|document>`，执行返回的 `query` 或 `query-registry` 命令，并把本地 wiki 证据与更广泛知识补充分开回答。 |
+| `/llm-wiki maintain` | 刷新确定性阅读页、索引、overview、readiness、embedding 状态、lint/status 和派生维护产物；不会凭规则发明语义页。 |
 | `/llm-wiki govern` | 管理 registry 成员、profile 边界、taxonomy、bridge 和 routing policy。 |
 
 这些是覆盖 CLI 命令的 skill 级工作流合同，不是独立的 TypeScript 子命令。
@@ -121,7 +121,7 @@ npm run --silent cli -- ingest ./knowledge ./tests/fixtures/inputs/sample.md --q
 npm run --silent cli -- ingest-inbox ./knowledge
 ```
 
-普通材料入库前，必须先阅读原文并写 `llm-wiki.inbox-quality.v1` 计划，判断材料是否有稳定知识价值、是否重复、是否可读，以及下一步该接受/拒绝/暂存/转换/合并。只有接受的材料继续写 `llm-wiki.semantic-curation.v1` 计划；里面的实体/概念/综合页都要带原文精确 quote。成功完成后，已接受材料不应只停留在 `wiki/sources` 的摘要页里；还应有 `wiki/readings` 的完整原文阅读页，以及 curation plan 明确认可的 `wiki/entities` / `wiki/concepts` / `wiki/syntheses` 页面。`govern` 只处理跨 wiki、taxonomy、profile、bridge 这类结构性决策。旧版本留下的 source-card-only 资产可由 `maintain` 在受管 raw 证据仍存在时补齐阅读页和索引，但不会凭规则补语义页。
+普通材料入库前，必须先阅读原文并写 `llm-wiki.inbox-quality.v1` 计划，判断材料是否有稳定知识价值、是否重复、是否可读，以及下一步该接受/拒绝/暂存/转换/合并。只有接受的材料继续写 `llm-wiki.semantic-curation.v1` 计划；里面的实体/概念/综合页都要带原文精确 quote。成功完成后，已接受材料不应只停留在 `wiki/sources` 的摘要页里；还应有 `wiki/readings` 的完整原文阅读页，以及 curation plan 明确认可的 `wiki/entities` / `wiki/concepts` / `wiki/syntheses` 页面。`govern` 只处理跨 wiki、taxonomy、profile、bridge 这类结构性决策。`maintain` 可在受管 raw 证据仍存在时刷新阅读页和索引，但不会凭规则补语义页。
 
 ### 3）查询 wiki
 

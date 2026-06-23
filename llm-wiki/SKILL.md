@@ -44,7 +44,7 @@ Resolve the root first for all five workflows.
 
 - `/llm-wiki setup` -> connect or create a root. Use `init`/`status` for one wiki, or `registry-init`/`registry-list` for an atlas.
 - `/llm-wiki inbox` -> process new raw material end to end. Inspect `raw/inbox`, decode non-Markdown files with `/anything2md`, then read the normalized source yourself. First write an `llm-wiki.inbox-quality.v1` quality plan that decides whether the material should be accepted, rejected, parked, converted, or merged. Only accepted material continues to routing/ingest. Then write an `llm-wiki.semantic-curation.v1` curation plan before calling `ingest` or `route-accept`. Present the batch's quality, placement, and linking decisions in user-facing terms, and execute only the human-approved accept/reject/park/override/merge/convert operation. A completed inbox pass leaves accepted material directly usable: raw evidence archived, source card written in Chinese, full reading mirror under `wiki/readings`, curation-backed entity/concept/synthesis pages linked when justified by source evidence, generated navigation overviews refreshed, and retrieval/index freshness reported. Missing or invalid quality or curation is a real blocker.
-- `/llm-wiki query <question>` -> classify the question yourself before retrieval. If the type, scope, or target wiki is unclear, ask a short clarifying question and stop. Once clear, choose `passage` or `document`, run `python3 scripts/query_handoff.py "<question>" --reading-mode <passage|document> --json`, execute the returned `recommendedCommand`, and answer only from the returned source-reading pack. Follow `references/rag-query-workflow.md`.
+- `/llm-wiki query <question>` -> classify the question yourself before retrieval. If the type, scope, or target wiki is unclear, ask a short clarifying question and stop. Once clear, choose `passage` or `document`, run `python3 scripts/query_handoff.py "<question>" --reading-mode <passage|document> --json`, execute the returned `recommendedCommand`, and answer with your broader knowledge plus the returned local source-reading pack. Treat RAG as a local, user-specific, inevitably incomplete evidence layer; never treat it as the boundary of what you know. Follow `references/rag-query-workflow.md`.
 - `/llm-wiki maintain` -> refresh derived maintenance artifacts and health/freshness state. Run `maintain <knowledgeRootOrRegistryRoot>` plus focused `status`, `lint`, `index`, or `query-readiness` checks when relevant. Report problems; do not perform broad repair unless asked.
 - `/llm-wiki govern` -> manage knowledge organization: registry membership, profile boundaries, taxonomy/category decisions, bridge links, and routing policy review. Use governance commands while preserving approval gates.
 
@@ -88,7 +88,11 @@ Default query output is intentionally compact:
 - `readiness`
 - `sourceReadingPack`
 
-Use `sourceReadingPack.passages[]` as the factual reading payload. If `sourceReadingPack.readingMode === "document"`, use `sourceReadingPack.documents[]` as the concise original-document reading list for survey/framework/landscape questions. Use `--full` only for diagnostics.
+Use `sourceReadingPack.passages[]` as the local factual reading payload. If `sourceReadingPack.readingMode === "document"`, use `sourceReadingPack.documents[]` as the concise original-document reading list for survey/framework/landscape questions. Use `--full` only for diagnostics.
+
+RAG output is always partial. It reflects the user's local wiki, source choices, and vertical habits; it is never a complete map of the topic. For every answer, combine the returned local evidence with your broader trained knowledge to make the answer more complete, scientific, rigorous, and correct. Do not let a narrow retrieval pack shrink the answer. Keep the boundary clear: say what the local wiki specifically supports, but use broader knowledge for context, missing routes, caveats, and corrections.
+
+Final answers must clearly separate "according to the local wiki" from "broader knowledge supplement." Do not present broader model knowledge as if it were proven by the local wiki.
 
 Final RAG evidence for your answer must be original source text or exact original-source fragments whenever raw-backed evidence exists. `wiki-overview`, `key_info`, taxonomy, graph, review, and ledger artifacts are routing/context layers, not final factual passages.
 
@@ -186,7 +190,7 @@ After the inbox quality plan says `accept`, create or locate a JSON plan:
 
 Each accepted entity/concept/synthesis needs at least one exact quote present in the normalized source. If you cannot confidently curate semantics, set `status: "needs_review"` with notes/rejections; do not let the CLI invent pages. Pass the plan with `--curation <plan.json>`, or place it next to a source as `<source>.curation.json`.
 
-For legacy assets that are already ingested but need semantic re-curation, run `ingest <knowledgeRoot> <originalSourceIdentity> --quality <quality.json> --curation <curation.json> --recompile`. `--recompile` is only for unchanged sources with refreshed quality/curation plans; it is not a general bypass for duplicate or routing approval.
+For already-ingested assets that need semantic re-curation, run `ingest <knowledgeRoot> <originalSourceIdentity> --quality <quality.json> --curation <curation.json> --recompile`. `--recompile` is only for unchanged sources with refreshed quality/curation plans; it is not a general bypass for duplicate or routing approval.
 
 ## Optional Retrieval Substrates
 
