@@ -87,4 +87,42 @@ describe('inbox quality gate', () => {
       },
     })).toThrow(/ready quality plan must use decision accept/u)
   })
+
+  it('blocks low-value material from ready accept without an explicit override', () => {
+    expect(() => validateInboxQualityPlan({
+      artifact,
+      plan: {
+        schema: 'llm-wiki.inbox-quality.v1',
+        status: 'ready',
+        decision: 'accept',
+        knowledgeValue: 'low',
+        readability: 'readable',
+        duplicateAssessment: { status: 'new', matchedRefs: [] },
+        sourceType: 'scratch',
+        reason: '材料只有边缘参考价值。',
+        evidence: [{ quote: 'durable retrieval workflow' }],
+      },
+    })).toThrow(/accepted low-value material requires overrideReason/u)
+  })
+
+  it('allows low-value material only when the override reason is explicit', () => {
+    const plan = validateInboxQualityPlan({
+      artifact,
+      plan: {
+        schema: 'llm-wiki.inbox-quality.v1',
+        status: 'ready',
+        decision: 'accept',
+        knowledgeValue: 'low',
+        readability: 'readable',
+        duplicateAssessment: { status: 'new', matchedRefs: [] },
+        sourceType: 'scratch',
+        reason: '材料只有边缘参考价值。',
+        overrideReason: '用户明确要求保留这份边缘案例，用于后续比较低质量材料如何影响检索。',
+        evidence: [{ quote: 'durable retrieval workflow' }],
+      },
+    })
+
+    expect(plan.knowledgeValue).toBe('low')
+    expect(plan.overrideReason).toContain('用户明确要求保留')
+  })
 })

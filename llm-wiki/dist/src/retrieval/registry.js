@@ -2,6 +2,8 @@ import { createSensitiveRedactor, runQuery } from '../query/query.js';
 import { buildQueryIntent, isEmbeddingOnlyScore, isEvidenceDomainConsistent, isFocusedEvidenceForIntent, isMeaningfulNonEmbeddingSupport, isStrongSemanticEvidence, scoreEvidenceIntentFit } from '../query/intent.js';
 import { buildKnowledgeQueryReadiness } from './readiness.js';
 import { buildRegistryDiagnostics } from './registry-diagnostics.js';
+import { buildRegistryAgentReadingPack, buildRegistryAnswer } from './registry-output.js';
+import { nonGenericProfileTerms, queryIntentProfilesForWikis } from './registry-profiles.js';
 import { buildRegistrySourceReadingPack, registryCitationKey, registryPassagesByCitation } from './registry-source-pack.js';
 import { loadRerankConfigFromEnv, LocalHttpReranker } from './rerank.js';
 import { retrieveChunks } from './retrieval.js';
@@ -263,39 +265,6 @@ function restrictGenericRegistryCitationsToLeadingWikis(citations, queryIntent, 
 function retrievalLimitForIntent(queryIntent) {
     return queryIntent.prefersDocumentReading ? 24 : undefined;
 }
-function queryIntentProfilesForWikis(wikis) {
-    const profiles = wikis.map((wiki) => {
-        const identityTerms = uniqueProfileTerms([wiki.wikiId, wiki.title, ...(wiki.aliases ?? [])]);
-        const profileScopeCore = nonGenericProfileTerms([...(wiki.scopeCore ?? []), ...(wiki.scope ?? [])]);
-        const profileScopeAdjacent = nonGenericProfileTerms(wiki.scopeAdjacent ?? []);
-        const genericProfileTerms = genericOnlyProfileTerms([
-            ...wiki.matchedTerms,
-            ...(wiki.scopeCore ?? []),
-            ...(wiki.scope ?? []),
-            ...(wiki.scopeAdjacent ?? []),
-        ]);
-        const coreTerms = uniqueProfileTerms([
-            ...identityTerms,
-            ...profileScopeCore,
-        ]);
-        const supportTerms = uniqueProfileTerms([
-            ...profileScopeAdjacent,
-        ]);
-        return {
-            domain: `wiki:${wiki.wikiId}`,
-            core: coreTerms,
-            support: supportTerms,
-            generic: uniqueProfileTerms(genericProfileTerms.filter((term) => !coreTerms.includes(term) && !supportTerms.includes(term))),
-            negative: [],
-            focus: uniqueProfileTerms([...coreTerms, ...supportTerms]),
-        };
-    });
-    const profileDomains = profiles.map((profile) => profile.domain);
-    return profiles.map((profile) => ({
-        ...profile,
-        negative: profileDomains.filter((domain) => domain !== profile.domain),
-    }));
-}
 function isSurveyRegistryEvidence(citation, minScore, queryIntent) {
     if (!citation.rawPath || citation.evidenceKind === 'wiki') {
         return false;
@@ -443,35 +412,6 @@ function isReadableRegistryCitation(citation) {
     const readableChars = (text.match(/[\p{L}\p{N}\u4e00-\u9fff]/gu) ?? []).length;
     return readableChars / Math.max(text.length, 1) >= 0.35;
 }
-function buildRegistryAgentReadingPack(input) {
-    const answered = input.answerability === 'answered';
-    return {
-        answerability: answered ? 'answered' : 'insufficient-evidence',
-        retrievalMode: 'registry-hybrid',
-        embeddingUsed: input.results.some((entry) => (entry.retrievalSignals?.signalCounts.embedding ?? 0) > 0),
-        citationCount: input.citations.length,
-        mustReadFurther: answered,
-        searchedWikis: input.selectedWikis.map(({ wikiId, title, knowledgeRoot, chunkScore }) => ({ wikiId, title, knowledgeRoot, chunkScore })),
-        citationsToRead: input.citations.map((citation, index) => ({
-            citationIndex: index + 1,
-            wikiId: citation.wikiId,
-            wikiTitle: citation.wikiTitle,
-            target: citation.target,
-            title: citation.title,
-            filePath: citation.filePath,
-            heading: citation.heading,
-            startLine: citation.startLine,
-            endLine: citation.endLine,
-            sourceRef: citation.sourceRef,
-            rawPath: citation.rawPath,
-            artifactId: citation.artifactId,
-            evidenceKind: citation.evidenceKind,
-            chunkId: citation.chunkId,
-        })),
-        diagnostics: input.diagnostics,
-        perWikiReadingPacks: input.results.map((entry) => ({ wikiId: entry.wikiId, agentReadingPack: entry.result?.agentReadingPack ?? null })),
-    };
-}
 function compareRegistryCitations(left, right, queryIntent) {
     const leftFit = scoreEvidenceIntentFit(queryIntent, citationEvidenceForIntent(left));
     const rightFit = scoreEvidenceIntentFit(queryIntent, citationEvidenceForIntent(right));
@@ -495,71 +435,4 @@ function citationEvidenceForIntent(citation) {
 }
 function round(value) {
     return Number(value.toFixed(6));
-}
-function uniqueProfileTerms(terms) {
-    return [...new Set(terms.map((term) => term.trim()).filter(Boolean))];
-}
-const GENERIC_PROFILE_TERMS = new Set([
-    'ai',
-    'agent',
-    'agents',
-    'architecture',
-    'automation',
-    'benchmark',
-    'benchmarks',
-    'data',
-    'dataset',
-    'evaluation',
-    'framework',
-    'frameworks',
-    'graph',
-    'learning',
-    'llm',
-    'market',
-    'method',
-    'methods',
-    'model',
-    'models',
-    'research',
-    'strategy',
-    'system',
-    'systems',
-    'task',
-    'tasks',
-    'workflow',
-]);
-function nonGenericProfileTerms(terms) {
-    return terms.filter((term) => !isGenericProfileTerm(term));
-}
-function genericOnlyProfileTerms(terms) {
-    return terms.filter(isGenericProfileTerm);
-}
-function isGenericProfileTerm(term) {
-    const normalized = term.toLowerCase().trim();
-    if (!normalized) {
-        return true;
-    }
-    const tokens = normalized.split(/[^a-z0-9\u4e00-\u9fff]+/u).filter(Boolean);
-    return tokens.length > 0 && tokens.every((token) => GENERIC_PROFILE_TERMS.has(token));
-}
-function buildRegistryAnswer(question, results, citations, answerability) {
-    if (answerability === 'insufficient-evidence') {
-        const errors = results.filter((entry) => entry.error).map((entry) => `${entry.wikiId}: ${entry.error}`).join('; ');
-        return `I searched ${results.length} registered wiki(s) for "${question}" but did not find enough source-backed evidence to answer.${errors ? ` Query errors: ${errors}` : ''}`;
-    }
-    const wikiTitles = new Map(results.map((entry) => [entry.wikiId, entry.title]));
-    const byWiki = new Map();
-    for (const citation of citations) {
-        byWiki.set(citation.wikiId, [...(byWiki.get(citation.wikiId) ?? []), citation]);
-    }
-    const wikiSections = [...byWiki.entries()].map(([wikiId, wikiCitations]) => [
-        `## ${wikiTitles.get(wikiId) ?? wikiId} (${wikiId})`,
-        ...wikiCitations.map((citation, index) => {
-            const span = citation.startLine && citation.endLine ? ` lines ${citation.startLine}-${citation.endLine}` : '';
-            const evidence = citation.rawPath ? ` raw=${citation.rawPath}` : '';
-            return `${index + 1}. ${citation.title} (${citation.target}${span})${evidence}: ${citation.excerpt}`;
-        }),
-        `Citations: ${wikiCitations.map((citation) => `${wikiId}:${citation.target}${citation.chunkId ? `#${citation.chunkId.slice(0, 14)}` : ''}`).join(', ')}`,
-    ].join('\n')).join('\n\n');
-    return `Question: ${question}\n\n${wikiSections}`;
 }

@@ -23,6 +23,7 @@ export function normalizeInboxQualityPlan(value) {
         sourceType: requiredString(value.sourceType, 'sourceType'),
         reason: requiredString(value.reason, 'reason'),
         evidence: normalizeEvidence(value.evidence),
+        overrideReason: optionalString(value.overrideReason),
         blockers: normalizeStringArray(value.blockers, 'blockers'),
     };
 }
@@ -51,6 +52,9 @@ export function validateInboxQualityPlan(input) {
         }
         if (plan.knowledgeValue === 'none') {
             errors.push('accepted material must have knowledgeValue high, medium, or low');
+        }
+        if (plan.knowledgeValue === 'low' && !plan.overrideReason?.trim()) {
+            errors.push('accepted low-value material requires overrideReason');
         }
         if (plan.duplicateAssessment.status === 'duplicate') {
             errors.push('accepted material cannot be marked as duplicate');

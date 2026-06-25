@@ -165,7 +165,6 @@ describe('buildCli', () => {
       HOME: home,
       llm_wiki_config: '',
       llm_wiki_root: '',
-      llm_wiki_knowledge_root: '',
     }
 
     try {

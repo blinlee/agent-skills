@@ -96,6 +96,7 @@ export async function writeTestQualityPlan(input: {
   matchedRefs?: string[]
   sourceType?: string
   blockers?: string[]
+  overrideReason?: string
   quote?: string
 }): Promise<string> {
   const sourcePath = normalizeSourcePath(input.sourcePath)
@@ -117,6 +118,7 @@ export async function writeTestQualityPlan(input: {
     },
     sourceType: input.sourceType ?? 'note',
     reason: input.reason ?? `测试质量判断：${titleFromSource(source, sourcePath)} 有明确知识价值，可进入 wiki。`,
+    ...(input.overrideReason ? { overrideReason: input.overrideReason } : {}),
     evidence: decision === 'convert' ? [] : [{ quote }],
     blockers: input.blockers ?? [],
   }), 'utf8')

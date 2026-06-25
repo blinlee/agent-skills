@@ -37,9 +37,9 @@ npm run --silent cli -- ingest-inbox <knowledgeRoot>
 - `llm-wiki.inbox-quality.v1` with `--quality <quality.json>` or sidecar `<source>.quality.json`
 - `llm-wiki.semantic-curation.v1` with `--curation <curation.json>` or sidecar `<source>.curation.json`
 
-The quality plan runs first. It decides accept/reject/park/convert/merge based on duplicate status, readability, junk/noise risk, durable knowledge value, and exact source evidence. Only `decision: "accept"` continues to curation and ingest. Missing, invalid, or non-accept quality returns `needs_review`; the runtime must not ingest first and leave cleanup for govern. Missing or invalid curation also returns `needs_review`; the runtime must not fall back to heuristic entity/concept extraction.
+The quality plan runs first. It decides accept/reject/park/convert/merge based on duplicate status, readability, junk/noise risk, durable knowledge value, and exact source evidence. Only `decision: "accept"` continues to curation and ingest. A source is worth ingesting only when it improves future reading, retrieval, synthesis, or governance; topic relevance alone is not enough. `knowledgeValue: "none"` cannot be accepted. `knowledgeValue: "low"` should park or reject by default and requires an explicit `overrideReason` before ready accept. Missing, invalid, or non-accept quality returns `needs_review`; the runtime must not ingest first and leave cleanup for govern. Missing or invalid curation also returns `needs_review`; the runtime must not fall back to heuristic entity/concept extraction.
 
-Use `--recompile` only for already-ingested sources when the source content is unchanged but the curation plan changed, such as legacy semantic-page cleanup followed by re-curation. It recompiles the same source identity with the new plan instead of treating unchanged content as a dedup skip.
+Use `--recompile` only for already-ingested sources when the source content is unchanged but the curation plan changed, such as semantic-page cleanup followed by re-curation. It recompiles the same source identity with the new plan instead of treating unchanged content as a dedup skip.
 
 Atlas-level unclassified inbox:
 

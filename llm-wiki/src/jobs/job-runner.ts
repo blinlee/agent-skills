@@ -1,12 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { access, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { generateKnowledgeChanges } from '../compile/generation.js'
-import {
-  loadSemanticCurationPlan,
-  semanticCurationNeedsReviewReasons,
-  validateSemanticCurationPlan,
-} from '../compile/semantic-curation.js'
 import { loadConfig } from '../config.js'
 import { persistReviewItems, removeStaleReviewFiles } from '../governance/review.js'
 import { applyTaxonomyEffects } from '../governance/taxonomy.js'
@@ -19,37 +13,38 @@ import {
   rejectIntakeFile,
   type IntakeLifecycleState,
 } from '../intake/lifecycle.js'
-import { contentDedupIndexPath, createContentDedupStore, type ContentDedupCandidate } from '../intake/content-dedup-store.js'
-import { createDedupStore, type DedupDecision, type DedupEntry, type OutputPageSnapshot } from '../intake/dedup-store.js'
-import { hashFileLike, hashParsedArtifactForDedup, hashSourceMetadata } from '../intake/fingerprint.js'
+import { contentDedupIndexPath, createContentDedupStore } from '../intake/content-dedup-store.js'
+import { createDedupStore, type DedupDecision } from '../intake/dedup-store.js'
 import { backfillDedupManifestPageSnapshots } from '../intake/manifest-migration.js'
 import { detectSourceMetadataMismatch } from '../intake/mismatch-gate.js'
 import { classifySource, isSupportedSourceKind, type DiscoveredSourceKind } from '../intake/source-discovery.js'
-import {
-  inboxQualityNeedsReviewReasons,
-  loadInboxQualityPlan,
-  validateInboxQualityPlan,
-} from '../intake/quality-gate.js'
 import { createJobStore } from './job-store.js'
-import { parseMarkdownSource } from '../parsers/markdown.js'
-import { parseRepoSource } from '../parsers/repo.js'
-import { parseTextSource } from '../parsers/text.js'
-import { parseUrlSource } from '../parsers/url.js'
-import type { ParsedArtifact } from '../parsers/base.js'
 import { ensureKnowledgeRootLayout } from '../paths.js'
 import type { JobStatus, SourceKind } from '../types.js'
-import { stripManagedRawFrontmatter } from '../intake/raw-store.js'
-import { updateWikiIndex } from '../wiki/index-log.js'
-import { removeWikiPageFile, restoreWikiPageSnapshot, writeKnowledgeChanges } from '../wiki/page-writer.js'
+import { writeKnowledgeChanges } from '../wiki/page-writer.js'
 import { applySourceSemanticLinks, pruneMissingSourceSemanticLinks } from '../wiki/semantic-links.js'
 import { refreshSemanticOverviews } from '../wiki/semantic-overviews.js'
 import { runBuildIndex } from '../index/wiki-index.js'
 import type { EmbedIndexResult } from '../retrieval/embed-index.js'
-import { loadContentDedupEmbedding } from '../intake/content-dedup-embedding.js'
 import { runEntityExtraction, type RunEntityExtractionResult } from '../retrieval/entity-extract.js'
 import { keyInfoIndexPath, runKeyInfoExtraction, type RunKeyInfoExtractionResult } from '../retrieval/key-info.js'
 import { runIngestEmbedIndex, summarizeEmbeddingResult, summarizeIndexResult } from './ingest-indexing.js'
-import { classifyUrlFailure, fetchCleanedUrlContent } from './url-source.js'
+import { buildReviewRelatedPages, reconcileStaleDerivedOutputs, resolveSemanticPageOwnership } from './semantic-derived-pages.js'
+import { runSemanticCurationPhase } from './curation-phase.js'
+import { runInboxQualityPhase } from './quality-phase.js'
+import { runContentDedupPhase } from './content-dedup-phase.js'
+import {
+  buildStableSourceId,
+  findInboxQualitySidecar,
+  findSemanticCurationSidecar,
+  isLocalFileCandidate,
+  normalizeSourceIdentity,
+  parseSource,
+  prepareSourceForDedup,
+  resolveCollisionFreeSourceSlug,
+  resolveFailureStatus,
+  resolveFinalStatus,
+} from './source-preparation.js'
 
 export type RunIngestJobInput = {
   knowledgeRoot: string
@@ -222,254 +217,44 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
     })
     const qualityPath = input.qualityPath ?? await findInboxQualitySidecar(input.input)
     const curationPath = input.curationPath ?? await findSemanticCurationSidecar(input.input)
-    const recordQualityBlock = async () => {
-      await dedupStore.recordSuccess({
-        identity: sourceIdentity,
-        sourceKind,
-        fingerprint,
-        jobId,
-        status: 'needs_review',
-        outputManifest: previousDedupEntry?.lastOutputManifest ?? null,
-      })
-    }
-    if (!qualityPath) {
-      const reviewResult = await persistReviewItems(config.knowledgeRoot, [{
-        id: `${parsedArtifactForDedup.id}-inbox-quality-required`,
-        artifactId: parsedArtifactForDedup.id,
-        type: 'inbox-quality-required',
-        issueSummary: '需要入库质量判断后才能完成入库。',
-        severity: 'medium',
-        reason: '缺少 llm-wiki.inbox-quality.v1 quality plan；inbox 必须先判断重复、可读性、垃圾/噪声、知识价值和建议动作。',
-        status: 'open',
-        relatedSources: [parsedArtifactForDedup.sourceRef],
-        relatedPages: [],
-        evidence: ['No --quality plan or sidecar quality plan was found.'],
-        confidence: 1,
-        suggestedActions: [
-          '阅读规范化原文，按 llm-wiki.inbox-quality.v1 写出 quality JSON。',
-          '如果材料应收入，decision=accept 后重新运行 ingest/route-accept 并传入 --quality <plan.json>。',
-          '如果材料应拒收、暂存、转换或合并，先让用户批准对应动作。',
-        ],
-      }])
-      reviewFiles.push(...reviewResult.files)
-      await recordQualityBlock()
-      return persistResult('needs_review', null, {
-        step: 'inbox-quality-required',
-        sourceIdentity,
-        fingerprint,
-        reviewTriggerCount: 1,
-      })
-    }
-
-    let qualityPlan
-    try {
-      qualityPlan = validateInboxQualityPlan({
-        artifact: parsedArtifactForDedup,
-        plan: await loadInboxQualityPlan(qualityPath),
-      })
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
-      const reviewResult = await persistReviewItems(config.knowledgeRoot, [{
-        id: `${parsedArtifactForDedup.id}-inbox-quality-invalid`,
-        artifactId: parsedArtifactForDedup.id,
-        type: 'inbox-quality-invalid',
-        issueSummary: '入库质量判断无效，无法完成入库。',
-        severity: 'high',
-        reason,
-        status: 'open',
-        relatedSources: [parsedArtifactForDedup.sourceRef, qualityPath],
-        relatedPages: [],
-        evidence: [reason],
-        confidence: 1,
-        suggestedActions: [
-          '修正 quality JSON 的 schema、字段、枚举或原文证据 quote。',
-          '重新运行 ingest/route-accept --quality <plan.json>。',
-        ],
-      }])
-      reviewFiles.push(...reviewResult.files)
-      await recordQualityBlock()
-      return persistResult('needs_review', null, {
-        step: 'inbox-quality-invalid',
-        sourceIdentity,
-        fingerprint,
-        qualityPath,
-        reviewTriggerCount: 1,
-      })
-    }
-
-    if (qualityPlan.status === 'needs_review' || qualityPlan.decision !== 'accept') {
-      const reasons = inboxQualityNeedsReviewReasons(qualityPlan)
-      const reviewResult = await persistReviewItems(config.knowledgeRoot, [{
-        id: `${parsedArtifactForDedup.id}-inbox-quality-blocked`,
-        artifactId: parsedArtifactForDedup.id,
-        type: 'inbox-quality-blocked',
-        issueSummary: '本材料未通过入库质量门槛。',
-        severity: qualityPlan.decision === 'reject' ? 'high' : 'medium',
-        reason: reasons.join('; ') || qualityPlan.reason,
-        status: 'open',
-        relatedSources: [parsedArtifactForDedup.sourceRef, qualityPath],
-        relatedPages: [],
-        evidence: qualityPlan.evidence.map((evidence) => evidence.quote),
-        confidence: 1,
-        suggestedActions: [
-          `建议动作：${qualityPlan.decision}`,
-          '向用户展示质量判断，等待批准 reject / park / convert / merge / accept 之一。',
-          '只有改为 decision=accept 且语义整理也有效时，才继续普通入库。',
-        ],
-      }])
-      reviewFiles.push(...reviewResult.files)
-      await recordQualityBlock()
-      return persistResult('needs_review', null, {
-        step: 'inbox-quality-blocked',
-        sourceIdentity,
-        fingerprint,
-        qualityPath,
-        qualityDecision: qualityPlan.decision,
-        knowledgeValue: qualityPlan.knowledgeValue,
-        readability: qualityPlan.readability,
-        duplicateStatus: qualityPlan.duplicateAssessment.status,
-        reviewTriggerCount: 1,
-      })
-    }
-
-    let contentDedupCheck = await contentDedupStore.check({
+    const qualityPhase = await runInboxQualityPhase({
+      knowledgeRoot: config.knowledgeRoot,
+      artifact: parsedArtifactForDedup,
+      qualityPath,
       sourceIdentity,
-      sourceKind,
-      sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
-      title: parsedArtifactForDedup.title,
-      content: parsedArtifactForDedup.content,
-    })
-    const resolvedContentDedupDecision = await contentDedupStore.getResolvedDecision({
-      docHash: contentDedupCheck.docHash,
-      sourceIdentity,
-    })
-    const recompilingAcceptedSource = Boolean(input.forceRecompile && previousDedupEntry)
-    const bypassContentDedupConfirmation = resolvedContentDedupDecision?.userDecision === 'ingest'
-      || resolvedContentDedupDecision?.userDecision === 'keep_both'
-      || resolvedContentDedupDecision?.userDecision === 'update'
-      || recompilingAcceptedSource
-
-    if (resolvedContentDedupDecision?.userDecision === 'skip') {
-      return persistResult('completed', { action: 'skip', reason: 'content-dedup-user-skip' }, {
-        step: 'content-dedup-user-skip',
-        sourceIdentity,
-        fingerprint,
-        skipped: true,
-        contentDedup: {
-          docHash: contentDedupCheck.docHash,
-          pendingDecisionId: resolvedContentDedupDecision.id,
-          matchedPageId: resolvedContentDedupDecision.matchedPageId,
-          matchedSourceIdentity: resolvedContentDedupDecision.matchedSourceIdentity,
-          userDecision: resolvedContentDedupDecision.userDecision,
-        },
-      })
-    }
-
-    if (contentDedupCheck.exactMatch && !bypassContentDedupConfirmation) {
-      await contentDedupStore.recordSkip({
-        docHash: contentDedupCheck.docHash,
-        sourceIdentity,
-        match: contentDedupCheck.exactMatch,
-      })
-      return persistResult('completed', { action: 'skip', reason: 'content-exact-hash' }, {
-        step: 'content-dedup-skip',
-        sourceIdentity,
-        fingerprint,
-        skipped: true,
-        contentDedup: {
-          docHash: contentDedupCheck.docHash,
-          matchedPageId: contentDedupCheck.exactMatch.pageId,
-          matchedSourceIdentity: contentDedupCheck.exactMatch.sourceIdentity,
-          reason: 'exact_hash',
-        },
-      })
-    }
-    const contentDedupEmbedding = await loadContentDedupEmbedding(parsedArtifactForDedup.content)
-    if (contentDedupEmbedding.vector) {
-      contentDedupCheck = await contentDedupStore.check({
-        sourceIdentity,
-        sourceKind,
-        sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
-        title: parsedArtifactForDedup.title,
-        content: parsedArtifactForDedup.content,
-        embeddingVector: contentDedupEmbedding.vector,
-        embeddingProvider: contentDedupEmbedding.provider,
-        embeddingModel: contentDedupEmbedding.model,
-      })
-      if (contentDedupCheck.semanticMatch && !bypassContentDedupConfirmation) {
-        await contentDedupStore.recordSkip({
-          docHash: contentDedupCheck.docHash,
-          sourceIdentity,
-          match: contentDedupCheck.semanticMatch.record,
-          reason: 'semantic_0.98',
-          similarity: contentDedupCheck.semanticMatch.similarity,
-        })
-        return persistResult('completed', { action: 'skip', reason: 'content-semantic-high' }, {
-          step: 'content-dedup-skip',
-          sourceIdentity,
-          fingerprint,
-          skipped: true,
-          contentDedup: {
-            docHash: contentDedupCheck.docHash,
-            matchedPageId: contentDedupCheck.semanticMatch.record.pageId,
-            matchedSourceIdentity: contentDedupCheck.semanticMatch.record.sourceIdentity,
-            reason: 'semantic_0.98',
-            similarity: contentDedupCheck.semanticMatch.similarity,
-            embeddingProvider: contentDedupEmbedding.provider,
-            embeddingModel: contentDedupEmbedding.model,
-          },
-        })
-      }
-    }
-    if (contentDedupCheck.candidates.length > 0) {
-      await contentDedupStore.recordCandidates({
-        docHash: contentDedupCheck.docHash,
-        sourceIdentity,
-        candidates: contentDedupCheck.candidates,
-      })
-    }
-    const confirmationCandidate = bypassContentDedupConfirmation
-      ? null
-      : pickContentDedupConfirmationCandidate(contentDedupCheck.candidates)
-    if (confirmationCandidate) {
-      const pendingDecision = await contentDedupStore.createPendingDecision({
-        docHash: contentDedupCheck.docHash,
-        sourceIdentity,
-        sourceKind,
-        sourceUrl: sourceKind === 'url' ? sourceIdentity : null,
-        title: parsedArtifactForDedup.title,
-        candidate: confirmationCandidate,
-      })
-      return persistResult('needs_review', { action: 'pending', reason: 'content-dedup-confirmation' }, {
-        step: 'content-dedup-confirmation',
-        sourceIdentity,
-        fingerprint,
-        contentDedup: {
-          docHash: contentDedupCheck.docHash,
-          pendingDecision,
-          candidates: contentDedupCheck.candidates.map((candidate) => ({
-            reason: candidate.reason,
-            similarity: candidate.similarity,
-            matchedPageId: candidate.record.pageId,
-            matchedSourceIdentity: candidate.record.sourceIdentity,
-          })),
-        },
-      })
-    }
-    const dedupDecision = await dedupStore.shouldCompile({
-      identity: sourceIdentity,
       sourceKind,
       fingerprint,
+      jobId,
+      previousOutputManifest: previousDedupEntry?.lastOutputManifest ?? null,
+      dedupStore,
     })
-    const retryingBlockedInboxGate = dedupDecision.action === 'skip'
-      && previousDedupEntry?.lastStatus === 'needs_review'
-      && Boolean(qualityPath || curationPath)
-    const forcingRecompile = dedupDecision.action === 'skip' && Boolean(input.forceRecompile)
-    const effectiveDedupDecision = forcingRecompile
-      ? { action: 'recompile' as const, reason: 'forced-recompile' as const }
-      : retryingBlockedInboxGate
-      ? { action: 'recompile' as const, reason: 'inbox-gate-resolved' as const }
-      : dedupDecision
+    if (qualityPhase.status === 'needs_review') {
+      reviewFiles.push(...qualityPhase.reviewFiles)
+      return persistResult('needs_review', null, qualityPhase.details)
+    }
+
+    const contentDedupPhase = await runContentDedupPhase({
+      contentDedupStore,
+      dedupStore,
+      sourceIdentity,
+      sourceKind,
+      title: parsedArtifactForDedup.title,
+      content: parsedArtifactForDedup.content,
+      fingerprint,
+      previousDedupEntry,
+      forceRecompile: input.forceRecompile,
+      qualityPath,
+      curationPath,
+    })
+    if (contentDedupPhase.status !== 'ready') {
+      return persistResult(contentDedupPhase.status, contentDedupPhase.dedupDecision, contentDedupPhase.details)
+    }
+    const {
+      contentDedupCheck,
+      contentDedupEmbedding,
+      resolvedContentDedupDecision,
+      effectiveDedupDecision,
+    } = contentDedupPhase
 
     await jobStore.updateStatus(jobId, 'running', {
       step: 'dedup-check',
@@ -520,124 +305,24 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
     }
 
     const metadataMismatch = detectSourceMetadataMismatch(parsedArtifact)
-    const recordSemanticCurationBlock = async () => {
-      await dedupStore.recordSuccess({
-        identity: sourceIdentity,
-        sourceKind,
-        fingerprint,
-        jobId,
-        status: 'needs_review',
-        outputManifest: previousDedupEntry?.lastOutputManifest ?? null,
-      })
+    const curationPhase = await runSemanticCurationPhase({
+      knowledgeRoot: config.knowledgeRoot,
+      artifact: parsedArtifact,
+      curationPath,
+      stagedPath: lifecycle.stagedPath,
+      sourceIdentity,
+      sourceKind,
+      fingerprint,
+      jobId,
+      previousOutputManifest: previousDedupEntry?.lastOutputManifest ?? null,
+      dedupStore,
+    })
+    if (curationPhase.status === 'needs_review') {
+      reviewFiles.push(...curationPhase.reviewFiles)
+      lifecycle.retainedPath = curationPhase.retainedPath
+      return persistResult('needs_review', effectiveDedupDecision, curationPhase.details)
     }
-    if (!curationPath) {
-      const reviewResult = await persistReviewItems(config.knowledgeRoot, [{
-        id: `${parsedArtifact.id}-semantic-curation-required`,
-        artifactId: parsedArtifact.id,
-        type: 'semantic-curation-required',
-        issueSummary: '需要语义整理计划后才能完成入库。',
-        severity: 'medium',
-        reason: '缺少 llm-wiki.semantic-curation.v1 curation plan；runtime 不再用规则抽词生成概念/实体页。',
-        status: 'open',
-        relatedSources: [parsedArtifact.sourceRef],
-        relatedPages: [],
-        evidence: ['No --curation plan or sidecar curation plan was found.'],
-        confidence: 1,
-        suggestedActions: [
-          '阅读完整原文，按 llm-wiki.semantic-curation.v1 写出 curation JSON。',
-          '重新运行 ingest 并传入 --curation <plan.json>，或把 sidecar 放在源文件旁边。',
-        ],
-      }])
-      reviewFiles.push(...reviewResult.files)
-      if (lifecycle.stagedPath) {
-        lifecycle.retainedPath = await retainReviewableIntake(lifecycle.stagedPath)
-      }
-      await recordSemanticCurationBlock()
-      return persistResult('needs_review', effectiveDedupDecision, {
-        step: 'semantic-curation-required',
-        sourceIdentity,
-        fingerprint,
-        reviewTriggerCount: 1,
-        entityCount: 0,
-        conceptCount: 0,
-      })
-    }
-
-    let curationPlan
-    try {
-      curationPlan = validateSemanticCurationPlan({
-        artifact: parsedArtifact,
-        plan: await loadSemanticCurationPlan(curationPath),
-      })
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
-      const reviewResult = await persistReviewItems(config.knowledgeRoot, [{
-        id: `${parsedArtifact.id}-semantic-curation-invalid`,
-        artifactId: parsedArtifact.id,
-        type: 'semantic-curation-invalid',
-        issueSummary: '语义整理计划无效，无法完成入库。',
-        severity: 'high',
-        reason,
-        status: 'open',
-        relatedSources: [parsedArtifact.sourceRef, curationPath],
-        relatedPages: [],
-        evidence: [reason],
-        confidence: 1,
-        suggestedActions: [
-          '修正 curation JSON 的 schema、字段、slug 或原文证据 quote。',
-          '重新运行 ingest --curation <plan.json>。',
-        ],
-      }])
-      reviewFiles.push(...reviewResult.files)
-      if (lifecycle.stagedPath) {
-        lifecycle.retainedPath = await retainReviewableIntake(lifecycle.stagedPath)
-      }
-      await recordSemanticCurationBlock()
-      return persistResult('needs_review', effectiveDedupDecision, {
-        step: 'semantic-curation-invalid',
-        sourceIdentity,
-        fingerprint,
-        curationPath,
-        reviewTriggerCount: 1,
-        entityCount: 0,
-        conceptCount: 0,
-      })
-    }
-
-    if (curationPlan.status === 'needs_review') {
-      const reasons = semanticCurationNeedsReviewReasons(curationPlan)
-      const reviewResult = await persistReviewItems(config.knowledgeRoot, [{
-        id: `${parsedArtifact.id}-semantic-curation-blocked`,
-        artifactId: parsedArtifact.id,
-        type: 'semantic-curation-blocked',
-        issueSummary: '本材料暂不能完成普通入库。',
-        severity: 'medium',
-        reason: reasons.join('; '),
-        status: 'open',
-        relatedSources: [parsedArtifact.sourceRef, curationPath],
-        relatedPages: [],
-        evidence: reasons,
-        confidence: 1,
-        suggestedActions: [
-          '根据 curation plan 给出的阻塞原因补证据、改边界、拒绝或暂存。',
-          '阻塞解除后重新提交 status=ready 的 curation plan。',
-        ],
-      }])
-      reviewFiles.push(...reviewResult.files)
-      if (lifecycle.stagedPath) {
-        lifecycle.retainedPath = await retainReviewableIntake(lifecycle.stagedPath)
-      }
-      await recordSemanticCurationBlock()
-      return persistResult('needs_review', effectiveDedupDecision, {
-        step: 'semantic-curation-blocked',
-        sourceIdentity,
-        fingerprint,
-        curationPath,
-        reviewTriggerCount: 1,
-        entityCount: curationPlan.entities.length,
-        conceptCount: curationPlan.concepts.length,
-      })
-    }
+    const curationPlan = curationPhase.curationPlan
 
     const otherDedupEntries = (await dedupStore.list()).filter((entry) => entry.identity !== sourceIdentity)
     let generation = await generateKnowledgeChanges(parsedArtifact, curationPlan)
@@ -680,8 +365,6 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       previousOutputManifest: previousDedupEntry?.lastOutputManifest ?? null,
       currentOutputManifest: writeResult.outputManifest,
       otherEntries: otherDedupEntries,
-      urlFetchTimeoutMs: config.urlFetchTimeoutMs,
-      repoSampleLimit: config.repoSamplingLimits.maxFiles,
     })
     const semanticPruneResult = await pruneMissingSourceSemanticLinks(config.knowledgeRoot)
     const semanticOverviewResult = await refreshSemanticOverviews({ knowledgeRoot: config.knowledgeRoot })
@@ -934,7 +617,7 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       } : {}),
     })
   } catch (error) {
-    if (!lifecycle.rejectedPath && isLocalFileCandidate(sourceKind, input.input)) {
+    if (!lifecycle.rejectedPath && isLocalFileCandidate(sourceKind)) {
       lifecycle.rejectedPath = await rejectIntakeFile({
         knowledgeRoot: config.knowledgeRoot,
         inputPath: input.input,
@@ -950,260 +633,6 @@ export async function runIngestJob(input: RunIngestJobInput): Promise<IngestJobR
       error: error instanceof Error ? error.message : String(error),
     })
   }
-}
-
-type GeneratedKnowledgeChanges = Awaited<ReturnType<typeof generateKnowledgeChanges>>
-
-async function resolveSemanticPageOwnership(input: {
-  knowledgeRoot: string
-  generation: GeneratedKnowledgeChanges
-  previousOutputManifest: DedupEntry['lastOutputManifest']
-}): Promise<GeneratedKnowledgeChanges> {
-  const [entityPages, entityRewrites] = await resolveOwnedSemanticPages({
-    knowledgeRoot: input.knowledgeRoot,
-    section: 'entities',
-    pages: input.generation.entityPages,
-    sourceSlug: input.generation.sourcePage.slug,
-    previousOutputManifest: input.previousOutputManifest,
-  })
-  const [conceptPages, conceptRewrites] = await resolveOwnedSemanticPages({
-    knowledgeRoot: input.knowledgeRoot,
-    section: 'concepts',
-    pages: input.generation.conceptPages,
-    sourceSlug: input.generation.sourcePage.slug,
-    previousOutputManifest: input.previousOutputManifest,
-  })
-  const [synthesisPages, synthesisRewrites] = await resolveOwnedSemanticPages({
-    knowledgeRoot: input.knowledgeRoot,
-    section: 'syntheses',
-    pages: input.generation.synthesisPages,
-    sourceSlug: input.generation.sourcePage.slug,
-    previousOutputManifest: input.previousOutputManifest,
-  })
-  const rewrites = [...entityRewrites, ...conceptRewrites, ...synthesisRewrites]
-
-  return {
-    ...input.generation,
-    sourcePage: {
-      ...input.generation.sourcePage,
-      body: rewriteSemanticLinks(input.generation.sourcePage.body, rewrites),
-    },
-    entityPages,
-    conceptPages,
-    synthesisPages,
-    indexMutations: input.generation.indexMutations.map((mutation) => ({
-      ...mutation,
-      value: rewriteSemanticLinks(mutation.value, rewrites),
-    })),
-  }
-}
-
-async function resolveOwnedSemanticPages(input: {
-  knowledgeRoot: string
-  section: SemanticPageSection
-  pages: GeneratedKnowledgeChanges['entityPages']
-  sourceSlug: string
-  previousOutputManifest: DedupEntry['lastOutputManifest']
-}): Promise<[GeneratedKnowledgeChanges['entityPages'], SemanticPageRewrite[]]> {
-  const resolvedPages: GeneratedKnowledgeChanges['entityPages'] = []
-  const rewrites: SemanticPageRewrite[] = []
-  const reservedSlugs = new Set(input.pages.map((page) => page.slug))
-
-  for (const page of input.pages) {
-    const owned = await isPageWritableByCurrentSource({
-      knowledgeRoot: input.knowledgeRoot,
-      section: input.section,
-      slug: page.slug,
-      previousOutputManifest: input.previousOutputManifest,
-    })
-    if (owned) {
-      resolvedPages.push(page)
-      continue
-    }
-
-    const nextSlug = await nextSourceScopedSemanticSlug({
-      knowledgeRoot: input.knowledgeRoot,
-      section: input.section,
-      baseSlug: page.slug,
-      sourceSlug: input.sourceSlug,
-      previousOutputManifest: input.previousOutputManifest,
-      reservedSlugs,
-    })
-    reservedSlugs.add(nextSlug)
-    resolvedPages.push({ ...page, slug: nextSlug })
-    rewrites.push({ section: input.section, fromSlug: page.slug, toSlug: nextSlug, title: page.title })
-  }
-
-  return [resolvedPages, rewrites]
-}
-
-async function isPageWritableByCurrentSource(input: {
-  knowledgeRoot: string
-  section: SemanticPageSection
-  slug: string
-  previousOutputManifest: DedupEntry['lastOutputManifest']
-}): Promise<boolean> {
-  const relativePath = `wiki/${input.section}/${input.slug}.md`
-  if (manifestOwnsPage(input.previousOutputManifest, relativePath)) {
-    if (await isManifestOwnedSemanticPageUnmodified({
-      knowledgeRoot: input.knowledgeRoot,
-      relativePath,
-      previousOutputManifest: input.previousOutputManifest,
-    })) {
-      return true
-    }
-    return false
-  }
-  if (!(await fileExists(path.join(input.knowledgeRoot, relativePath)))) {
-    return true
-  }
-  if (input.section === 'syntheses') {
-    return false
-  }
-  return isManagedSemanticPage({
-    knowledgeRoot: input.knowledgeRoot,
-    section: input.section,
-    slug: input.slug,
-  })
-}
-
-async function isManagedSemanticPage(input: {
-  knowledgeRoot: string
-  section: SemanticPageSection
-  slug: string
-}): Promise<boolean> {
-  let markdown: string
-  try {
-    markdown = await readFile(path.join(input.knowledgeRoot, 'wiki', input.section, `${input.slug}.md`), 'utf8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return false
-    }
-    throw error
-  }
-
-  const typeBySection = {
-    entities: 'entity',
-    concepts: 'concept',
-    syntheses: 'synthesis',
-  } as const
-  return hasManagedSemanticFrontmatter(markdown, typeBySection[input.section])
-}
-
-async function nextSourceScopedSemanticSlug(input: {
-  knowledgeRoot: string
-  section: SemanticPageSection
-  baseSlug: string
-  sourceSlug: string
-  previousOutputManifest: DedupEntry['lastOutputManifest']
-  reservedSlugs: Set<string>
-}): Promise<string> {
-  const base = `${input.baseSlug}-${input.sourceSlug}`
-  for (let counter = 1; counter < 100; counter += 1) {
-    const slug = counter === 1 ? base : `${base}-${counter}`
-    const relativePath = `wiki/${input.section}/${slug}.md`
-    if (input.reservedSlugs.has(slug)) {
-      continue
-    }
-    if (manifestOwnsPage(input.previousOutputManifest, relativePath)) {
-      if (await isManifestOwnedSemanticPageUnmodified({
-        knowledgeRoot: input.knowledgeRoot,
-        relativePath,
-        previousOutputManifest: input.previousOutputManifest,
-      })) {
-        return slug
-      }
-      continue
-    }
-    if (!(await fileExists(path.join(input.knowledgeRoot, relativePath)))) {
-      return slug
-    }
-  }
-  throw new Error(`Unable to choose non-conflicting semantic page slug for ${input.section}/${input.baseSlug}`)
-}
-
-function manifestOwnsPage(manifest: DedupEntry['lastOutputManifest'], relativePath: string): boolean {
-  return Boolean(
-    manifest?.pageFiles.includes(relativePath)
-    || manifest?.pageSnapshots.some((snapshot) => snapshot.filePath === relativePath),
-  )
-}
-
-function hasManagedSemanticFrontmatter(markdown: string, type: 'entity' | 'concept' | 'synthesis'): boolean {
-  return new RegExp(`^---\\n[\\s\\S]*\\ntype: ${JSON.stringify(type)}\\n[\\s\\S]*\\n---\\n?`, 'u').test(markdown)
-}
-
-async function isManifestOwnedSemanticPageUnmodified(input: {
-  knowledgeRoot: string
-  relativePath: string
-  previousOutputManifest: DedupEntry['lastOutputManifest']
-}): Promise<boolean> {
-  const snapshot = input.previousOutputManifest?.pageSnapshots.find((candidate) => candidate.filePath === input.relativePath)
-  if (!snapshot) {
-    return false
-  }
-
-  let currentMarkdown: string
-  try {
-    currentMarkdown = await readFile(path.join(input.knowledgeRoot, input.relativePath), 'utf8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return true
-    }
-    throw error
-  }
-
-  if (snapshot.body.trimStart().startsWith('---\n')) {
-    return currentMarkdown.trimEnd() === snapshot.body.trimEnd()
-  }
-
-  return stripWikiFrontmatter(currentMarkdown).trimEnd() === snapshot.body.trimEnd()
-}
-
-function stripWikiFrontmatter(markdown: string): string {
-  if (!markdown.startsWith('---\n')) {
-    return markdown
-  }
-  const end = markdown.indexOf('\n---\n', 4)
-  if (end < 0) {
-    return markdown
-  }
-  return markdown.slice(end + '\n---\n'.length)
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath)
-    return true
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return false
-    }
-    throw error
-  }
-}
-
-type SemanticPageSection = 'entities' | 'concepts' | 'syntheses'
-type SemanticPageRewrite = { section: SemanticPageSection; fromSlug: string; toSlug: string; title: string }
-
-function rewriteSemanticLinks(
-  value: string,
-  rewrites: SemanticPageRewrite[],
-): string {
-  return rewrites.reduce((current, rewrite) => {
-    const from = `[[${rewrite.section}/${rewrite.fromSlug}|${rewrite.title}]]`
-    const to = `[[${rewrite.section}/${rewrite.toSlug}|${rewrite.title}]]`
-    return current.split(from).join(to)
-  }, value)
-}
-
-function buildReviewRelatedPages(generation: GeneratedKnowledgeChanges): string[] {
-  return [
-    `sources/${generation.sourcePage.slug}`,
-    ...generation.entityPages.map((page) => `entities/${page.slug}`),
-    ...generation.conceptPages.map((page) => `concepts/${page.slug}`),
-    ...generation.synthesisPages.map((page) => `syntheses/${page.slug}`),
-  ]
 }
 
 function buildDefaultReviewSuggestedActions(kind: string): string[] {
@@ -1232,320 +661,4 @@ function buildDefaultReviewSuggestedActions(kind: string): string[] {
 
 function shouldRecordSuccessfulManifest(status: JobStatus): status is Extract<JobStatus, 'completed' | 'needs_review' | 'partial'> {
   return status === 'completed' || status === 'needs_review' || status === 'partial'
-}
-
-function pickContentDedupConfirmationCandidate(candidates: ContentDedupCandidate[]): ContentDedupCandidate | null {
-  return candidates.find((candidate) =>
-    candidate.reason === 'semantic_match'
-    && (candidate.similarity ?? 0) >= 0.88
-    && (candidate.similarity ?? 0) < 0.98,
-  ) ?? candidates.find((candidate) => candidate.reason === 'url_match') ?? null
-}
-
-type DerivedPageOwner = {
-  entry: DedupEntry
-  snapshot: OutputPageSnapshot
-}
-
-async function reconcileStaleDerivedOutputs(input: {
-  knowledgeRoot: string
-  previousOutputManifest: DedupEntry['lastOutputManifest']
-  currentOutputManifest: NonNullable<DedupEntry['lastOutputManifest']>
-  otherEntries: DedupEntry[]
-  urlFetchTimeoutMs: number
-  repoSampleLimit: number
-}): Promise<{ writtenFiles: string[] }> {
-  const previousManifest = input.previousOutputManifest
-  if (!previousManifest) {
-    return { writtenFiles: [] }
-  }
-
-  const staleDerivedFiles = collectStaleDerivedFiles(previousManifest, input.currentOutputManifest)
-
-  const retainedIndexEntries = new Set(
-    input.otherEntries.flatMap((entry) => entry.lastOutputManifest?.indexEntries ?? []),
-  )
-  const indexEntriesToAdd = new Set<string>()
-  const indexEntriesToRemove = new Set<string>()
-  const retainedHumanEditedFiles = new Set<string>()
-  const writtenFiles: string[] = []
-  for (const filePath of staleDerivedFiles) {
-    const remainingOwners = await collectDerivedPageOwners({
-      entries: input.otherEntries,
-      filePath,
-    })
-
-    if (remainingOwners.length === 0) {
-      if (!(await isManifestOwnedSemanticPageUnmodified({
-        knowledgeRoot: input.knowledgeRoot,
-        relativePath: filePath,
-        previousOutputManifest: previousManifest,
-      }))) {
-        retainedHumanEditedFiles.add(filePath)
-        continue
-      }
-      await removeWikiPageFile(input.knowledgeRoot, filePath)
-      writtenFiles.push(path.join(path.resolve(input.knowledgeRoot), filePath))
-      continue
-    }
-
-    const survivor = pickMostRecentSnapshotOwner(remainingOwners)
-    writtenFiles.push(await restoreWikiPageSnapshot(input.knowledgeRoot, survivor.snapshot))
-
-    if (survivor.snapshot.indexEntry) {
-      indexEntriesToAdd.add(survivor.snapshot.indexEntry)
-    }
-  }
-
-  const staleIndexEntries = previousManifest.indexEntries.filter(
-    (entry) => {
-      const targetFile = semanticIndexEntryTargetFile(entry)
-      return !input.currentOutputManifest.indexEntries.includes(entry)
-        && !isSourceOwnedIndexEntry(entry)
-        && !(targetFile && retainedHumanEditedFiles.has(targetFile))
-    },
-  )
-
-  for (const entry of staleIndexEntries) {
-    if (!retainedIndexEntries.has(entry)) {
-      indexEntriesToRemove.add(entry)
-    }
-  }
-
-  if (indexEntriesToAdd.size > 0 || indexEntriesToRemove.size > 0) {
-    writtenFiles.push(await updateWikiIndex(input.knowledgeRoot, {
-      addEntries: [...indexEntriesToAdd],
-      removeEntries: [...indexEntriesToRemove],
-    }))
-  }
-
-  return {
-    writtenFiles: [...new Set(writtenFiles)],
-  }
-}
-
-function collectStaleDerivedFiles(
-  previousOutputManifest: NonNullable<DedupEntry['lastOutputManifest']>,
-  currentOutputManifest: NonNullable<DedupEntry['lastOutputManifest']>,
-): string[] {
-  const previousDerivedFiles = new Set<string>([
-    ...previousOutputManifest.pageFiles.filter(isDerivedWikiPage),
-    ...previousOutputManifest.pageSnapshots.map((snapshot) => snapshot.filePath).filter(isDerivedWikiPage),
-  ])
-
-  return [...previousDerivedFiles].filter((filePath) => !currentOutputManifest.pageFiles.includes(filePath))
-}
-
-async function collectDerivedPageOwners(input: {
-  entries: DedupEntry[]
-  filePath: string
-}): Promise<DerivedPageOwner[]> {
-  const owners = await Promise.all(input.entries.map(async (entry) => {
-    const snapshots = entry.lastOutputManifest?.pageSnapshots ?? []
-
-    return snapshots
-      .filter((snapshot) => snapshot.filePath === input.filePath)
-      .map((snapshot) => ({ entry, snapshot }))
-  }))
-
-  return owners.flat()
-}
-
-function pickMostRecentSnapshotOwner(
-  owners: DerivedPageOwner[],
-): DerivedPageOwner {
-  return [...owners].sort((left, right) => compareCompiledAt(right.entry.lastCompiledAt, left.entry.lastCompiledAt))[0]
-}
-
-function compareCompiledAt(left: string | null, right: string | null): number {
-  const leftTime = left ? Date.parse(left) : Number.NEGATIVE_INFINITY
-  const rightTime = right ? Date.parse(right) : Number.NEGATIVE_INFINITY
-  return leftTime - rightTime
-}
-
-function isDerivedWikiPage(filePath: string): boolean {
-  const normalized = filePath.replace(/\\/g, '/')
-  return normalized.startsWith('wiki/entities/') || normalized.startsWith('wiki/concepts/') || normalized.startsWith('wiki/syntheses/')
-}
-
-function isSourceOwnedIndexEntry(entry: string): boolean {
-  return /^[-*]\s+\[\[sources\/[^|\]]+\|[^\]]+\]\]$/.test(entry.trim())
-}
-
-function semanticIndexEntryTargetFile(entry: string): string | null {
-  const match = entry.trim().match(/^[-*]\s+\[\[((?:entities|concepts|syntheses)\/[^|\]]+)\|[^\]]+\]\]$/)
-  return match ? `wiki/${match[1]}.md` : null
-}
-
-async function parseSource(input: {
-  sourceKind: SourceKind
-  input: string
-  sourceId: string
-  stagedPath: string | null
-  urlFetchTimeoutMs: number
-  repoSampleLimit: number
-}) {
-  if (input.sourceKind === 'md' || input.sourceKind === 'txt') {
-    const readPath = input.stagedPath ?? input.input
-    const content = await readFile(readPath, 'utf8')
-    const parserInput = {
-      sourceId: input.sourceId,
-      path: input.input,
-      content: stripManagedRawFrontmatter(content),
-    }
-
-    return input.sourceKind === 'md'
-      ? parseMarkdownSource(parserInput)
-      : parseTextSource(parserInput)
-  }
-
-  if (input.sourceKind === 'repo') {
-    return parseRepoSource({
-      sourceId: input.sourceId,
-      repoPath: input.input,
-      maxSampleFiles: input.repoSampleLimit,
-    })
-  }
-
-  return parseUrlSource(
-    {
-      sourceId: input.sourceId,
-      url: input.input,
-    },
-    (url) => fetchCleanedUrlContent(url, input.urlFetchTimeoutMs),
-  )
-}
-
-async function prepareSourceForDedup(input: {
-  sourceKind: SourceKind
-  input: string
-  sourceId: string
-  stagedPath: string | null
-  urlFetchTimeoutMs: number
-  repoSampleLimit: number
-}): Promise<{ fingerprint: string; parsedArtifact: ParsedArtifact | null }> {
-  if (input.sourceKind === 'md' || input.sourceKind === 'txt') {
-    return {
-      fingerprint: await fingerprintSource(input.sourceKind, input.input),
-      parsedArtifact: null,
-    }
-  }
-
-  const parsedArtifact = await parseSource({
-    sourceKind: input.sourceKind,
-    input: input.input,
-    sourceId: input.sourceId,
-    stagedPath: input.stagedPath,
-    urlFetchTimeoutMs: input.urlFetchTimeoutMs,
-    repoSampleLimit: input.repoSampleLimit,
-  })
-
-  return {
-    fingerprint: hashParsedArtifactForDedup(parsedArtifact),
-    parsedArtifact,
-  }
-}
-
-async function fingerprintSource(sourceKind: SourceKind, source: string): Promise<string> {
-  if (sourceKind === 'md' || sourceKind === 'txt') {
-    return hashFileLike(await readFile(source))
-  }
-
-  if (sourceKind === 'repo') {
-    const fileStat = await stat(source)
-    return hashSourceMetadata({
-      kind: sourceKind,
-      identity: normalizeSourceIdentity(sourceKind, source),
-      size: fileStat.size,
-      modifiedAt: fileStat.mtimeMs,
-    })
-  }
-
-  return hashSourceMetadata({
-    kind: sourceKind,
-    identity: normalizeSourceIdentity(sourceKind, source),
-  })
-}
-
-function normalizeSourceIdentity(sourceKind: SourceKind, source: string): string {
-  return sourceKind === 'url' ? source.trim() : path.resolve(source)
-}
-
-function buildStableSourceId(sourceKind: SourceKind, sourceIdentity: string): string {
-  return hashSourceMetadata({ sourceKind, sourceIdentity }).slice(0, 16)
-}
-
-function resolveCollisionFreeSourceSlug(baseSlug: string, artifactId: string, otherEntries: DedupEntry[]): string {
-  if (!isSourceSlugOwnedByOtherEntry(baseSlug, otherEntries)) {
-    return baseSlug
-  }
-
-  const suffix = artifactId.replace(/[^a-z0-9]+/gi, '').toLowerCase().slice(0, 8) || 'source'
-  const suffixedSlug = `${baseSlug}-${suffix}`
-
-  if (!isSourceSlugOwnedByOtherEntry(suffixedSlug, otherEntries)) {
-    return suffixedSlug
-  }
-
-  let counter = 2
-  while (isSourceSlugOwnedByOtherEntry(`${suffixedSlug}-${counter}`, otherEntries)) {
-    counter += 1
-  }
-
-  return `${suffixedSlug}-${counter}`
-}
-
-function isSourceSlugOwnedByOtherEntry(slug: string, otherEntries: DedupEntry[]): boolean {
-  const sourcePagePath = path.posix.join('wiki', 'sources', `${slug}.md`)
-  return otherEntries.some((entry) => entry.lastOutputManifest?.pageFiles.includes(sourcePagePath))
-}
-
-function resolveFinalStatus(hasReviewTriggers: boolean): JobStatus {
-  if (hasReviewTriggers) {
-    return 'needs_review'
-  }
-
-  return 'completed'
-}
-
-function isLocalFileCandidate(sourceKind: DiscoveredSourceKind, source: string): boolean {
-  return sourceKind === 'md' || sourceKind === 'txt' || sourceKind === 'unknown'
-}
-
-async function findSemanticCurationSidecar(source: string): Promise<string | null> {
-  const candidates = [
-    `${source}.curation.json`,
-    path.join(path.dirname(source), `${path.basename(source, path.extname(source))}.curation.json`),
-    path.join(path.dirname(source), '_curation', `${path.basename(source, path.extname(source))}.json`),
-  ]
-
-  for (const candidate of candidates) {
-    if (await fileExists(candidate)) {
-      return candidate
-    }
-  }
-  return null
-}
-
-async function findInboxQualitySidecar(source: string): Promise<string | null> {
-  const candidates = [
-    `${source}.quality.json`,
-    path.join(path.dirname(source), `${path.basename(source, path.extname(source))}.quality.json`),
-    path.join(path.dirname(source), '_quality', `${path.basename(source, path.extname(source))}.json`),
-  ]
-
-  for (const candidate of candidates) {
-    if (await fileExists(candidate)) {
-      return candidate
-    }
-  }
-  return null
-}
-
-function resolveFailureStatus(sourceKind: DiscoveredSourceKind, error: unknown): JobStatus {
-  if (sourceKind === 'url' && classifyUrlFailure(error).retryable) {
-    return 'failed_retryable'
-  }
-
-  return 'failed_terminal'
 }

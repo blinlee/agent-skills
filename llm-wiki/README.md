@@ -66,7 +66,7 @@ The skill exposes five public workflows:
 | Workflow | Purpose |
 | --- | --- |
 | `/llm-wiki setup` | Resolve, save, initialize, or inspect a knowledge root or registry root. |
-| `/llm-wiki inbox` | Process new raw drops, decode non-Markdown sources, write quality and curation plans, route or ingest accepted material, execute approved placement decisions, and finish accepted material as usable wiki pages plus indexes. |
+| `/llm-wiki inbox` | Process new raw drops, decode non-Markdown sources, judge whether each source improves future reading/retrieval/synthesis/governance, write quality and curation plans, route or ingest accepted material, execute approved placement decisions, and finish accepted material as usable wiki pages plus indexes. |
 | `/llm-wiki query <question>` | Classify the question, ask for clarification if route is unclear, run `scripts/query_handoff.py --reading-mode <passage|document>`, execute the recommended query command, and answer with broader knowledge plus the returned local source-reading pack. |
 | `/llm-wiki maintain` | Refresh deterministic reading/index assets, indexes, overviews, readiness, embedding state, lint/status, and derived maintenance artifacts. |
 | `/llm-wiki govern` | Manage registry membership, wiki profiles, taxonomy, bridge links, routing policy, and approval queues. |
@@ -113,7 +113,7 @@ npm run --silent cli -- ingest-inbox ./knowledge
 npm run --silent cli -- maintain ./knowledge
 ```
 
-Before ingesting ordinary source material, write an `llm-wiki.inbox-quality.v1` JSON plan and an `llm-wiki.semantic-curation.v1` JSON plan with exact source quotes. The quality plan decides accept/reject/park/convert/merge before ingest; only accepted material reaches curation. After a successful inbox pass, accepted sources have generated pages under `wiki/sources`, `wiki/readings`, and any curation-backed `wiki/entities` / `wiki/concepts` / `wiki/syntheses` entries. `govern` is for structural changes, not for finishing ordinary ingestion. `maintain` backfills deterministic reading/index assets when managed raw evidence is present; it does not invent semantic pages.
+Before ingesting ordinary source material, write an `llm-wiki.inbox-quality.v1` JSON plan and an `llm-wiki.semantic-curation.v1` JSON plan with exact source quotes. The quality plan decides accept/reject/park/convert/merge before ingest; only accepted material reaches curation. A source should enter the wiki only if it improves future reading, retrieval, synthesis, or governance. `knowledgeValue: "low"` needs an explicit keep reason before ready accept, and `knowledgeValue: "none"` is rejected. After a successful inbox pass, accepted sources have generated pages under `wiki/sources`, `wiki/readings`, and any curation-backed `wiki/entities` / `wiki/concepts` / `wiki/syntheses` entries. `govern` is for structural changes, not for finishing ordinary ingestion. `maintain` backfills deterministic reading/index assets when managed raw evidence is present; it does not invent semantic pages.
 
 Create and query a registry:
 

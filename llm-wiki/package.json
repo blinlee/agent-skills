@@ -19,8 +19,9 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:query": "vitest run tests/unit/query-intent.test.ts tests/integration/query-readiness.test.ts tests/integration/query-source-evidence.test.ts tests/integration/query-grounding-diagnostics.test.ts tests/integration/lint-status.test.ts tests/integration/save-synthesis.test.ts",
-    "test:registry": "vitest run tests/integration/registry-query-routing.test.ts tests/integration/registry-intake-profile.test.ts tests/integration/registry-bridge-workflow.test.ts tests/integration/rag-governance-eval.test.ts",
+    "test:registry": "vitest run tests/integration/registry-query-routing.test.ts tests/integration/registry-query-domain-gates.test.ts tests/integration/registry-query-pack.test.ts tests/integration/registry-intake-profile.test.ts tests/integration/registry-profile-workflow.test.ts tests/integration/registry-bridge-workflow.test.ts tests/integration/rag-governance-eval.test.ts",
     "test:embedding": "vitest run tests/integration/embedding-cache-provider.test.ts tests/integration/retrieval-ranking.test.ts tests/integration/query-expansion-entity.test.ts",
+    "test:dedup": "vitest run tests/integration/cli-dedup-lifecycle.test.ts tests/integration/cli-dedup-semantic-lifecycle.test.ts tests/integration/cli-dedup-merge.test.ts tests/integration/cli-ingest-lifecycle-regressions.test.ts",
     "test:smoke": "vitest run tests/smoke.test.ts",
     "test:watch": "vitest",
     "lint:plan": "vitest run"

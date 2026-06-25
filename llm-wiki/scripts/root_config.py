@@ -101,18 +101,6 @@ def show_default(args: argparse.Namespace) -> int:
         write_json(payload)
         return 0
 
-    legacy_env_root = os.environ.get("llm_wiki_knowledge_root")
-    if legacy_env_root:
-        root = str(Path(legacy_env_root).expanduser().resolve(strict=False))
-        payload = found_payload("env", root, write_config_path(), "knowledge")
-        if args.require_existing and not payload["exists"]:
-            payload["status"] = "missing_path"
-            payload["error"] = "resolved_root_does_not_exist"
-            write_json(payload)
-            return 1
-        write_json(payload)
-        return 0
-
     searched_paths = read_config_paths()
     for path in searched_paths:
         data = read_config(path)

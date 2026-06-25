@@ -125,7 +125,7 @@ def resolve_root(explicit_root: str | None, explicit_kind: str | None) -> dict[s
     if explicit_root:
         return {"root": explicit_root, "kind": explicit_kind or "unknown", "source": "explicit"}
 
-    env_root = os.environ.get("llm_wiki_root") or os.environ.get("LLM_WIKI_ROOT")
+    env_root = os.environ.get("llm_wiki_root")
     if env_root:
         return {"root": env_root, "kind": explicit_kind or "unknown", "source": "env"}
 
