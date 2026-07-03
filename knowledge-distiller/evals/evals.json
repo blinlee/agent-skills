@@ -1,0 +1,42 @@
+{
+  "skill_name": "knowledge-distiller",
+  "evals": [
+    {
+      "id": 1,
+      "name": "trader-philosophy-factor-seeds",
+      "prompt": "Use the knowledge-distiller skill on a folder of markdown trader course notes. Produce a trading philosophy report with core anchors, mechanism models, strategy/tactic library, factor seeds, contradictions, evidence, and fidelity notes.",
+      "expected_output": "A source-backed Markdown report that distinguishes philosophy from tactics, marks factor seeds as research hypotheses, preserves caveats, and cites source ids.",
+      "files": [
+        "evals/fixtures/trader-course/lesson-01-cycle.md",
+        "evals/fixtures/trader-course/lesson-02-auction.md"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "product-principles-playbook",
+      "prompt": "Use the knowledge-distiller skill on product design notes and PRD review materials. Distill product principles, operating mechanisms, process playbook, tensions, and anti-patterns.",
+      "expected_output": "A high-fidelity product principles/playbook report that separates source-backed principles from inference and preserves unresolved tensions.",
+      "files": [
+        "evals/fixtures/product-notes/product-review.md"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "project-log-operating-system",
+      "prompt": "Use the knowledge-distiller skill on project logs and chat summaries. Extract operating principles, recurring workflows, escalation rules, failure modes, changed decisions, and follow-up leads.",
+      "expected_output": "A process/playbook report with source citations, contradiction handling, and memory-session style durable lessons.",
+      "files": [
+        "evals/fixtures/project-logs/week-01.md"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "noisy-source-cleanup",
+      "prompt": "Use the knowledge-distiller skill on markdown converted from slides/PDFs that includes repeated headers, footers, page numbers, watermarks, OCR edge text, download-site ads, and unrelated disclaimers. Produce a clean knowledge distillation report.",
+      "expected_output": "A report that removes source-production noise from distilled rules while preserving meaningful source details, with a Noise Review section for ambiguous fragments.",
+      "files": [
+        "evals/fixtures/noisy-slides/slide-export.md"
+      ]
+    }
+  ]
+}
